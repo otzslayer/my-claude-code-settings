@@ -6,11 +6,36 @@
 
 ---
 
-## 설치 (Plan A — 수동)
+## 설치
+
+### 자동 설치 (권장)
+
+```bash
+git clone https://github.com/otzslayer/my-claude-code-settings.git ~/.claude
+bash ~/.claude/scripts/install.sh
+```
+
+`scripts/install.sh`는 gum TUI 기반 인터랙티브 설치기다. macOS와 WSL2를 지원하며, gum이 없으면 plain read 폴백으로 동작한다.
+
+**설치기가 처리하는 항목**:
+- rtk (token optimizer) + `rtk init -g` (RTK.md 생성 — 순서 보장)
+- codegraph (symbol-level code intelligence)
+- graphify (knowledge graph CLI)
+- slides-grab (npm 패키지)
+- 메모리 seed 동기화 (`memory-templates/`)
+- `settings.json` skip-worktree 적용 (permissions 재유입 방지)
+
+> **skip-worktree**: Claude 세션 중 grant가 `settings.json`에 재기입되어 `git status`가 dirty가 되는 현상을 방지한다. `install.sh`가 자동 실행하나, clone 후 재실행이 필요하다. 해제: `git update-index --no-skip-worktree settings.json`
+
+설치 후 **Claude Code를 재시작**하면 `settings.json`의 `enabledPlugins`가 읽혀 플러그인이 자동 설치된다.
+
+---
+
+### 수동 설치
 
 > **중요**: 아래 순서를 반드시 지킬 것. `rtk init -g`를 먼저 실행하지 않으면 CLAUDE.md의 `@RTK.md` import가 깨진다.
 
-### 1단계: RTK 설치 (최우선)
+#### 1단계: RTK 설치 (최우선)
 
 ```bash
 # RTK (token optimizer) 설치 — brew tap이 없다면 GitHub Releases에서 직접 설치
@@ -23,7 +48,7 @@ rtk init -g
 rtk --version
 ```
 
-### 2단계: 나머지 툴 설치
+#### 2단계: 나머지 툴 설치
 
 ```bash
 # CodeGraph (symbol-level code intelligence)
@@ -36,14 +61,20 @@ uv tool install graphifyy
 npm install -g slides-grab
 ```
 
-### 3단계: 저장소 복제
+#### 3단계: 저장소 복제
 
 ```bash
 git clone https://github.com/otzslayer/my-claude-code-settings.git ~/.claude
 cd ~/.claude
 ```
 
-### 4단계: Claude Code 첫 실행
+#### 4단계: skip-worktree 적용
+
+```bash
+git update-index --skip-worktree settings.json
+```
+
+#### 5단계: Claude Code 첫 실행
 
 ```bash
 claude
@@ -52,12 +83,6 @@ claude
 Claude Code가 `settings.json`의 `enabledPlugins`와 `extraKnownMarketplaces`를 읽어 플러그인을 자동 설치한다. 플러그인 캐시(`plugins/cache/`)가 생성된 뒤 statusLine이 점등된다.
 
 > **참고**: skills/는 git에서 추적하지 않는다. 플러그인 스킬은 Claude Code가 자동 설치하고, npm/CLI 스킬(slides-grab*, graphify)은 위 2단계에서 직접 설치해야 한다.
-
----
-
-## scripts/install.sh
-
-자동화 설치 스크립트(gum TUI 기반)는 **Plan B**로 예정. 이 저장소에 아직 존재하지 않는다.
 
 ---
 

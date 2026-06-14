@@ -2,7 +2,7 @@
 
 Plannotator 자동 게이트가 작동하는 환경에서 Superpowers·Compound Engineering·CodeGraph·graphify·RTK·.remember를 하나의 7단계 파이프라인으로 묶는 운영 규칙.
 
-**Source of truth (spec)**: `~/my-claude-code-settings/docs/superpowers/specs/2026-05-19-compound-superpowers-hybrid-workflow.md`
+**Source of truth (spec)**: `~/.claude/docs/superpowers/specs/2026-05-19-compound-superpowers-hybrid-workflow.md`
 
 본 문서는 spec 운영 가이드 요약본이다. 단계명·도구명·트리거 조건은 spec과 1:1 일치해야 한다. 본 문서와 spec이 충돌하면 spec이 우선이며, 본 문서를 갱신해 정합을 맞춘다.
 
