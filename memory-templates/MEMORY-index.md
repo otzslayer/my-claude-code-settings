@@ -1,0 +1,1 @@
+- [하이브리드 워크플로우 정책](feedback_hybrid_workflow.md) — spec 채택, ce-compound는 docs/solutions/만, Tier 0/1 자동 변경 금지

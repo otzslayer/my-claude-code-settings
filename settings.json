@@ -1,0 +1,119 @@
+{
+  "skillListingBudgetFraction": 0.03,
+  "env": {
+    "ENABLE_TOOL_SEARCH": "true",
+    "ENABLE_PROMPT_CACHING_1H": "true",
+    "FORCE_PROMPT_CACHING_5M": "false",
+    "CLAUDE_CODE_ENABLE_AWAY_SUMMARY": "true"
+  },
+  "model": "sonnet[1m]",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash $HOME/.claude/hooks/rtk-hook.sh"
+          },
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/rtk-rewrite.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -c 'if (.tool_input.file_path // \"\") | test(\"\\\\.py$\") then {hookSpecificOutput:{hookEventName:\"PreToolUse\",additionalContext:\"Python (.py) file edit detected. If not already done this turn, invoke Skill(skill=\\\"python-coding-style\\\") to apply Ruff config, immutability, naming, type hints, file/function size limits.\"}} else empty end'"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "ExitPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"PLAN APPROVED via Plannotator. This PostToolUse:ExitPlanMode hook fires only on Approve (annotation/edit requests deny the tool and never reach here, so reaching this point means the plan was approved). MANDATORY -- do NOT implement inline in this planning session: (1) Promote the approved plan into docs/plans/ of the CURRENT project (cwd). Plannotator saved the approved plan under ~/.claude/plans/ as the most recently modified .md file; identify it by matching its content to the plan you just submitted, then copy that file (preserving its frontmatter) into docs/plans/ using its frontmatter intended_final_path as the destination, otherwise the convention docs/plans/YYYY-MM-DD-short-slug.md. Create docs/plans/ if missing, and update intended_final_path so it matches the actual saved path. (2) If this project has no docs/plans/ convention, or you cannot confidently identify the approved plan file, do NOT guess -- skip the copy and just report where the plan was saved. (3) Then tell the user to run /clear and, in a fresh session, run /ce-work <docs/plans path> to execute (Build phase -- suggest switching to /model sonnet and /effort high). Inline implementation in this planning session is forbidden.\"}}'",
+            "statusMessage": "Context clear reminder"
+          }
+        ]
+      },
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash $HOME/.claude/hooks/workflow-stage-inject.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "enableWorkflows": true,
+  "statusLine": {
+    "type": "command",
+    "command": "node \"$(ls -td \"$HOME\"/.claude/plugins/cache/claude-dashboard/claude-dashboard/*/ | head -1)dist/index.js\""
+  },
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": true,
+    "skill-creator@claude-plugins-official": true,
+    "context7@claude-plugins-official": true,
+    "claude-md-management@claude-plugins-official": true,
+    "security-guidance@claude-plugins-official": true,
+    "plannotator@plannotator": true,
+    "code-simplifier@claude-plugins-official": true,
+    "commit-commands@claude-plugins-official": true,
+    "compound-engineering@compound-engineering-plugin": true,
+    "claude-hud@claude-hud": true,
+    "claude-dashboard@claude-dashboard": true
+  },
+  "extraKnownMarketplaces": {
+    "plannotator": {
+      "source": {
+        "source": "github",
+        "repo": "backnotprop/plannotator"
+      },
+      "autoUpdate": true
+    },
+    "compound-engineering-plugin": {
+      "source": {
+        "source": "github",
+        "repo": "EveryInc/compound-engineering-plugin"
+      },
+      "autoUpdate": true
+    },
+    "yet-another-statusline": {
+      "source": {
+        "source": "github",
+        "repo": "tmck-code/yet-another-statusline"
+      },
+      "autoUpdate": true
+    },
+    "claude-hud": {
+      "source": {
+        "source": "github",
+        "repo": "jarrodwatts/claude-hud"
+      }
+    },
+    "claude-dashboard": {
+      "source": {
+        "source": "github",
+        "repo": "uppinote20/claude-dashboard"
+      }
+    }
+  },
+  "language": "Korean",
+  "effortLevel": "high",
+  "advisorModel": "opus",
+  "tui": "fullscreen",
+  "agentPushNotifEnabled": true,
+  "skills": {
+    "enabled": true,
+    "path": ".claude/skills"
+  }
+}

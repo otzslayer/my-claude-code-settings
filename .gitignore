@@ -1,0 +1,25 @@
+# Provenance-based allowlist: 기본 전부 무시 → 손-콘텐츠만 opt-in
+# 런타임이 새 디렉토리를 만들어도 기본이 ignore라 노이즈 재유입 없음
+/*
+
+# 코어 파일
+!/.gitignore
+!/.gitattributes
+!/README.md
+!/CLAUDE.md
+!/settings.json
+
+# 손으로 작성한 규칙·메모리 템플릿
+!/rules/
+!/memory-templates/
+
+# 훅: 디렉토리 opt-in → 전체 무시 → .sh만 재opt-in
+!/hooks/
+/hooks/*
+!/hooks/*.sh
+
+# 스크립트: sync-memory-templates.sh + install.sh(Plan B 예정, forward-compat)
+!/scripts/
+/scripts/*
+!/scripts/sync-memory-templates.sh
+!/scripts/install.sh
