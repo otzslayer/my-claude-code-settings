@@ -118,6 +118,62 @@ warn() { echo "WARNING: $*"; }
 ok()   { echo "OK: $*"; }
 skip() { echo "SKIP: $*"; }
 
+# _register_mcp <name> <json_entry> -- ~/.claude.json의 mcpServers에 등록 (idempotent)
+# jq 우선, 없으면 python3 폴백, 둘 다 없으면 수동 안내
+_register_mcp() {
+    local _name="$1"
+    local _entry="$2"
+    local _target="$HOME/.claude.json"
+
+    if command -v jq &>/dev/null; then
+        if [[ -f "$_target" ]] && jq -e --arg n "$_name" '.mcpServers[$n]' "$_target" &>/dev/null; then
+            skip "$_name MCP ~/.claude.json에 이미 등록됨"
+            return
+        fi
+        local _tmp; _tmp="$(mktemp)"
+        if [[ -f "$_target" ]]; then
+            if jq --arg n "$_name" --argjson e "$_entry" \
+                '.mcpServers //= {} | .mcpServers[$n] = $e' \
+                "$_target" > "$_tmp" && mv "$_tmp" "$_target"; then
+                ok "$_name MCP ~/.claude.json에 등록됨"
+            else
+                rm -f "$_tmp"
+                warn "$_name MCP 등록 실패 (jq 오류)"
+            fi
+        else
+            if jq -n --arg n "$_name" --argjson e "$_entry" \
+                '{"mcpServers": {($n): $e}}' > "$_target"; then
+                ok "~/.claude.json 생성 + $_name MCP 등록됨"
+            else
+                warn "$_name MCP 등록 실패"
+            fi
+        fi
+    elif command -v python3 &>/dev/null; then
+        MCP_NAME="$_name" MCP_ENTRY="$_entry" MCP_TARGET="$_target" \
+        python3 -c '
+import json, os, sys
+name = os.environ["MCP_NAME"]
+entry = json.loads(os.environ["MCP_ENTRY"])
+target = os.environ["MCP_TARGET"]
+data = {}
+if os.path.exists(target):
+    with open(target) as f:
+        data = json.load(f)
+if data.get("mcpServers", {}).get(name):
+    print("SKIP: " + name + " MCP already registered"); sys.exit(0)
+data.setdefault("mcpServers", {})[name] = entry
+with open(target, "w") as f:
+    json.dump(data, f, indent=2)
+    f.write("\n")
+print("OK: " + name + " MCP registered in ~/.claude.json")
+'
+    else
+        warn "$_name MCP 수동 등록 필요 (jq/python3 없음):"
+        echo "  ~/.claude.json 의 mcpServers 키에 추가:"
+        echo "  \"$_name\": $_entry"
+    fi
+}
+
 # ---------------------------------------------------
 # 2. 컴포넌트 멀티셀렉트
 # ---------------------------------------------------
@@ -286,6 +342,10 @@ if [[ "$INSTALL_CODEGRAPH" == "true" ]]; then
             echo "  수동: curl -fsSL https://raw.githubusercontent.com/colbymchenry/codegraph/main/install.sh | sh"
         fi
     fi
+    # 바이너리가 있으면 MCP 등록 (설치 직후 or 이미 설치된 경우 모두 idempotent)
+    if command -v codegraph &>/dev/null; then
+        _register_mcp "codegraph" '{"type":"stdio","command":"codegraph","args":["serve","--mcp"]}'
+    fi
 fi
 
 # ---- graphify ----
@@ -407,9 +467,9 @@ echo
 echo "  1. Claude Code 재시작"
 echo "     -> 플러그인 자동 설치 (compound-engineering, superpowers 등)"
 echo
-echo "  2. MCP 서버 수동 설정"
-echo "     -> codegraph, computer-use, sequential-thinking 등"
-echo "     -> 설정: ~/.claude/settings.json  (mcp 섹션)"
+echo "  2. 나머지 MCP 서버 수동 설정"
+echo "     -> computer-use, sequential-thinking 등 (codegraph는 자동 등록됨)"
+echo "     -> 설정: ~/.claude.json  (mcpServers 키)"
 echo
 echo "  3. clone 후 매번: skip-worktree 재확인"
 echo "     -> git ls-files -v settings.json"
