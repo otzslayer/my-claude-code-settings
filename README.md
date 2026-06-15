@@ -4,6 +4,8 @@
 
 **메인 하네스**: Compound + Superpowers 하이브리드 워크플로우 (`rules/hybrid-workflow.md`)
 
+**발표자료**: [`PRESENTATION.pdf`](PRESENTATION.pdf) — 이 저장소가 추구하는 하이브리드 워크플로우 설명 자료
+
 ---
 
 ## 설치
@@ -19,9 +21,10 @@ bash ~/.claude/scripts/install.sh
 
 **설치기가 처리하는 항목**:
 - rtk (token optimizer) + `rtk init -g` (RTK.md 생성 — 순서 보장)
-- codegraph (symbol-level code intelligence)
+- codegraph (symbol-level code intelligence) — `~/.claude.json`에 MCP 자동 등록 (idempotent)
 - graphify (knowledge graph CLI)
 - slides-grab (npm 패키지)
+- plannotator (Plan Mode 브라우저 리뷰 UI 바이너리 — plannotator 플러그인 prerequisite)
 - 메모리 seed 동기화 (`memory-templates/`)
 - `settings.json` skip-worktree 적용 (permissions 재유입 방지)
 
@@ -59,6 +62,9 @@ uv tool install graphifyy
 
 # slides-grab (npm 패키지, Codex용)
 npm install -g slides-grab
+
+# plannotator (Plan Mode 브라우저 리뷰 UI 바이너리)
+curl -fsSL https://plannotator.ai/install.sh | bash
 ```
 
 #### 3단계: 저장소 복제
@@ -98,9 +104,10 @@ Claude Code가 `settings.json`의 `enabledPlugins`와 `extraKnownMarketplaces`�
 | `settings.json` | 포터블화된 플러그인·훅 설정 |
 | `rules/` | 행동 규칙 파일 4종 |
 | `memory-templates/` | 세션 간 메모리 seed |
-| `hooks/*.sh` | rtk-hook, rtk-rewrite, workflow-stage-inject |
+| `hooks/*.sh` | rtk-hook, rtk-rewrite, workflow-stage-inject, graphify-install-check |
 | `scripts/sync-memory-templates.sh` | 메모리 템플릿 동기화 |
 | `.gitignore`, `.gitattributes`, `README.md` | 저장소 메타 |
+| `PRESENTATION.pdf` | 하이브리드 워크플로우 발표자료 |
 
 ### 추적하지 않는 것 (기본 무시)
 
@@ -147,9 +154,9 @@ Phase 3: Ship   [Sonnet·high]  verify → /ce-compound → commit+PR
 
 ### 의존 MCP 서버
 
-- `codegraph` — symbol-level code intelligence (`.codegraph/` 인덱스)
-- `computer-use` — 스크린샷·GUI 자동화
-- `sequential-thinking` — 다단계 추론
+- `codegraph` — symbol-level code intelligence (`.codegraph/` 인덱스). `install.sh`가 `~/.claude.json`에 자동 등록
+- `computer-use` — 스크린샷·GUI 자동화 (수동 등록)
+- `sequential-thinking` — 다단계 추론 (수동 등록)
 
 ---
 
