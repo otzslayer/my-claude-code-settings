@@ -52,6 +52,17 @@
           }
         ]
       }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash $HOME/.claude/hooks/graphify-install-check.sh",
+            "statusMessage": "graphify 설정 확인"
+          }
+        ]
+      }
     ]
   },
   "enableWorkflows": true,
