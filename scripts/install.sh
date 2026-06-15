@@ -183,25 +183,35 @@ INSTALL_RTK=false
 INSTALL_CODEGRAPH=false
 INSTALL_GRAPHIFY=false
 INSTALL_SLIDES=false
+INSTALL_PLANNOTATOR=false
+
+# 컴포넌트 라벨 (역할 설명 포함) -- gum choose 표시 / plain read 안내 / 선택 요약에서 공용
+_OPT_RTK="rtk (출력 토큰 압축 프록시)"
+_OPT_CODEGRAPH="codegraph (심볼 단위 코드 인텔리전스 MCP)"
+_OPT_GRAPHIFY="graphify (코드 지식 그래프 네비게이션)"
+_OPT_SLIDES="slides-grab (HTML -> 슬라이드 덱 생성 CLI)"
+_OPT_PLANNOTATOR="plannotator (Plan Mode 브라우저 리뷰 UI 바이너리)"
 
 if [[ "$GUM_OK" == "true" ]]; then
     # gum choose --no-limit: 선택 항목을 한 줄씩 stdout 출력
     _sel_file="$(mktemp)"
-    gum choose --no-limit "rtk" "codegraph" "graphify" "slides-grab" > "$_sel_file" || true
-    grep -qx "rtk"         "$_sel_file" && INSTALL_RTK=true
-    grep -qx "codegraph"   "$_sel_file" && INSTALL_CODEGRAPH=true
-    grep -qx "graphify"    "$_sel_file" && INSTALL_GRAPHIFY=true
-    grep -qx "slides-grab" "$_sel_file" && INSTALL_SLIDES=true
+    gum choose --no-limit "$_OPT_RTK" "$_OPT_CODEGRAPH" "$_OPT_GRAPHIFY" "$_OPT_SLIDES" "$_OPT_PLANNOTATOR" > "$_sel_file" || true
+    grep -qxF "$_OPT_RTK"         "$_sel_file" && INSTALL_RTK=true
+    grep -qxF "$_OPT_CODEGRAPH"   "$_sel_file" && INSTALL_CODEGRAPH=true
+    grep -qxF "$_OPT_GRAPHIFY"    "$_sel_file" && INSTALL_GRAPHIFY=true
+    grep -qxF "$_OPT_SLIDES"      "$_sel_file" && INSTALL_SLIDES=true
+    grep -qxF "$_OPT_PLANNOTATOR" "$_sel_file" && INSTALL_PLANNOTATOR=true
     rm -f "$_sel_file"
 else
     echo "번호를 공백으로 구분해 입력 (기본값: 전체 선택):"
-    echo "  1) rtk"
-    echo "  2) codegraph"
-    echo "  3) graphify"
-    echo "  4) slides-grab"
-    read -rp "> [기본: 1 2 3 4] " _raw_sel || true
+    echo "  1) $_OPT_RTK"
+    echo "  2) $_OPT_CODEGRAPH"
+    echo "  3) $_OPT_GRAPHIFY"
+    echo "  4) $_OPT_SLIDES"
+    echo "  5) $_OPT_PLANNOTATOR"
+    read -rp "> [기본: 1 2 3 4 5] " _raw_sel || true
     if [[ -z "${_raw_sel:-}" ]]; then
-        _raw_sel="1 2 3 4"
+        _raw_sel="1 2 3 4 5"
     fi
     for _n in $_raw_sel; do
         case "$_n" in
@@ -209,16 +219,18 @@ else
             2) INSTALL_CODEGRAPH=true ;;
             3) INSTALL_GRAPHIFY=true ;;
             4) INSTALL_SLIDES=true ;;
+            5) INSTALL_PLANNOTATOR=true ;;
         esac
     done
 fi
 
 echo
 echo "선택된 컴포넌트:"
-[[ "$INSTALL_RTK"        == "true" ]] && echo "  * rtk"
-[[ "$INSTALL_CODEGRAPH"  == "true" ]] && echo "  * codegraph"
-[[ "$INSTALL_GRAPHIFY"   == "true" ]] && echo "  * graphify"
-[[ "$INSTALL_SLIDES"     == "true" ]] && echo "  * slides-grab"
+[[ "$INSTALL_RTK"         == "true" ]] && echo "  * $_OPT_RTK"
+[[ "$INSTALL_CODEGRAPH"   == "true" ]] && echo "  * $_OPT_CODEGRAPH"
+[[ "$INSTALL_GRAPHIFY"    == "true" ]] && echo "  * $_OPT_GRAPHIFY"
+[[ "$INSTALL_SLIDES"      == "true" ]] && echo "  * $_OPT_SLIDES"
+[[ "$INSTALL_PLANNOTATOR" == "true" ]] && echo "  * $_OPT_PLANNOTATOR"
 echo
 
 # ---------------------------------------------------
@@ -388,6 +400,31 @@ if [[ "$INSTALL_SLIDES" == "true" ]]; then
             warn "npm 없음 -- slides-grab 설치 불가."
             FAILED_TOOLS+=("slides-grab")
             echo "  수동: npm install -g slides-grab  (node/npm 설치 후)"
+        fi
+    fi
+fi
+
+# ---- plannotator (Plan Mode 브라우저 리뷰 UI 바이너리) ----
+# 주의: 이 바이너리는 plannotator@plannotator 플러그인의 prerequisite다.
+# 플러그인 훅(PermissionRequest:ExitPlanMode)이 PATH의 `plannotator` 커맨드를 호출하므로,
+# settings.json으로 플러그인이 자동 설치돼도 이 바이너리가 없으면 Plan 리뷰 UI가 동작하지 않는다.
+if [[ "$INSTALL_PLANNOTATOR" == "true" ]]; then
+    if command -v plannotator &>/dev/null; then
+        skip "plannotator 이미 설치됨"
+    else
+        echo "plannotator 설치 중..."
+        if spin "plannotator 설치 중..." \
+            bash -c 'curl -fsSL https://plannotator.ai/install.sh | bash'; then
+            export PATH="$HOME/.local/bin:$PATH"
+            if command -v plannotator &>/dev/null; then
+                ok "plannotator 설치 완료"
+            else
+                warn "plannotator 설치는 됐으나 PATH에서 찾을 수 없습니다 -- ~/.local/bin을 PATH에 추가하세요."
+            fi
+        else
+            warn "plannotator 설치 실패."
+            FAILED_TOOLS+=("plannotator")
+            echo "  수동: curl -fsSL https://plannotator.ai/install.sh | bash"
         fi
     fi
 fi
