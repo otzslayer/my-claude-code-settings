@@ -26,16 +26,16 @@
 - Match existing code style
 
 ### Tool Usage (token-optimized)
-- **Code intelligence (read)**: CodeGraph MCP — `codegraph_explore` 우선 (PRIMARY: NL 질문 또는 심볼/파일명 → 관련 심볼 소스를 파일별로 한 번에, Read 대체). 보조: `codegraph_search`(이름→위치만), `codegraph_node`(단일 심볼 전체 소스·시그니처, 오버로드 처리)
-- **Code relationships**: CodeGraph `codegraph_callers`(누가 X를 호출) / `codegraph_callees`(X가 무엇을 호출) / `codegraph_impact`(X 변경 시 영향 범위 — 리팩토링 전 필수). grep으로 못 따라가는 동적 디스패치까지 추적
-- **Project layout**: CodeGraph `codegraph_files` (인덱싱된 파일 트리·심볼 수 — Glob보다 빠름)
-- **Text/regex 검색**: `Grep` 유지 — CodeGraph는 심볼 그래프라 문자열/정규식 검색은 하지 않음
-- **File/dir lookup**: `Glob` (파일명·글롭) / `Bash(ls)` (디렉토리 나열) — `codegraph_files`가 못 잡는 비코드 파일·특정 경로
-- **Code edits**: 표준 `Edit`/`Write`가 **주 경로** — CodeGraph는 읽기 전용(편집 도구 없음). 편집 *전*에 `codegraph_impact`/`codegraph_callers`로 blast radius부터 파악 ("consult BEFORE editing, not during"). 인덱스는 파일 워처가 ~1초 내 자동 갱신 — 수동 갱신 불필요
-- **ce-plan 리서치 단계**: CodeGraph `codegraph_explore`·`codegraph_callers`·`codegraph_impact`로 코드베이스 패턴·의존성 자동 수집 (병렬 리서치 에이전트 보조)
-- **ce-work 구현 단계**: 편집 전 `codegraph_impact`로 영향 범위 확인 → `Edit`로 변경
-- **Knowledge graph (broad)**: `/graphify` — 광범위 네비게이션·아키텍처 개요. 심볼 단위 질의("X가 뭐냐 / 누가 X를 호출하나 / X 바꾸면 뭐가 깨지나")는 CodeGraph
-- **Read**: 비코드 파일(`.md`, `.json`, `.toml`, `.yaml`)이나 `codegraph_explore`가 못 잡는 코드 영역 확인용
+- **Code intelligence (read)**: CodeGraph MCP — prefer `codegraph_explore` (PRIMARY: an NL question or symbol/file name → the relevant symbols' source per file in one shot, replacing Read). Secondary: `codegraph_search` (name → location only), `codegraph_node` (a single symbol's full source + signature, handles overloads)
+- **Code relationships**: CodeGraph `codegraph_callers` (who calls X) / `codegraph_callees` (what X calls) / `codegraph_impact` (blast radius when changing X — required before refactoring). Tracks even the dynamic dispatch that grep can't follow
+- **Project layout**: CodeGraph `codegraph_files` (indexed file tree + symbol counts — faster than Glob)
+- **Text/regex search**: keep `Grep` — CodeGraph is a symbol graph and does not do string/regex search
+- **File/dir lookup**: `Glob` (filename/glob) / `Bash(ls)` (directory listing) — for non-code files or specific paths that `codegraph_files` doesn't capture
+- **Code edits**: standard `Edit`/`Write` are the **main path** — CodeGraph is read-only (no edit tools). *Before* editing, assess the blast radius with `codegraph_impact`/`codegraph_callers` ("consult BEFORE editing, not during"). The index is auto-refreshed by the file watcher within ~1s — no manual refresh needed
+- **ce-plan research stage**: gather codebase patterns and dependencies automatically with CodeGraph `codegraph_explore`/`codegraph_callers`/`codegraph_impact` (assisting the parallel research agents)
+- **ce-work implementation stage**: check the blast radius with `codegraph_impact` before editing → make changes with `Edit`
+- **Knowledge graph (broad)**: `/graphify` — broad navigation and architecture overview. Symbol-level queries ("what is X / who calls X / what breaks if I change X") go to CodeGraph
+- **Read**: for non-code files (`.md`, `.json`, `.toml`, `.yaml`) or code areas that `codegraph_explore` doesn't capture
 - **Never** `cat`/`head`/`tail`/`sed`/`awk`
 
 ## ⚠️ Ask First (Require Approval)

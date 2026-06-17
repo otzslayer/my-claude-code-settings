@@ -20,21 +20,21 @@ Call `Skill(skill="superpowers:using-superpowers")` before any file reads or cla
 
 | Trigger | Skill | Model · effort |
 |---------|-------|----------------|
-| New feature / component / behavior change | `superpowers:brainstorming` — 95% confidence opener. 산출 spec은 plan 단계에서 항상 `/ce-plan`으로 이어감 (진입 스킬이 자체 plan 도구를 제시해도 이 파이프라인 우선) | Opus · `xhigh` |
-| Multi-step implementation task (Plan Mode 안에서) | `ce-plan` | Opus · `xhigh` |
-| Plan 실행 | `ce-work <plan-path>` | Sonnet · `high` |
+| New feature / component / behavior change | `superpowers:brainstorming` — 95% confidence opener. The resulting spec always continues into the plan stage via `/ce-plan` (this pipeline takes priority even if the entry skill offers its own plan tool) | Opus · `xhigh` |
+| Multi-step implementation task (within Plan Mode) | `ce-plan` | Opus · `xhigh` |
+| Plan execution | `ce-work <plan-path>` | Sonnet · `high` |
 | Bug or failing test | `superpowers:systematic-debugging` | Opus · `xhigh` |
-| Implementation work | `superpowers:test-driven-development` (트리비얼 면제) | Sonnet · `high` |
-| Code review | `ce-code-review` | Opus · `xhigh` (리뷰어 subagent / 세션은 Sonnet 유지) |
+| Implementation work | `superpowers:test-driven-development` (trivial-case exemption) | Sonnet · `high` |
+| Code review | `ce-code-review` | Opus · `xhigh` (reviewer subagents / session stays on Sonnet) |
 | Before claiming task complete | `superpowers:verification-before-completion` | Sonnet · `high` |
-| 학습 누적 (작업 완료 후) | `/ce-compound mode:headless` | Sonnet · `high` |
-| 커밋·푸시·PR | `superpowers:finishing-a-development-branch` | Sonnet · `high` |
-| Writing/editing Python (`.py`) | `python-coding-style` | (현재 단계 모델 유지) |
-| New Python project / directory layout | `python-architecture` | (현재 단계 모델 유지) |
+| Learning accumulation (after work completes) | `/ce-compound mode:headless` | Sonnet · `high` |
+| Commit · push · PR | `superpowers:finishing-a-development-branch` | Sonnet · `high` |
+| Writing/editing Python (`.py`) | `python-coding-style` | (keep current stage's model) |
+| New Python project / directory layout | `python-architecture` | (keep current stage's model) |
 
 Domain skills (FastAPI, LangChain, etc.) layer on top when relevant. Available skills are auto-listed in session context — invoke via `Skill(skill="...")`.
 
-**Model · effort 정책**: 위 열은 각 단계의 권장 실행 모델과 reasoning effort다. **메인 에이전트는 세션 도중 스스로 모델을 바꿀 수 없으므로**, 각 단계(특히 `/clear` 후 새 세션) 시작 시 그 단계의 권장 모델·effort를 announce하고 현재 설정과 다르면 사용자에게 `/model`·`/effort` 전환을 안내한 뒤 진행한다(강제 금지, 안내·확인만). 현재 글로벌 디폴트는 `model: Opus`·`effortLevel: xhigh`이므로 Opus 단계는 전환 불필요, Sonnet 단계 진입 시 `/model sonnet`·`/effort high`를 안내한다. **예외 — ce-code-review**: Phase 2' 내부라 `/clear` 경계가 아니므로 세션 모델을 바꾸지 않는다(세션 Sonnet 유지, 세션 중 전환의 캐시 비용 회피). "Opus xhigh"는 6+ 리뷰어 subagent 레벨 권장을 뜻한다. 정식 정의·근거는 `~/.claude/rules/hybrid-workflow.md` "단계별 모델 정책" 참조.
+**Model · effort policy**: The column above is the recommended execution model and reasoning effort for each stage. **Since the main agent cannot switch its own model mid-session**, at the start of each stage (especially a new session after `/clear`), announce that stage's recommended model · effort and, if it differs from the current setting, guide the user to switch via `/model`·`/effort` before proceeding (never enforce — announce and confirm only). The current global default is `model: Opus`·`effortLevel: xhigh`, so Opus stages need no switch; when entering a Sonnet stage, guide `/model sonnet`·`/effort high`. **Exception — ce-code-review**: it runs inside Phase 2', not at a `/clear` boundary, so the session model does not change (session stays on Sonnet, avoiding the cache cost of an in-session switch). "Opus xhigh" here means the 6+ reviewer subagent level is recommended. For the formal definition and rationale, see the "Per-stage model policy" section in `~/.claude/rules/hybrid-workflow.md`.
 
 ## Core Principles
 
@@ -78,12 +78,12 @@ Before complex tasks: Plan Mode → Analyze → Draft plan → Resolve ambiguiti
 
 **Plan Persistence (MANDATORY — Complex tasks)**:
 
-1. Plan Mode 진입 (Shift+Tab)
-2. `/ce-plan`으로 `docs/plans/<draft>.md` 작성 (ce-plan 인터랙티브 질문 응답; `docs/plans/` 디렉토리가 없으면 생성)
-3. `ExitPlanMode` 호출 — plan 인자에 ce-plan 결과 경로·요약 포함
-4. plannotator hook 자동 발동 → browser UI에서 어노테이션·승인
-5. 어노테이션 반영 또는 승인 → `docs/plans/YYYY-MM-DD-<summary>.md` 최종 저장 (revision 시 같은 파일, 원 날짜 유지)
-6. `/clear` → 새 세션에서 `/ce-work <plan-path>`로 실행 (Plan은 Opus·`xhigh`, Build는 Sonnet·`high` — 새 세션 시작 시 `/model sonnet`·`/effort high` 전환 안내)
+1. Enter Plan Mode (Shift+Tab)
+2. Author `docs/plans/<draft>.md` via `/ce-plan` (answer ce-plan's interactive questions; create the `docs/plans/` directory if it doesn't exist)
+3. Call `ExitPlanMode` — include the ce-plan result path and summary in the plan argument
+4. The plannotator hook fires automatically → annotate and approve in the browser UI
+5. Apply annotations or approve → final save to `docs/plans/YYYY-MM-DD-<summary>.md` (on revision, reuse the same file and keep the original date)
+6. `/clear` → execute via `/ce-work <plan-path>` in a new session (Plan is Opus·`xhigh`, Build is Sonnet·`high` — at new-session start, guide the `/model sonnet`·`/effort high` switch)
 7. NEVER implement inline in the same planning session — this wastes planning context tokens
 
 ### When Stuck (Max 3 Attempts)
@@ -104,7 +104,7 @@ Extended guidelines in `~/.claude/rules/`:
 - `boundaries.md` — Auto/Ask/Never permission tiers, tool-usage policy
 - `karpathy-principles.md` — Full principles detail
 - `git-workflow.md` — Commit format, branch naming, PR workflow
-- `hybrid-workflow.md` — Compound + Superpowers 하이브리드 파이프라인 운영 규칙
+- `hybrid-workflow.md` — Operating rules for the Compound + Superpowers hybrid pipeline
 - `security.md` — Pre-commit checklist, secret management
 
 Active hooks live in `~/.claude/settings.json` under `hooks` (source of truth — view with `/hooks`).
@@ -120,19 +120,25 @@ this is per-project, not global):
 ## Tools & References
 
 ### RTK (Token Optimizer)
-@~/.claude/RTK.md
+@RTK.md
 
-## CodeGraph (symbol-level code intelligence)
+<!-- CODEGRAPH_START -->
+## CodeGraph
 
-CodeGraph는 워크스페이스의 모든 심볼·호출·파일을 인덱싱한 SQLite 지식 그래프(`.codegraph/`)다. 읽기는 sub-millisecond이고, 파일 워처가 쓰기를 ~1초 내 자동 반영하므로 **수동 갱신이 필요 없다**. 코드를 읽거나 수정하기 **전에** 조회한다 (consult BEFORE editing, not during).
+In repositories indexed by CodeGraph (a `.codegraph/` directory exists at the repo root), reach for it BEFORE grep/find or reading files when you need to understand or locate code:
 
-Rules:
-- 코드 관련 질문("X가 어떻게 동작하나", 아키텍처, "X가/어디 있나", 특정 영역 훑어보기)은 먼저 `codegraph_explore`를 호출한다 — NL 질문 또는 심볼/파일명을 주면 관련 심볼 소스를 파일별로 한 번에 돌려준다(Read 대체). 보통 이 한 번이면 충분하다.
-- 이름으로 위치만 찾을 땐 `codegraph_search`, 단일 심볼의 전체 소스·시그니처는 `codegraph_node`.
-- 관계는 `codegraph_callers`(누가 X를 호출) / `codegraph_callees`(X가 무엇을 호출) / `codegraph_impact`(X를 바꾸면 무엇이 깨지나 — 리팩토링 전 필수). grep으로 못 따라가는 동적 디스패치(콜백·재렌더 등)까지 추적한다.
-- 프로젝트 레이아웃은 `codegraph_files`(인덱싱된 파일 트리·심볼 수 — Glob보다 빠름).
-- CodeGraph는 **읽기 전용**이다 — 편집 도구가 없으므로 코드 수정은 표준 `Edit`/`Write`로 한다. 텍스트/정규식 검색도 CodeGraph가 하지 않으므로 `Grep`을 쓴다.
-- **CodeGraph vs graphify**: 심볼 단위 질의(무엇/누가 호출/무엇이 깨지나)는 CodeGraph, 광범위 네비게이션·아키텍처 개요는 graphify(아래).
+- **MCP tools** (when available): `codegraph_explore` answers most code questions in one call — the relevant symbols' verbatim source plus the call paths between them. `codegraph_node` returns one symbol's source + callers, or reads a whole file with line numbers. If the tools are listed but deferred, load them by name via tool search.
+- **Shell** (always works): `codegraph explore "<symbol names or question>"` and `codegraph node <symbol-or-file>` print the same output.
+
+If there is no `.codegraph/` directory, skip CodeGraph entirely — indexing is the user's decision.
+<!-- CODEGRAPH_END -->
+
+### CodeGraph — relationships & impact (indexed repos only)
+
+- Relationships/impact (symbol-level): `codegraph_callers` / `codegraph_callees` / `codegraph_impact` (MCP), or shell `codegraph callers|callees|impact <symbol>`. Before refactoring, check the blast radius with `impact`.
+- Project layout: `codegraph_files` (MCP) / `codegraph files` (shell) — takes no argument, the indexed file tree.
+- Read-only — make edits with `Edit`/`Write`, do text/regex search with `Grep`.
+- Symbol-level queries go to CodeGraph; broad navigation and architecture overview go to `graphify` (below).
 
 ## graphify
 
@@ -143,5 +149,3 @@ Rules:
 - If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
-
-@RTK.md

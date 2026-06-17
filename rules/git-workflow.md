@@ -3,14 +3,14 @@
 ## Commit Message Format
 
 ```
-<type>: <한국어 설명>
+<type>: <description in Korean>
 
-- <변경 이유 또는 맥락 (한국어)>
-- <주요 변경 사항 (한국어)>
+- <reason or context for the change (in Korean)>
+- <key changes (in Korean)>
 ```
 
-- `<description>`: 한국어로 작성, 명령형 현재형 (예: "로그인 기능 추가", "버그 수정")
-- `<optional body>`: 불릿(`-`) 리스트로 작성, 한국어로 작성. WHY와 주요 변경 사항 위주로 기술
+- `<description>`: Written in Korean, imperative present tense (e.g., "로그인 기능 추가", "버그 수정")
+- `<optional body>`: Written as a bullet (`-`) list, in Korean. Focus on the WHY and the key changes.
 
 Types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`, `ci`
 
