@@ -271,6 +271,53 @@ if [[ "$INSTALL_RTK" == "true" ]] && [[ "$PLATFORM" == "macOS" ]]; then
     fi
 fi
 
+# jq: rtk-rewrite.sh 훅의 하드 의존 (없으면 명령 재작성 훅이 조용히 비활성화됨).
+# _register_mcp / 플러그인 안내도 jq를 선호하므로 section 4 이전에 확보한다.
+if [[ "$INSTALL_RTK" == "true" ]]; then
+    if command -v jq &>/dev/null; then
+        ok "jq $(jq --version)"
+    else
+        echo "jq가 없습니다. 자동 설치를 시도합니다 (rtk 훅 전제)..."
+        _jq_installed=false
+        if [[ "$PLATFORM" == "macOS" ]]; then
+            if command -v brew &>/dev/null && spin "jq 설치 중 (brew)..." brew install jq; then
+                _jq_installed=true
+            fi
+        else
+            if command -v apt-get &>/dev/null \
+                && spin "jq 설치 중 (apt)..." bash -c 'sudo apt-get install -y jq'; then
+                _jq_installed=true
+            fi
+            # apt 실패 시 release binary fallback
+            if [[ "$_jq_installed" == "false" ]]; then
+                _local_bin="$HOME/.local/bin"
+                mkdir -p "$_local_bin"
+                case "$(uname -m)" in
+                    x86_64)  _jq_arch="amd64" ;;
+                    aarch64) _jq_arch="arm64" ;;
+                    *)       _jq_arch="amd64" ;;
+                esac
+                _jq_url="https://github.com/jqlang/jq/releases/latest/download/jq-linux-${_jq_arch}"
+                if curl -fsSL "$_jq_url" -o "$_local_bin/jq" 2>/dev/null && chmod +x "$_local_bin/jq"; then
+                    export PATH="$_local_bin:$PATH"
+                    command -v jq &>/dev/null && _jq_installed=true
+                fi
+            fi
+        fi
+
+        if [[ "$_jq_installed" == "true" ]]; then
+            ok "jq 설치 완료 ($(jq --version))"
+        else
+            warn "jq 설치 실패 -- rtk 명령 재작성 훅이 비활성화됩니다."
+            if [[ "$PLATFORM" == "macOS" ]]; then
+                echo "  수동: brew install jq"
+            else
+                echo "  수동: sudo apt-get install -y jq  또는  https://jqlang.github.io/jq/download/"
+            fi
+        fi
+    fi
+fi
+
 echo
 
 # ---------------------------------------------------
