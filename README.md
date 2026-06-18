@@ -20,7 +20,7 @@ bash ~/.claude/scripts/install.sh
 `scripts/install.sh`는 gum TUI 기반 인터랙티브 설치기다. macOS와 WSL2를 지원하며, gum이 없으면 plain read 폴백으로 동작한다.
 
 **설치기가 처리하는 항목**:
-- rtk (token optimizer) + `rtk init -g` (RTK.md 생성 — 순서 보장)
+- rtk (token optimizer) + jq (rtk-rewrite 훅의 하드 의존) + `rtk init -g` (RTK.md 생성 — 순서 보장)
 - codegraph (symbol-level code intelligence) — `~/.claude.json`에 MCP 자동 등록 (idempotent)
 - graphify (knowledge graph CLI)
 - slides-grab (npm 패키지)
@@ -43,6 +43,9 @@ bash ~/.claude/scripts/install.sh
 ```bash
 # RTK (token optimizer) 설치 — brew tap이 없다면 GitHub Releases에서 직접 설치
 brew install reachingforthejack/rtk/rtk   # 또는 릴리즈 바이너리 직접 설치
+
+# jq — rtk-rewrite 훅의 하드 의존 (없으면 명령 재작성 훅이 조용히 비활성화됨)
+brew install jq   # Linux/WSL2: sudo apt-get install -y jq
 
 # RTK.md 글로벌 초기화 — 이 단계 없이는 CLAUDE.md @RTK.md import가 깨짐
 rtk init -g
