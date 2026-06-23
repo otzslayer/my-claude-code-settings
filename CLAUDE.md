@@ -78,7 +78,7 @@ Before complex tasks: Plan Mode → Analyze → Draft plan → Resolve ambiguiti
 
 **Plan Persistence (MANDATORY — Complex tasks)**:
 
-1. Enter Plan Mode (Shift+Tab)
+1. Enter Plan Mode — press Shift+Tab, **or** the agent calls the `EnterPlanMode` tool (which carries a user-approval gate). Unlike model·effort switches (which the agent cannot perform mid-session), Plan Mode entry **can** be triggered by the agent itself via this tool. **ce-plan operates only inside Plan Mode** — it is the precondition for the plannotator gate. So if you are about to invoke `/ce-plan` and are not already in Plan Mode, call `EnterPlanMode` FIRST, then invoke ce-plan. (The `workflow-stage-inject.sh` `*ce-plan` hook re-asserts this at runtime **when ce-plan is invoked via the Skill tool**; a user-typed `/ce-plan` slash command may load without a Skill call and bypass the hook, so this step-1 guidance — always in context at session start — is the primary guarantee, with the hook as a supplementary backstop.)
 2. Author `docs/plans/<draft>.md` via `/ce-plan` (answer ce-plan's interactive questions; create the `docs/plans/` directory if it doesn't exist)
 3. Call `ExitPlanMode` — include the ce-plan result path and summary in the plan argument
 4. The plannotator hook fires automatically → annotate and approve in the browser UI

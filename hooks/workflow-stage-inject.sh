@@ -4,8 +4,9 @@
 # 모델·effort 전환은 메인 에이전트가 세션 중 스스로 못 하므로,
 # 주입 내용은 "announce + 사용자에게 전환 안내"이며 강제가 아니라 강한 넛지다.
 #
-# salience 보존: 원래 목표인 brainstorming opener만 full 문단으로 두고,
-# 자주 호출되는 나머지 단계는 terse 1줄로 유지한다(additionalContext 습관화 → opener 희석 방지).
+# salience 보존: brainstorming opener는 full 문단으로 둔다.
+# ce-plan은 Plan Mode 진입 게이트(파이프라인 전제조건)라 의도적으로 격상해 multi-sentence로 둔다.
+# 그 외 자주 호출되는 단계는 terse 1줄로 유지한다(additionalContext 습관화 → opener 희석 방지).
 
 input=$(cat)
 skill=$(printf '%s' "$input" | grep -oP '"skill"\s*:\s*"\K[^"]*' | head -1)
@@ -17,9 +18,9 @@ emit() {
 
 case "$skill" in
   *brainstorming)
-    emit "BRAINSTORMING STARTED — MANDATORY FIRST TURN: rules/hybrid-workflow.md의 95퍼센트 confidence opener 규칙에 따라, 일반적인 무엇을 만들까요 식 질문 대신 반드시 다음 opener로 첫 turn을 시작하라 → 지금 만들려는 것에 대해 1-2문장으로 설명해 주세요. 저는 95퍼센트 확신이 생길 때까지 질문을 던지겠습니다, 표면적으로 원하는 것이 아니라 진짜로 필요한 것을 짚기 위해서입니다. 가정과 엣지 케이스를 도전하겠습니다. 이후 한 번에 한 질문 원칙으로 95퍼센트 확신까지 반복하고, 그 미만에서 설계 단계로 넘어가지 말 것. 제품성 작업이면 evidence·specificity·counterfactual·attachment·durability 5렌즈로 질문을 도출하라. 브레인스토밍 종료 시 superpowers가 writing-plans 호출을 안내해도 따르지 말고 /clear 후 /ce-plan으로 진행하라(이 파이프라인은 writing-plans 미사용)." ;;
+    emit "BRAINSTORMING STARTED — MANDATORY FIRST TURN: rules/hybrid-workflow.md의 95퍼센트 confidence opener 규칙에 따라, 일반적인 무엇을 만들까요 식 질문 대신 반드시 다음 opener로 첫 turn을 시작하라 → 지금 만들려는 것에 대해 1-2문장으로 설명해 주세요. 저는 95퍼센트 확신이 생길 때까지 질문을 던지겠습니다, 표면적으로 원하는 것이 아니라 진짜로 필요한 것을 짚기 위해서입니다. 가정과 엣지 케이스를 도전하겠습니다. 이후 한 번에 한 질문 원칙으로 95퍼센트 확신까지 반복하고, 그 미만에서 설계 단계로 넘어가지 말 것. 제품성 작업이면 evidence·specificity·counterfactual·attachment·durability 5렌즈로 질문을 도출하라. 브레인스토밍 종료 시 superpowers가 writing-plans 호출을 안내해도 따르지 말고 /clear 후 /ce-plan으로 진행하라(이 파이프라인은 writing-plans 미사용). ce-plan은 Plan Mode 안에서만 동작하므로 /clear 직후 Plan Mode가 아니면 EnterPlanMode 도구로 먼저 진입한 뒤 ce-plan을 호출하라." ;;
   *ce-plan)
-    emit "Phase 2 PLAN: Opus·xhigh 권장(디폴트와 동일, 전환 불필요). 병렬 리서치+Serena 패턴 수집, docs/solutions/ 파일 3개 이상이면 ce-learnings-researcher 조회. docs/plans/ 초안 → ExitPlanMode(plannotator) → /clear." ;;
+    emit "Phase 2 PLAN: MANDATORY FIRST — ce-plan은 Plan Mode 안에서만 동작한다(plannotator 게이트의 전제조건). 지금 Plan Mode가 아니면 즉시 멈추고 EnterPlanMode 도구를 먼저 호출하라 — 모델·effort 전환과 달리 Plan Mode 진입은 에이전트가 도구로 가능하다(호출 시 사용자 승인 게이트). 진입 후 ce-plan 재개. 이후: Opus·xhigh 권장(디폴트와 동일, 전환 불필요). 병렬 리서치+Serena 패턴 수집, docs/solutions/ 파일 3개 이상이면 ce-learnings-researcher 조회. docs/plans/ 초안 → ExitPlanMode(plannotator) → /clear." ;;
   *test-driven-development)
     emit "Phase 2-prime BUILD(TDD): Sonnet·high 권장 — 현재 Opus면 /model sonnet·/effort high 전환 안내(강제 아님). RED→GREEN→REFACTOR, 트리비얼 면제." ;;
   *ce-work)

@@ -21,7 +21,7 @@ Phase 1: Spec  ▸ Opus · xhigh
        │
        ▼  /clear  (next stage is also Opus xhigh — no switch needed)
 Phase 2: Plan  ▸ Opus · xhigh  (when the Plan Mode trigger is met)
-  1. Enter Plan Mode (Shift+Tab)
+  1. Enter Plan Mode (Shift+Tab, or the agent's EnterPlanMode tool — ce-plan runs only inside Plan Mode, the plannotator gate precondition)
   2. /ce-plan  [Opus·xhigh]  (parallel research + CodeGraph codegraph_explore/codegraph_callers/codegraph_impact
               + ce-learnings-researcher: query past learnings in docs/solutions/ — only when 3+ files)
               → docs/plans/<draft>.md
@@ -73,6 +73,8 @@ The recommended execution model and reasoning effort for each stage. This sectio
 ### Switch mechanism (manual guidance at boundaries)
 
 > **Constraint**: The main agent **cannot switch its own model mid-session.** Model·effort switches are only possible via the user's `/model`·`/effort` input or in a new session after `/clear`.
+
+> **Plan Mode is the exception**: Unlike model·effort switches, Plan Mode entry **can** be triggered by the agent itself via the `EnterPlanMode` tool (a user-approval gate is attached, so it is the strongest available guarantee rather than a literal force). ce-plan operates only inside Plan Mode and is the precondition for the plannotator gate, so **before invoking ce-plan, if not already in Plan Mode, call `EnterPlanMode` first** (guiding the user to Shift+Tab is also acceptable, but agent-initiated entry is the default). The `workflow-stage-inject.sh` `*ce-plan` case re-asserts this at runtime **when the agent invokes ce-plan via the Skill tool** (e.g., the brainstorming→plan handoff). A user-typed `/ce-plan` slash command may load as a pre-loaded command with no Skill tool call, so the hook may not fire on that path — **this step-1 guidance, always in context at session start, is the primary guarantee; the hook is a supplementary runtime backstop.** (Closing the slash path at runtime would need a `UserPromptSubmit` hook matching `/ce-plan` — not currently installed.)
 
 Operating contract:
 
