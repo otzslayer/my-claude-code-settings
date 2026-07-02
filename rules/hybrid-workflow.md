@@ -95,6 +95,17 @@ Note: Sonnet 4.6 does not support `xhigh` and its default effort is already `hig
 
 ---
 
+## Unit granularity & execution strategy (token discipline under 1-hour caching)
+
+Under 1-hour prompt caching, cache **writes cost 2× base input** (reads stay 0.1×), and every subagent spawn re-establishes its full prefix (CLAUDE.md + skill injection + unit packet) as a fresh 2× write. Spawn count — not per-token price — is the dominant reducible cost. Two defaults follow, one per stage:
+
+- **Coarse units (Phase 2, `/ce-plan`)** — group cohesive Implementation Units (shared files, types, or dependency chains) into fewer, larger U-IDs. Fewer units = fewer spawns = fewer 2× prefix writes. This is the primary lever and it lives in the plan, not in execution. Do not fragment a cohesive change into many fine-grained units just to make the plan look granular.
+- **Serial subagents (Phase 2', `/ce-work`)** — prefer serial subagent execution over parallel fan-out unless wall-clock speed is explicitly the priority. Parallelism's only gain is latency; when optimizing cost it adds merge/contention/integration overhead (ce-work already caps parallel batches at 3-5 workers for exactly this reason). Serial keeps both subagent benefits — clean per-unit rollback and a lean orchestrator context — without the parallel-batch tax.
+
+**Trade-off accepted**: this gives up wall-clock speed and cross-unit visibility (separate workers can't see each other's emerging patterns; ce-work's "Simplify as You Go" pass partly mitigates). For a tightly-coupled cluster where cross-unit consolidation matters more than clean rollback, run that cluster inline in the main context with a `/clear` at the stage boundary instead — choose per cluster, not globally. Inline vs subagent is roughly a wash on tokens; the real win is the reduced spawn count from coarser units, which applies to both execution modes.
+
+---
+
 ## 95% confidence opener (Phase 1 first turn — model utterance)
 
 The form of the first question the model poses to the user when entering the brainstorming skill (identical to spec §4.1):
