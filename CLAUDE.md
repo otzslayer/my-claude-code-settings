@@ -13,8 +13,8 @@ Resolve conflicts in this order:
 
 When a relevant skill exists, call the `Skill` tool **before proceeding**.
 
-### Every Session Start — NO EXCEPTIONS
-Call `Skill(skill="superpowers:using-superpowers")` before any file reads or clarifying questions.
+### Session Start — `using-superpowers` is auto-injected (do NOT re-invoke)
+The `superpowers` SessionStart hook already injects the full `using-superpowers` skill into context on every startup / `/clear` / `/compact`, and it stays present for the whole session. Do **not** call `Skill(skill="superpowers:using-superpowers")` explicitly — a manual call only re-inserts identical content and needlessly fires the `workflow-stage-inject.sh` PostToolUse hook. Subagents (Task tool) must ignore it entirely (per the skill's own `<SUBAGENT-STOP>`). The skill-check discipline still applies to every **other** skill: when a relevant skill exists, invoke it before proceeding (see the table below).
 
 ### High-Priority Workflow Skills
 
