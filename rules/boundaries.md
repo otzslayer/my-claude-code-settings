@@ -26,17 +26,14 @@
 - Match existing code style
 
 ### Tool Usage (token-optimized)
-- **Code intelligence (read)**: CodeGraph MCP — prefer `codegraph_explore` (PRIMARY: an NL question or symbol/file name → the relevant symbols' source per file in one shot, replacing Read). Secondary: `codegraph_search` (name → location only), `codegraph_node` (a single symbol's full source + signature, handles overloads)
-- **Code relationships**: CodeGraph `codegraph_callers` (who calls X) / `codegraph_callees` (what X calls) / `codegraph_impact` (blast radius when changing X — required before refactoring). Tracks even the dynamic dispatch that grep can't follow
-- **Project layout**: CodeGraph `codegraph_files` (indexed file tree + symbol counts — faster than Glob)
-- **Text/regex search**: keep `Grep` — CodeGraph is a symbol graph and does not do string/regex search
-- **File/dir lookup**: `Glob` (filename/glob) / `Bash(ls)` (directory listing) — for non-code files or specific paths that `codegraph_files` doesn't capture
-- **Code edits**: standard `Edit`/`Write` are the **main path** — CodeGraph is read-only (no edit tools). *Before* editing, assess the blast radius with `codegraph_impact`/`codegraph_callers` ("consult BEFORE editing, not during"). The index is auto-refreshed by the file watcher within ~1s — no manual refresh needed
-- **ce-plan research stage**: gather codebase patterns and dependencies automatically with CodeGraph `codegraph_explore`/`codegraph_callers`/`codegraph_impact` (assisting the parallel research agents)
-- **ce-work implementation stage**: check the blast radius with `codegraph_impact` before editing → make changes with `Edit`
-- **Knowledge graph (broad)**: `/graphify` — broad navigation and architecture overview. Symbol-level queries ("what is X / who calls X / what breaks if I change X") go to CodeGraph
-- **Read**: for non-code files (`.md`, `.json`, `.toml`, `.yaml`) or code areas that `codegraph_explore` doesn't capture
-- **Never** `cat`/`head`/`tail`/`sed`/`awk`
+- **Read code**: CodeGraph MCP `codegraph_explore` (PRIMARY — NL question or symbol/file name → relevant source per file in one shot, replaces Read). Also `codegraph_search` (name → location), `codegraph_node` (one symbol's full source + signature).
+- **Relationships / impact**: `codegraph_callers` / `codegraph_callees` / `codegraph_impact` (blast radius — **required before refactoring**; catches dynamic dispatch grep misses).
+- **Project layout**: `codegraph_files` (indexed tree — faster than Glob).
+- **Search / lookup**: `Grep` for text/regex (CodeGraph doesn't do strings); `Glob`·`Bash(ls)` for non-code files or paths `codegraph_files` misses.
+- **Edit**: `Edit`/`Write` are the main path (CodeGraph is read-only); assess blast radius with `codegraph_impact`/`codegraph_callers` BEFORE editing, not during. Index auto-refreshes ~1s.
+- **Broad navigation / architecture**: `/graphify`; symbol-level queries go to CodeGraph.
+- **Read tool**: non-code files (`.md`/`.json`/`.toml`/`.yaml`) or areas `codegraph_explore` misses.
+- **Never** `cat`/`head`/`tail`/`sed`/`awk`.
 
 ## ⚠️ Ask First (Require Approval)
 
