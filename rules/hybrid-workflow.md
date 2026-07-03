@@ -23,9 +23,7 @@ Phase 2: Plan  ▸ Opus · xhigh  (when the Plan Mode trigger is met)
   2. /ce-plan  [Opus·xhigh]  (parallel research + CodeGraph codegraph_explore/codegraph_callers/codegraph_impact
               + ce-learnings-researcher: query past learnings in docs/solutions/ — only when 3+ files)
               → docs/plans/<draft>.md
-  2a. ce-doc-review  [reviewers forced to Sonnet]  (runs AUTOMATICALLY as ce-plan's mandatory
-              Phase 5.3.8, headless, for OUTPUT_FORMAT=md; skipped for html. Inside the Opus
-              session — reviewers pinned to model=sonnet per the override below)
+  2a. ce-doc-review  (runs AUTOMATICALLY as ce-plan's Phase 5.3.8, headless, md-only; reviewers pinned to Sonnet — see override below)
   3. ExitPlanMode  (include the ce-plan result path and summary in the plan argument)
   4. plannotator hook fires automatically → browser UI annotation · approval
   5. final save to docs/plans/YYYY-MM-DD-<summary>.md
@@ -76,13 +74,13 @@ The recommended execution model and reasoning effort for each stage. This sectio
 
 > **Constraint**: The main agent **cannot switch its own model mid-session.** Model·effort switches are only possible via the user's `/model`·`/effort` input or in a new session after `/clear`.
 
-> **Plan Mode is the exception**: Unlike model·effort switches, Plan Mode entry **can** be triggered by the agent itself via the `EnterPlanMode` tool (a user-approval gate is attached, so it is the strongest available guarantee rather than a literal force). ce-plan operates only inside Plan Mode and is the precondition for the plannotator gate, so **before invoking ce-plan, if not already in Plan Mode, call `EnterPlanMode` first** (guiding the user to Shift+Tab is also acceptable, but agent-initiated entry is the default). The `workflow-stage-inject.sh` `*ce-plan` case re-asserts this at runtime **when the agent invokes ce-plan via the Skill tool** (e.g., the brainstorming→plan handoff). A user-typed `/ce-plan` slash command may load as a pre-loaded command with no Skill tool call, so the hook may not fire on that path — **this step-1 guidance, always in context at session start, is the primary guarantee; the hook is a supplementary runtime backstop.** (Closing the slash path at runtime would need a `UserPromptSubmit` hook matching `/ce-plan` — not currently installed.)
+> **Plan Mode is the exception**: unlike model·effort switches, Plan Mode entry **can** be agent-triggered via the `EnterPlanMode` tool (a user-approval gate is attached). ce-plan runs only inside Plan Mode and is the precondition for the plannotator gate, so **before invoking ce-plan, if not already in Plan Mode, call `EnterPlanMode` first**. The `workflow-stage-inject.sh` `*ce-plan` hook re-asserts this only when ce-plan is invoked via the Skill tool; a user-typed `/ce-plan` may bypass it, so this instruction — not the hook — is the guarantee.
 
 Operating contract:
 
-- At the start of each stage (especially a new session after `/clear`), the model **announces that stage's recommended model·effort to the user** and, if it differs from the current setting, **guides the switch before** proceeding. It does not enforce — announce and confirm only. (Since the model can't always query its own effort, "announce + guide" is safer than "inspect".)
-- The pipeline's `/clear` points are the natural switch boundaries. Phases 1 and 2 are continuous on Opus xhigh, so there's no switch between them. At the Phase 2→2' boundary, step down to Sonnet medium.
-- **Review-subagent override (ce-doc-review · ce-code-review)**: both skills fan out to reviewer subagents. Pin every reviewer to `model=sonnet` at dispatch (overriding each skill's built-in model tiering) and ignore session effort. Neither triggers a session `/model` switch — the session model does not change (an in-session `/model` switch reloads the entire history cache, which is costly). See "Review-subagent model override" below.
+- At the start of each stage (especially a new session after `/clear`), **announce that stage's recommended model·effort** and, if it differs from the current setting, **guide the switch before** proceeding — announce and confirm, never enforce.
+- The pipeline's `/clear` points are the natural switch boundaries. Phases 1 and 2 are continuous on Opus xhigh; at the Phase 2→2' boundary, step down to Sonnet medium.
+- **Review-subagent override**: ce-doc-review · ce-code-review pin every reviewer to `model=sonnet` at dispatch; no session `/model` switch. See "Review-subagent model override" below.
 
 Current global default (`~/.claude/settings.json`): `model: Opus`, `effortLevel: xhigh`. Therefore:
 
@@ -142,7 +140,7 @@ So the 95% opener doesn't scatter in any direction, for work with a user/value s
 - **attachment** — what is the minimal form that delivers the same value
 - **durability** — does this assumption hold against near-term change
 
-For non-product work (large refactors · broad documentation · tooling), do not apply this — there's no 'real user need' to press on, so a product-style probe spins idle. This lays ce-brainstorm's Product Pressure Test on top of the 95% opener _without swapping tools_ (the brainstorming tool stays superpowers; only the questioning methodology is absorbed from ce-brainstorm).
+For non-product work (large refactors · broad documentation · tooling), do not apply this — there's no 'real user need' to press on, so a product-style probe spins idle.
 
 ---
 
@@ -176,7 +174,7 @@ Handle exemption cases on **Sonnet · medium** (if you entered on the global def
 
 ---
 
-## Memory · documentation 4-tier
+## Memory · documentation tiers
 
 | Tier | Location | Responsibility | Who changes it |
 | --- | --- | --- | --- |
@@ -185,7 +183,6 @@ Handle exemption cases on **Sonnet · medium** (if you entered on the global def
 | 2. Project decisions | `<proj>/docs/superpowers/specs/`, `<proj>/docs/plans/` | spec, plan | Model authors, user approval gate |
 | 3. Project learning accumulation | `<proj>/docs/solutions/` | ce-compound output (**file content written in Korean**, frontmatter keys·enum values stay English) (write) + ce-learnings-researcher query (read) | Model auto (headless) |
 | 4. Project visualization | `<proj>/graphify-out/`, `<proj>/docs/solutions/*.graph.md` | graphify output | User or model on invocation |
-| 5. Project progress tracking | `<proj>/TODO.md` | Follow-up work list | Both |
 
 **Policy**:
 
@@ -199,7 +196,7 @@ Handle exemption cases on **Sonnet · medium** (if you entered on the global def
 
 | Situation | Policy |
 | --- | --- |
-| ce-plan's Write blocked inside Plan Mode | Approach 2 (PostToolUse hook) fallback. Record the result in this document's errors/edge-cases table |
+| ce-plan's Write blocked inside Plan Mode | Approach 2 (PostToolUse hook) fallback |
 | plannotator fails to intercept ExitPlanMode | Manually invoke `/plannotator-annotate docs/plans/<file>` |
 | ce-work parallel subagent worktree conflict | ce-work's built-in policy (abort → retry serially) |
 | ce-compound headless misclassification | docs/solutions/ is git tracked; user manually corrects·deletes |
