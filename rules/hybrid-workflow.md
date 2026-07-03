@@ -25,6 +25,7 @@ Phase 2: Plan  (when the Plan Mode trigger is met)
   2. ce-doc-review  (runs AUTOMATICALLY as ce-plan's Phase 5.3.8, headless, md-only; reviewer model branching — see "Reviewer branching" below)
   3. EnterPlanMode → immediately ExitPlanMode, edit-free bracket (finalized plan as argument) — re-triggers the plannotator hard gate
   4. plannotator hook fires automatically → browser UI annotation · approval (blocks `/clear` until approved)
+     (if annotations request changes: edit the plan in non-plan-mode, then repeat step 3's bracket to re-trigger the gate)
   5. /clear
        │
        ▼  fresh context, plan file as input
@@ -74,7 +75,7 @@ Every task — main-session work at a `/clear` boundary, and each subagent dispa
 
 | Signal | Add |
 | --- | --- |
-| File count: 2 files +1 · 3–5 files +2 · 6+ files +3 (one band only) | +1 to +3 |
+| File count: 2 files +1 · 3–5 files +2 · 6+ files +3 (apply only the single tier matching the actual count, not cumulatively) | +1 to +3 |
 | New module / pattern / architectural decision | +2 |
 | New dependency | +1 |
 | Public API or data schema change | +2 |
@@ -90,15 +91,15 @@ Every task — main-session work at a `/clear` boundary, and each subagent dispa
 | 6–7 | Moderately hard | opus-4.8 | high |
 | 8–10 | Complex | opus-4.8 | xhigh |
 
-**Boundary rounding rule**: a pure base-5 task (open-ended reasoning, zero additive signals) lands exactly on 5 — round up to opus·high per the escalation policy (§4.3) below, so open-ended reasoning never stays on sonnet.
+**Boundary rounding rule** (the concrete instance of §4's "round up at boundaries" below): a pure base-5 task (open-ended reasoning, zero additive signals) lands exactly on 5 — round up to opus·high, so open-ended reasoning never stays on sonnet.
 
-**fable-5 gating (KTD2)**: fable is never reached by raw score — the cumulative score can't distinguish "many small signals" from "a genuinely long-horizon task," and fable's real edge is the latter. fable is opted into only by an explicit **long-horizon flag**: sustained design/implementation spanning multiple subsystems, a long agentic chain, or a task judged to exceed the opus·xhigh ceiling. Default effort `high` when fable is used, `xhigh` optional.
+**fable-5 gating**: fable is never reached by raw score — the cumulative score can't distinguish "many small signals" from "a genuinely long-horizon task," and fable's real edge is the latter. fable is opted into only by an explicit **long-horizon flag**: sustained design/implementation spanning multiple subsystems, a long agentic chain, or a task judged to exceed the opus·xhigh ceiling. Default effort `high` when fable is used, `xhigh` optional.
 
 Current global default (`~/.claude/settings.json`): `model: opus[1m]`, `effortLevel: high` (resting). `xhigh` is reached per-task within the 8–10 band via the score — it is not a resting default.
 
-## Escalation policy (§4.3)
+## Escalation policy (§4)
 
-- **Round up at boundaries (insurance premium)**: if the score lands on a band boundary, or the task has large blast radius / is hard to reverse, break ties by rounding up one band.
+- **Round up at boundaries (insurance premium)**: if the scoring itself is genuinely ambiguous between two adjacent bands (e.g., unsure whether an additive signal applies, or a base score like pure open-ended reasoning lands exactly on a band's own top value with no signals to push it further — see the §3 boundary rounding rule), or the task has large blast radius / is hard to reverse, break ties by rounding up one band. This is a tie-breaker for genuine uncertainty, not a rule to re-round every score that happens to sit at a band's numeric ceiling — a clean 7 (already routed to opus·high) is not rounded again into 8–10.
 - **Re-run gate — narrow, objective-signal-first**: only re-score/re-run at a higher band when a deterministic signal fires — test/typecheck/verification failure, **or** scope discovered mid-task (file count, cross-cutting concerns) exceeds the initial band's assumption — **and** the task is hard to reverse at the same time. The scope-overrun trigger exists so work with no test signal (prose, governance edits) and mid-investigation scope growth aren't structurally excluded from the gate. Self-reported confidence is a secondary signal only, for areas with no objective signal (design, research).
 
 ### Applying the score
@@ -108,8 +109,8 @@ The main agent **cannot switch its own model mid-session** — model·effort cha
 | Dispatch point | Mechanism |
 | --- | --- |
 | Main session (after scoring, at a `/clear` boundary or new task) | Announce both `/model` and `/effort` and guide the switch — announce and confirm, never enforce |
-| `Agent`-tool subagent (reviewers, ce-work workers) | `model` is pinned at dispatch; the `Agent` tool exposes no `effort` parameter (R10), so effort is **inherited from the dispatching session** |
-| `Workflow` `agent()` | Both `model` and `effort` are set per-agent — fully dynamic |
+| `Agent`-tool subagent (reviewers, ce-work workers) | `model` is pinned at dispatch; the `Agent` tool exposes no `effort` parameter, so effort is **inherited from the dispatching session** |
+| `Workflow` `agent()` — available to the top-level/orchestrating session only, not to a subagent it dispatches | Both `model` and `effort` are set per-agent — fully dynamic |
 
 This mechanism boundary means the "opus·high" reviewer notation in "Reviewer branching" below is realized as `model=opus` pin + session-inherited effort, not a pinned effort. Once the parent session rests at `effortLevel: high` (per §2 above), Agent-tool opus reviewers land near `high` via inheritance — if the parent session is `xhigh`, the reviewer inherits `xhigh` instead.
 

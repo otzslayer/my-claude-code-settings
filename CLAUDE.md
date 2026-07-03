@@ -84,7 +84,7 @@ Before complex tasks: Plan Mode → Analyze → Draft plan → Resolve ambiguiti
 2. ce-doc-review runs automatically as ce-plan's Phase 5.3.8 (headless, md-only; reviewer model branching per hybrid-workflow.md §5)
 3. Re-trigger the plannotator hard gate with an edit-free bracket: call `EnterPlanMode`, then immediately `ExitPlanMode` with the finalized plan as argument
 4. The plannotator hook fires automatically on `ExitPlanMode` → annotate and approve in the browser UI (blocks `/clear` until approved)
-5. Apply annotations or approve — the plan is already saved at `docs/plans/YYYY-MM-DD-<summary>.md` from step 1 (on revision, reuse the same file and keep the original date)
+5. Approve, or if annotations request changes: edit the plan in non-plan-mode, then repeat step 3's bracket to re-trigger the gate. The plan is already saved at `docs/plans/YYYY-MM-DD-<summary>.md` from step 1 (on revision, reuse the same file and keep the original date)
 6. `/clear` → execute via `/ce-work <plan-path>` in a new session (score the build task's complexity per hybrid-workflow.md §3 and guide the resulting `/model`·`/effort` switch)
 7. NEVER implement inline in the same planning session — this wastes planning context tokens
 
