@@ -36,6 +36,7 @@
 - **Broad navigation / architecture**: `/graphify`; symbol-level queries go to CodeGraph.
 - **Read tool**: non-code files (`.md`/`.json`/`.toml`/`.yaml`) or areas `codegraph_explore` misses.
 - **Never** `cat`/`head`/`tail`/`sed`/`awk`.
+- **Subagent dispatch**: score the subtask's complexity (`~/.claude/rules/hybrid-workflow.md` §3) and set `model` dynamically (sonnet/opus/fable) accordingly. `Agent` tool: `model` only, no `effort` param — effort inherits from the dispatching session. `Workflow` `agent()`: `model` + `effort` both settable per-agent.
 
 ## ⚠️ Ask First (Require Approval)
 
