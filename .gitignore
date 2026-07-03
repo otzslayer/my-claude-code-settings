@@ -27,9 +27,10 @@
 !/scripts/sync-memory-templates.sh
 !/scripts/install.sh
 
-# 설계 스펙: 손으로 작성한 docs opt-in → specs만(생성물 solutions·plans는 계속 무시)
+# 설계 스펙 + compound 학습: docs opt-in → specs·solutions(생성물 plans는 계속 무시)
 !/docs/
 /docs/*
 !/docs/superpowers/
 /docs/superpowers/*
 !/docs/superpowers/specs/
+!/docs/solutions/
