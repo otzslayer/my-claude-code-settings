@@ -105,7 +105,7 @@ Extended guidelines in `~/.claude/rules/`:
 - `karpathy-principles.md` — Full principles detail
 - `git-workflow.md` — Commit format, branch naming, PR workflow
 - `hybrid-workflow.md` — Operating rules for the Compound + Superpowers hybrid pipeline
-- `security.md` — Pre-commit checklist, secret management
+- `security.md` — Secret management, security-issue response
 
 Active hooks live in `~/.claude/settings.json` under `hooks` (source of truth — view with `/hooks`).
 

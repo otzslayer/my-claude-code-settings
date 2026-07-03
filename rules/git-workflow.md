@@ -28,9 +28,3 @@ Examples: `feat/user-auth`, `fix/login-bug`
 2. Draft comprehensive PR summary
 3. Include test plan
 4. Push with `-u` flag if new branch
-
-## Pre-Commit Check
-
-- [ ] Tests passing
-- [ ] Lint/format passing
-- [ ] Commit message explains "why"

@@ -14,6 +14,8 @@
 - Validate user input (Pydantic)
 - Use parameterized SQL queries
 - Exclude sensitive info from error messages
+- Prevent XSS; enable CSRF protection
+- Verify auth/authz; rate-limit endpoints
 
 ### Patterns
 - Follow existing code patterns

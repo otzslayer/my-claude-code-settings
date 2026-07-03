@@ -1,15 +1,6 @@
 # Security Guidelines
 
-## Pre-Commit Checklist
-
-- [ ] No hardcoded secrets
-- [ ] All user inputs validated
-- [ ] SQL injection prevention
-- [ ] XSS prevention
-- [ ] CSRF protection enabled
-- [ ] Auth/authz verified
-- [ ] Rate limiting on endpoints
-- [ ] Error messages don't leak sensitive data
+Security rules (secrets, input validation, SQL, XSS/CSRF, auth, rate limiting) live in `boundaries.md` → Security. This file holds only what boundaries doesn't.
 
 ## Secret Management
 
