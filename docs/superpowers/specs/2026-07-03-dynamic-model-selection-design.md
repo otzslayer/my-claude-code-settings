@@ -137,3 +137,29 @@
 - 리뷰어가 적대적/비적대적로 분기되어 dispatch됨.
 - 훅이 하드코딩 대신 채점 포인터를 주입함.
 - 문서의 effort 표기가 실제 설정(high)과 일치함.
+
+## 9. 파이프라인 재배치 (Plan Mode ↔ plannotator 디커플링) — 2026-07-03 추가
+
+이 절은 §1~§8(모델 선택)과 별개의 결정으로, 같은 거버넌스 파일을 손대므로 조율해 한 계획으로 통합한다(§1~§8 재프레임 아님, 추가만).
+
+**배경.** Plan Mode는 ce-plan의 계획 파일 Write(Phase 5.2)와 ce-doc-review의 autofix를 **차단**한다. 기존 흐름(Plan Mode → ce-plan → ce-doc-review → ExitPlanMode → plannotator)은 이 쓰기들이 막혀 정상 동작하지 못한다(계획 파일이 안 써지면 리뷰·수정 대상도 없음). 또한 plannotator의 품질 기여는 **사람의 읽기 노력에 정비례**하는데, ce-doc-review(다중 페르소나 AI 패스)는 노력과 무관하게 기계적 정합·실현가능성·스코프·적대적 검토를 잡는다.
+
+**메커니즘 정정.** plannotator의 실제 게이트는 **ExitPlanMode에 걸린 `PermissionRequest` 훅**(플러그인 `hooks.json`, timeout 4일)으로, 브라우저 승인 전까지 ExitPlanMode tool을 **거부(hard block)**한다(EnterPlanMode 훅은 5초 context-enrich, 게이트 아님). 따라서 단순히 non-plan-mode로 옮기면 이 **하드 강제 리뷰 게이트가 사라진다** — 스킴하는 사용자에겐 사람 리뷰가 통째로 증발할 위험.
+
+**결정.** Phase 2 파이프라인을 다음으로 재배치한다(하드 게이트를 **브라켓으로 복구**):
+
+> **non-plan-mode** → `/ce-plan`(계획 작성) → **자동 ce-doc-review**(headless, §5 리뷰어 분기) → **편집 없는 `EnterPlanMode → 즉시 ExitPlanMode`(finalized 계획 인자) 브라켓 → plannotator 하드 게이트(승인 전 /clear 불가)** → `/clear`.
+
+- Plan Mode의 "ce-plan 전제조건" 역할 제거. **일반 "복잡 작업 전 Plan Mode" 규율은 유지하되, ce-plan 본작업은 non-plan-mode라는 carve-out을 명시**(선택: 최소 디커플링).
+- plannotator 트리거 복구: ce-plan·ce-doc-review는 non-plan-mode(Write·autofix 통과)로 돌리되, **끝난 뒤 편집 없는 EnterPlanMode→ExitPlanMode 브라켓으로 plannotator PermissionRequest 하드 게이트를 재발동**한다. 이 시점엔 Write/autofix가 이미 끝났으므로 차단 문제가 없고, 승인 전까지 /clear가 막힌다(강제 복구). 수동 `/plannotator-annotate`는 브라켓이 막히는 환경의 fallback.
+- 자동 ce-doc-review 패스는 §5 리뷰어 분기(adversarial·security → opus, 나머지 sonnet)를 따른다.
+
+**근거.** 기계적 리뷰(ce-doc-review)를 사람 리뷰(plannotator) 앞에 둬 사람 주의가 잡티가 아닌 의도·우선순위에 집중되게 하고, 브라켓으로 **자동 하드 게이트를 유지**해 스키머에게도 사람 리뷰를 보장한다. 대가: 흐름에 순간 plan-mode 1스텝 + approved-hook의 docs/plans 승격 중복(무해 — 훅이 "식별 못 하면 skip").
+
+**변경 파일(§6에 추가).** `hybrid-workflow.md`(Phase 2 스텝·"Plan Mode is the exception"·Errors 표), `CLAUDE.md`(Plan Persistence 스텝·Plan Mode carve-out), `workflow-stage-inject.sh`(`*ce-plan`·`*brainstorming` 케이스의 EnterPlanMode-먼저 지침 → non-plan-mode 본작업 + "ce-doc-review 후 EnterPlanMode→ExitPlanMode 브라켓으로 plannotator 재발동" 안내, `*ce-doc-review` 케이스에 다음-단계 브라켓 안내).
+
+**성공 기준(§8에 추가).**
+- ce-plan이 non-plan-mode에서 실행되도록 문서·훅에서 "Plan Mode 전제조건"이 제거되고 carve-out이 명시됨.
+- plannotator 하드 게이트가 ce-doc-review 이후 EnterPlanMode→ExitPlanMode 브라켓으로 재발동되고(승인 전 /clear 불가), 훅이 그 브라켓 실행을 안내함.
+- 자동 ce-doc-review 패스가 §5 리뷰어 분기로 실행됨.
+- 일반 Plan Mode 규율은 유지되되 ce-plan 파이프라인 carve-out이 명시되어 문서 자기모순이 없음.
