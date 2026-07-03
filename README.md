@@ -134,11 +134,53 @@ Claude Code가 `settings.json`의 `enabledPlugins`와 `extraKnownMarketplaces`�
 `rules/hybrid-workflow.md`가 정식 운영 가이드다. 요약:
 
 ```
-Phase 1: Spec   [Opus·xhigh]   superpowers:brainstorming → docs/superpowers/specs/
-Phase 2: Plan   [Opus·xhigh]   /ce-plan → docs/plans/  (Plannotator 게이트)
-Phase 2': Build [Sonnet·high]  /ce-work <plan-path>
-Phase 3: Ship   [Sonnet·high]  verify → /ce-compound → commit+PR
+Phase 1: Spec    superpowers:brainstorming → docs/superpowers/specs/
+Phase 2: Plan    non-plan-mode: /ce-plan → docs/plans/  (자동 ce-doc-review → EnterPlanMode→ExitPlanMode 브라켓으로 Plannotator 하드 게이트 재발동)
+Phase 2': Build  /ce-work <plan-path>
+Phase 3: Ship    verify → /ce-compound → commit+PR
 ```
+
+각 단계의 model·effort는 더 이상 단계별 고정값이 아니라, **과업 복잡도를 채점**해 정해진다(`rules/hybrid-workflow.md` §3 "Complexity scoring"이 정본).
+
+### model·effort는 어떻게 정해지나 (복잡도 채점)
+
+과업마다 **기저점**(인지 성격)에 **가산 신호**(범위)를 더해 0–10점을 매기고, 점수 구간(밴드)이 model·effort를 정한다.
+
+| 기저점 | 예 | 점수 |
+|---|---|---|
+| 기계적 실행 | 빌드·검증·리네임·포맷 | 1 |
+| 표준 구현 | 잘 정의된 기능·바운드된 버그 | 3 |
+| 개방형 추론 | 설계·브레인스토밍·근본원인 디버깅 | 5 |
+
+여기에 파일 수(+1~+3), 새 모듈/아키텍처 결정(+2), 새 의존성(+1), API·스키마 변경(+2), 동시성/보안/마이그레이션 같은 교차 관심사(+2), 실질적 모호성(+2)이 해당할 때마다 더해진다(상한 10).
+
+| 점수 | 밴드 | model | effort | 예시 |
+|---|---|---|---|---|
+| 0–2 | 사소·기계적 | sonnet-5 | low | "테스트 통과 확인만" |
+| 3–5 | 표준 | sonnet-5 | medium | "새 엔드포인트 하나 추가, 파일 3개" |
+| 6–7 | 조금 어려움 | opus-4.8 | high | "동시성 얽힌 8파일 교차 리팩터" |
+| 8–10 | 복잡함 | opus-4.8 | xhigh | "새 아키텍처 결정 + API 스키마 변경 + 교차 관심사" |
+
+예: "표준 구현(base 3) + 파일 3–5개(+2) + 동시성 얽힘(+2)" = 7점 → **opus·high**를 announce하고 현재 세션과 다르면 `/model`·`/effort` 전환을 안내한다(강제 아님).
+
+**fable-5**는 점수로는 절대 도달하지 않는다 — 여러 서브시스템을 넘나드는 지속적 설계·구현이나 긴 agentic 체인처럼 "진짜로 길고 복잡한" 과업임을 명시적으로 판단했을 때만 옵트인한다(점수 라우팅 상한은 opus·xhigh). haiku는 이 파이프라인에서 쓰지 않는다.
+
+**메커니즘 제약**: 메인 에이전트는 세션 도중 자기 모델을 못 바꾼다 — `/model`·`/effort`로 announce & 전환 안내만 가능. 서브에이전트 디스패치는 두 갈래다: `Agent` 툴은 `model`만 지정 가능(effort는 디스패치 세션에서 상속), `Workflow`의 `agent()`는 `model`+`effort` 둘 다 개별 지정 가능(완전 동적).
+
+**리뷰어 분기**: 코드/문서 리뷰는 본질적으로 개방형 적대적 추론(base 5)이라, 가장 중요한 판정만 opus로 올린다 — `ce-code-review`는 correctness·security·adversarial, `ce-doc-review`는 adversarial·security-lens가 `model=opus`, 나머지는 `model=sonnet`.
+
+세션 resting 기본값(`settings.json`)은 `effortLevel: high`다 — `xhigh`는 8–10 밴드에서 과업별로만 도달하며 상시 기본값이 아니다.
+
+### Plan 단계 흐름 (Plan Mode ↔ Plannotator 디커플링)
+
+`/ce-plan`의 본작업(계획 파일 작성, ce-doc-review의 자동 수정)은 Plan Mode 밖(non-plan-mode)에서 실행된다 — Plan Mode가 파일 쓰기와 자동 수정을 막기 때문이다. 대신 계획이 확정된 뒤, **편집 없이 `EnterPlanMode` → 곧바로 `ExitPlanMode`**를 호출하는 "브라켓"으로 Plannotator의 승인 게이트를 다시 건다 — 이 게이트는 브라우저에서 승인하기 전까지 `/clear`를 막는 하드 게이트라서, non-plan-mode로 옮겨도 사람 리뷰가 사라지지 않는다.
+
+```
+non-plan-mode → /ce-plan (계획 작성) → 자동 ce-doc-review(리뷰어 model 분기)
+  → EnterPlanMode→ExitPlanMode 브라켓 → Plannotator 승인(브라우저) → /clear
+```
+
+일반적인 "복잡한 작업 전에는 Plan Mode로 먼저 분석한다"는 규율(CLAUDE.md)은 그대로 유지된다 — 위 흐름은 `/ce-plan` 자체의 실행 방식에 대한 예외(carve-out)일 뿐이다.
 
 ### 의존 플러그인
 
