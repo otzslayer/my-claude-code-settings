@@ -10,17 +10,16 @@
 # model·effort는 단계 고정이 아니라 복잡도 채점(hybrid-workflow.md 3장)으로 산출한다 — 각 case는 그 채점 산출을 announce하라는 짧은 포인터만 담는다.
 
 input=$(cat)
-# python3 json parse (not grep -P / sed regex): settings.json fires this via a non-interactive
-# `bash script.sh` subshell, where grep resolves to BSD grep (no -P support) — PCRE would
-# silently no-op every case. A regex extraction (grep -P or sed's greedy .*"skill") is also
-# unsafe here: tool_response can itself contain a nested "skill" key (e.g. ce-plan's own
-# tool_response), and a greedy/leftmost-unaware pattern can grab that instead of the real
-# tool_input.skill. Real JSON parsing sidesteps both problems.
-skill=$(printf '%s' "$input" | python3 -c 'import json, sys
-try:
-    print(json.load(sys.stdin).get("tool_input", {}).get("skill", ""))
-except Exception:
-    pass')
+# jq json parse (not grep -P / sed regex, not python3): settings.json fires this via a
+# non-interactive `bash script.sh` subshell, where grep resolves to BSD grep (no -P support)
+# and python3 may resolve to a pyenv shim that only exists on an interactive-shell PATH —
+# both fail the same way (silent no-op) in that subshell. A regex extraction (grep -P or
+# sed's greedy .*"skill") is also unsafe here: tool_response can itself contain a nested
+# "skill" key (e.g. ce-plan's own tool_response), and a greedy/leftmost-unaware pattern can
+# grab that instead of the real tool_input.skill. jq is a documented hard dependency of this
+# repo (see README.md, and rtk-rewrite.sh's identical `.tool_input.*` pattern) and resolves
+# via the default system PATH with no shell-rc dependency.
+skill=$(printf '%s' "$input" | jq -r '.tool_input.skill // empty' 2>/dev/null)
 
 emit() {
   # $1: additionalContext 텍스트. 내부에 큰따옴표(") 사용 금지 — JSON이 깨진다.
