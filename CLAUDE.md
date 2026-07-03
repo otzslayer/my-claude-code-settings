@@ -133,13 +133,6 @@ In repositories indexed by CodeGraph (a `.codegraph/` directory exists at the re
 If there is no `.codegraph/` directory, skip CodeGraph entirely — indexing is the user's decision.
 <!-- CODEGRAPH_END -->
 
-### CodeGraph — relationships & impact (indexed repos only)
-
-- Relationships/impact (symbol-level): `codegraph_callers` / `codegraph_callees` / `codegraph_impact` (MCP), or shell `codegraph callers|callees|impact <symbol>`. Before refactoring, check the blast radius with `impact`.
-- Project layout: `codegraph_files` (MCP) / `codegraph files` (shell) — takes no argument, the indexed file tree.
-- Read-only — make edits with `Edit`/`Write`, do text/regex search with `Grep`.
-- Symbol-level queries go to CodeGraph; broad navigation and architecture overview go to `graphify` (below).
-
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
