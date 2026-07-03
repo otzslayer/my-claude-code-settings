@@ -2,9 +2,7 @@
 
 Operating rules that bind Superpowers · Compound Engineering · CodeGraph · graphify · RTK · .remember into a single 7-stage pipeline, in an environment where the Plannotator auto-gate is active.
 
-**Source of truth (spec)**: `~/.claude/docs/superpowers/specs/2026-05-19-compound-superpowers-hybrid-workflow.md`
-
-This document is a summary operating guide for the spec. Stage names, tool names, and trigger conditions must match the spec 1:1. If this document and the spec conflict, the spec wins, and this document is updated to restore alignment.
+This document is the single source of truth for the pipeline. There is no separate spec to keep in sync.
 
 ---
 
@@ -25,35 +23,38 @@ Phase 2: Plan  ▸ Opus · xhigh  (when the Plan Mode trigger is met)
   2. /ce-plan  [Opus·xhigh]  (parallel research + CodeGraph codegraph_explore/codegraph_callers/codegraph_impact
               + ce-learnings-researcher: query past learnings in docs/solutions/ — only when 3+ files)
               → docs/plans/<draft>.md
+  2a. ce-doc-review  [reviewers forced to Sonnet]  (runs AUTOMATICALLY as ce-plan's mandatory
+              Phase 5.3.8, headless, for OUTPUT_FORMAT=md; skipped for html. Inside the Opus
+              session — reviewers pinned to model=sonnet per the override below)
   3. ExitPlanMode  (include the ce-plan result path and summary in the plan argument)
   4. plannotator hook fires automatically → browser UI annotation · approval
   5. final save to docs/plans/YYYY-MM-DD-<summary>.md
   6. /clear
        │
-       ▼  fresh context, plan file as input  (model switch guidance: → Sonnet high)
-Phase 2': Build  ▸ Sonnet · high  (session model fixed — only ce-code-review's reviewer subagents are recommended at Opus xhigh)
-  7. superpowers:test-driven-development  [Sonnet·high]  (RED → GREEN → REFACTOR, trivial-case exemption)
-  8. /ce-work <plan-path>  [Sonnet·high]  (built-in worktree · parallel safety; before editing, assess blast radius with codegraph_impact, then Edit)
-  9. /ce-code-review  [reviewer subagents: Opus·xhigh / session: stays on Sonnet]  (6+ reviewer ensemble — no session model switch)
+       ▼  fresh context, plan file as input  (model switch guidance: → Sonnet medium)
+Phase 2': Build  ▸ Sonnet · medium  (single session effort across Phase 2'–3; ce-code-review reviewers pinned to Sonnet)
+  7. superpowers:test-driven-development  [Sonnet·medium]  (RED → GREEN → REFACTOR, trivial-case exemption)
+  8. /ce-work <plan-path>  [Sonnet·medium]  (built-in worktree · parallel safety; before editing, assess blast radius with codegraph_impact, then Edit)
+  9. /ce-code-review  [reviewers forced to Sonnet / session stays Sonnet medium]  (6+ reviewer ensemble — no session model switch)
        │
        ▼
-Phase 3: Verify · Learn · Ship  ▸ Sonnet · high
-  10. superpowers:verification-before-completion  [Sonnet·high]
+Phase 3: Verify · Learn · Ship  ▸ Sonnet · medium
+  10. superpowers:verification-before-completion  [Sonnet·medium]
        (uv run ty check / ruff check --fix / ruff format / pytest -v)
-  11. /ce-compound mode:headless  [Sonnet·high]  (Full, docs/solutions/<problem>.md only)
-  12. superpowers:finishing-a-development-branch  [Sonnet·high]  (Korean commit format)
+  11. /ce-compound mode:headless  [Sonnet·medium]  (Full, docs/solutions/<problem>.md only)
+  12. superpowers:finishing-a-development-branch  [Sonnet·medium]  (Korean commit format)
 ```
 
 ---
 
 ## Per-stage model policy
 
-The recommended execution model and reasoning effort for each stage. This section is the **formal definition**, and the model notations in CLAUDE.md and the spec refer to it.
+The recommended execution model and reasoning effort for each stage. This section is the **formal definition**, and the model notations in CLAUDE.md refer to it.
 
 ### Placement principle
 
 - **Opus · effort `xhigh`** — open-ended reasoning where being wrong is costly. One misstep contaminates every downstream stage.
-- **Sonnet · effort `high`** — execution against a finalized artifact (spec/plan). Centered on carrying out, not judging.
+- **Sonnet · effort `medium`** — execution against a finalized artifact (spec/plan). Centered on carrying out, not judging.
 
 ### Per-stage table
 
@@ -61,14 +62,15 @@ The recommended execution model and reasoning effort for each stage. This sectio
 | --- | --- | --- | --- |
 | Phase 1 `superpowers:brainstorming` | Opus | `xhigh` | Grasping intent and surfacing edge cases; if this is wrong, everything is off |
 | Phase 2 `/ce-plan` | Opus | `xhigh` | Architectural decisions, tradeoffs, synthesizing research |
-| Phase 2' `superpowers:test-driven-development` | Sonnet | `high` | Writing tests based on the plan, execution-centered |
-| Phase 2' `/ce-work` | Sonnet | `high` | Executing the finalized plan |
-| Phase 2' `/ce-code-review` | Opus (reviewer) | `xhigh` | Opus recommended **at the reviewer subagent level**. Session stays on Sonnet (no in-session switch — see mechanism below). Not enforced |
-| Phase 3 `superpowers:verification-before-completion` | Sonnet | `high` | Running commands and verifying, mechanical |
-| Phase 3 `/ce-compound mode:headless` | Sonnet | `high` | Structured learning documentation (headless) |
-| Phase 3 `superpowers:finishing-a-development-branch` | Sonnet | `high` | Commit · push · PR |
+| Phase 2 `ce-doc-review` (auto, headless) | Sonnet (reviewers) | inherit | Runs inside the Opus ce-plan session; reviewers pinned to `model=sonnet` (see override below). Session effort ignored |
+| Phase 2' `superpowers:test-driven-development` | Sonnet | `medium` | Writing tests based on the plan, execution-centered |
+| Phase 2' `/ce-work` | Sonnet | `medium` | Executing the finalized plan |
+| Phase 2' `/ce-code-review` | Sonnet (reviewers) | inherit | Reviewers pinned to `model=sonnet`; session stays Sonnet medium (no in-session switch). Session effort ignored |
+| Phase 3 `superpowers:verification-before-completion` | Sonnet | `medium` | Running commands and verifying, mechanical |
+| Phase 3 `/ce-compound mode:headless` | Sonnet | `medium` | Structured learning documentation (headless) |
+| Phase 3 `superpowers:finishing-a-development-branch` | Sonnet | `medium` | Commit · push · PR |
 | `superpowers:systematic-debugging` (bug) | Opus | `xhigh` | Root-cause tracing, open-ended reasoning |
-| Exemption cases (type/linter/rename/trivial) | Sonnet | `high` | Simple work, low judgment weight |
+| Exemption cases (type/linter/rename/trivial) | Sonnet | `medium` | Simple work, low judgment weight |
 
 ### Switch mechanism (manual guidance at boundaries)
 
@@ -79,19 +81,30 @@ The recommended execution model and reasoning effort for each stage. This sectio
 Operating contract:
 
 - At the start of each stage (especially a new session after `/clear`), the model **announces that stage's recommended model·effort to the user** and, if it differs from the current setting, **guides the switch before** proceeding. It does not enforce — announce and confirm only. (Since the model can't always query its own effort, "announce + guide" is safer than "inspect".)
-- The pipeline's `/clear` points are the natural switch boundaries. Phases 1 and 2 are continuous on Opus xhigh, so there's no switch between them. At the Phase 2→2' boundary, step down to Sonnet high.
-- **ce-code-review exception**: the ce-code-review inside Phase 2' is not a `/clear` boundary. Therefore it **does not change the session model** — the session stays on Sonnet high (an in-session `/model` switch reloads the entire history cache, which is costly, making the most expensive stage even more expensive). ce-code-review fans out to 6+ reviewer **subagents**, so "Opus xhigh" refers to the **reviewer level**, not the session. Raising reviewers to Opus is in the subagent-model-specification domain (separate from the global 'manual guidance at boundaries'; we do not adopt plugin frontmatter pins), and is not enforced. If cost is the priority, let reviewers inherit the session model (Sonnet), and run reviewers on Opus only for changes where quality matters especially.
+- The pipeline's `/clear` points are the natural switch boundaries. Phases 1 and 2 are continuous on Opus xhigh, so there's no switch between them. At the Phase 2→2' boundary, step down to Sonnet medium.
+- **Review-subagent override (ce-doc-review · ce-code-review)**: both skills fan out to reviewer subagents. Pin every reviewer to `model=sonnet` at dispatch (overriding each skill's built-in model tiering) and ignore session effort. Neither triggers a session `/model` switch — the session model does not change (an in-session `/model` switch reloads the entire history cache, which is costly). See "Review-subagent model override" below.
 
 Current global default (`~/.claude/settings.json`): `model: Opus`, `effortLevel: xhigh`. Therefore:
 
 | Entering stage | Switch command to announce |
 | --- | --- |
 | Opus xhigh stages (brainstorming, ce-plan, debugging) | (same as default — no switch needed) |
-| ce-code-review (inside Phase 2') | (no session switch — session stays on Sonnet, only reviewer subagents recommended at Opus. See "ce-code-review exception" above) |
-| Sonnet high stages (build·verify·compound·ship·exemption) | `/model sonnet` and `/effort high` |
+| ce-doc-review (auto, inside the Opus ce-plan session) | (no session switch — reviewers pinned to Sonnet at dispatch. See "Review-subagent model override" below) |
+| ce-code-review (inside Phase 2') | (no session switch — session stays Sonnet medium, reviewers pinned to Sonnet at dispatch. See "Review-subagent model override" below) |
+| Sonnet medium stages (build·verify·compound·ship·exemption) | `/model sonnet` and `/effort medium` |
 | Returning from a Sonnet stage to an Opus stage | `/model opus` and `/effort xhigh` |
 
-Note: Sonnet 4.6 does not support `xhigh` and its default effort is already `high`. Since the global default is `xhigh`, when switching to Sonnet also guide `/effort high` to make the intent explicit.
+Note: Since the global default is `xhigh`, when switching to Sonnet also guide `/effort medium` to make the intent explicit.
+
+### Review-subagent model override
+
+`ce-doc-review` and `ce-code-review` both dispatch reviewer subagents. Force every reviewer to run on **Sonnet**, regardless of the parent session model.
+
+**Mechanism.** The `Agent` dispatch primitive exposes a `model` parameter but no `effort` parameter — so a reviewer's *model* is pinnable per-dispatch, its *effort* is not. Per the decision to **ignore session effort**, do not manage reviewer effort: just pin `model=sonnet` at dispatch and let effort fall where it may. Do NOT edit the plugin skills to achieve this — `~/.claude/plugins/...` is machine state, overwritten on plugin update. This document is the enforcement point; it outranks the skills' built-in model tiering.
+
+**ce-doc-review** is not opt-in — it runs automatically as `ce-plan`'s mandatory Phase 5.3.8, headless, for every `OUTPUT_FORMAT=md` plan (skipped only for `OUTPUT_FORMAT=html`). It runs *inside* the Opus `xhigh` ce-plan session, so there is no `/clear` boundary to switch models. Its built-in tiering would otherwise send `feasibility`/`product`/`adversarial` to the parent (Opus), `design`/`security`/`scope` to Sonnet, and `coherence` to the cheapest tier (Haiku). **Override: dispatch every ce-doc-review reviewer — including the automatic headless pass — with `model=sonnet`.** This drops the 3 parent-tier reviewers off Opus.
+
+**ce-code-review** runs in Phase 2' (Sonnet medium session). Its built-in tiering already puts every reviewer on Sonnet when the session is Sonnet (`correctness`/`security`/`adversarial` inherit the session; the rest use Sonnet mid-tier). **Override: dispatch every reviewer with `model=sonnet` anyway, so "Sonnet" holds unconditionally even if the session is not Sonnet.** No session `/model` switch.
 
 ---
 
@@ -108,7 +121,7 @@ Under 1-hour prompt caching, cache **writes cost 2× base input** (reads stay 0.
 
 ## 95% confidence opener (Phase 1 first turn — model utterance)
 
-The form of the first question the model poses to the user when entering the brainstorming skill (identical to spec §4.1):
+The form of the first question the model poses to the user when entering the brainstorming skill:
 
 > "지금 만들려는 것에 대해 1-2문장으로 설명해 주세요. 저는 95% 확신이 생길 때까지 질문을 던지겠습니다 — 표면적으로 원하는 것이 아니라 진짜로 필요한 것을 짚기 위해서입니다. 가정과 엣지 케이스를 도전하겠습니다."
 
@@ -129,7 +142,7 @@ So the 95% opener doesn't scatter in any direction, for work with a user/value s
 - **attachment** — what is the minimal form that delivers the same value
 - **durability** — does this assumption hold against near-term change
 
-For non-product work (large refactors · broad documentation · tooling), do not apply this — there's no 'real user need' to press on, so a product-style probe spins idle. This lays ce-brainstorm's Product Pressure Test on top of the 95% opener _without swapping tools_ (the brainstorming tool stays superpowers; only the questioning methodology is absorbed from ce-brainstorm — rationale in the spec §3 table).
+For non-product work (large refactors · broad documentation · tooling), do not apply this — there's no 'real user need' to press on, so a product-style probe spins idle. This lays ce-brainstorm's Product Pressure Test on top of the 95% opener _without swapping tools_ (the brainstorming tool stays superpowers; only the questioning methodology is absorbed from ce-brainstorm).
 
 ---
 
@@ -145,7 +158,7 @@ Any one of the following:
 - public API or data schema change
 - Explicit user request (e.g., "design this properly", "make a plan")
 
-### Exemption (skip Phases 1·2, go straight to Phase 2' — TDD also exempt) ▸ Sonnet · high
+### Exemption (skip Phases 1·2, go straight to Phase 2' — TDD also exempt) ▸ Sonnet · medium
 
 - Adding type annotations only
 - ruff auto-fixes
@@ -154,12 +167,12 @@ Any one of the following:
 - Bumping dependency versions only
 - Obvious refactors of one to a few dozen lines (existing tests pass as-is)
 
-Handle exemption cases on **Sonnet · high** (if you entered on the global default Opus xhigh, guide `/model sonnet`·`/effort high`). Even when applying an exemption, run `pytest` once after the change. If the exemption call is ambiguous, confirm via `AskUserQuestion`.
+Handle exemption cases on **Sonnet · medium** (if you entered on the global default Opus xhigh, guide `/model sonnet`·`/effort medium`). Even when applying an exemption, run `pytest` once after the change. If the exemption call is ambiguous, confirm via `AskUserQuestion`.
 
 ### Partial activation
 
-- Broad README update → Phase 1 [Opus·xhigh] + Phase 3 [Sonnet·high] (no build stage)
-- eval result analysis/regression → only Phase 3's `/ce-compound` [Sonnet·high] (artifacts/\*.csv as input)
+- Broad README update → Phase 1 [Opus·xhigh] + Phase 3 [Sonnet·medium] (no build stage)
+- eval result analysis/regression → only Phase 3's `/ce-compound` [Sonnet·medium] (artifacts/\*.csv as input)
 
 ---
 
@@ -186,16 +199,10 @@ Handle exemption cases on **Sonnet · high** (if you entered on the global defau
 
 | Situation | Policy |
 | --- | --- |
-| ce-plan's Write blocked inside Plan Mode | Approach 2 (PostToolUse hook) fallback. Record the result in spec §9 Open Questions, then update the spec |
+| ce-plan's Write blocked inside Plan Mode | Approach 2 (PostToolUse hook) fallback. Record the result in this document's errors/edge-cases table |
 | plannotator fails to intercept ExitPlanMode | Manually invoke `/plannotator-annotate docs/plans/<file>` |
 | ce-work parallel subagent worktree conflict | ce-work's built-in policy (abort → retry serially) |
 | ce-compound headless misclassification | docs/solutions/ is git tracked; user manually corrects·deletes |
 | ce-compound token overflow | Pass only summary·headers as input, leverage RTK compression |
 | docs/solutions/ is empty or has 2 or fewer files | Skip ce-learnings-researcher invocation — querying in a low-signal state risks injecting noise into the plan |
 | TDD exemption call ambiguous | Confirm with the user via `AskUserQuestion` |
-
----
-
-## Spec synchronization on change
-
-When updating this document, also update the spec (`docs/superpowers/specs/2026-05-19-compound-superpowers-hybrid-workflow.md`) to maintain 1:1 alignment. If stage names, tool names, or trigger conditions differ between the two documents, correct this document against the spec.

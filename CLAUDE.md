@@ -22,19 +22,19 @@ The `superpowers` SessionStart hook already injects the full `using-superpowers`
 |---------|-------|----------------|
 | New feature / component / behavior change | `superpowers:brainstorming` — 95% confidence opener. The resulting spec always continues into the plan stage via `/ce-plan` (this pipeline takes priority even if the entry skill offers its own plan tool) | Opus · `xhigh` |
 | Multi-step implementation task (within Plan Mode) | `ce-plan` | Opus · `xhigh` |
-| Plan execution | `ce-work <plan-path>` | Sonnet · `high` |
+| Plan execution | `ce-work <plan-path>` | Sonnet · `medium` |
 | Bug or failing test | `superpowers:systematic-debugging` | Opus · `xhigh` |
-| Implementation work | `superpowers:test-driven-development` (trivial-case exemption) | Sonnet · `high` |
-| Code review | `ce-code-review` | Opus · `xhigh` (reviewer subagents / session stays on Sonnet) |
-| Before claiming task complete | `superpowers:verification-before-completion` | Sonnet · `high` |
-| Learning accumulation (after work completes) | `/ce-compound mode:headless` | Sonnet · `high` |
-| Commit · push · PR | `superpowers:finishing-a-development-branch` | Sonnet · `high` |
+| Implementation work | `superpowers:test-driven-development` (trivial-case exemption) | Sonnet · `medium` |
+| Code review | `ce-code-review` | Sonnet (reviewers pinned to `model=sonnet` / session Sonnet medium) |
+| Before claiming task complete | `superpowers:verification-before-completion` | Sonnet · `medium` |
+| Learning accumulation (after work completes) | `/ce-compound mode:headless` | Sonnet · `medium` |
+| Commit · push · PR | `superpowers:finishing-a-development-branch` | Sonnet · `medium` |
 | Writing/editing Python (`.py`) | `python-coding-style` | (keep current stage's model) |
 | New Python project / directory layout | `python-architecture` | (keep current stage's model) |
 
 Domain skills (FastAPI, LangChain, etc.) layer on top when relevant. Available skills are auto-listed in session context — invoke via `Skill(skill="...")`.
 
-**Model · effort policy**: The column above is the recommended execution model and reasoning effort for each stage. **Since the main agent cannot switch its own model mid-session**, at the start of each stage (especially a new session after `/clear`), announce that stage's recommended model · effort and, if it differs from the current setting, guide the user to switch via `/model`·`/effort` before proceeding (never enforce — announce and confirm only). The current global default is `model: Opus`·`effortLevel: xhigh`, so Opus stages need no switch; when entering a Sonnet stage, guide `/model sonnet`·`/effort high`. **Exception — ce-code-review**: it runs inside Phase 2', not at a `/clear` boundary, so the session model does not change (session stays on Sonnet, avoiding the cache cost of an in-session switch). "Opus xhigh" here means the 6+ reviewer subagent level is recommended. For the formal definition and rationale, see the "Per-stage model policy" section in `~/.claude/rules/hybrid-workflow.md`.
+**Model · effort policy**: The column above is the recommended execution model and reasoning effort for each stage. **Since the main agent cannot switch its own model mid-session**, at the start of each stage (especially a new session after `/clear`), announce that stage's recommended model · effort and, if it differs from the current setting, guide the user to switch via `/model`·`/effort` before proceeding (never enforce — announce and confirm only). The current global default is `model: Opus`·`effortLevel: xhigh`, so Opus stages need no switch; when entering a Sonnet stage, guide `/model sonnet`·`/effort medium`. **Exception — ce-code-review / ce-doc-review**: they run without a `/clear` boundary, so the session model does not change (avoiding the cache cost of an in-session switch); their reviewer subagents are pinned to `model=sonnet` at dispatch and session effort is ignored. For the formal definition and rationale, see the "Per-stage model policy" and "Review-subagent model override" sections in `~/.claude/rules/hybrid-workflow.md`.
 
 ## Core Principles
 
@@ -83,7 +83,7 @@ Before complex tasks: Plan Mode → Analyze → Draft plan → Resolve ambiguiti
 3. Call `ExitPlanMode` — include the ce-plan result path and summary in the plan argument
 4. The plannotator hook fires automatically → annotate and approve in the browser UI
 5. Apply annotations or approve → final save to `docs/plans/YYYY-MM-DD-<summary>.md` (on revision, reuse the same file and keep the original date)
-6. `/clear` → execute via `/ce-work <plan-path>` in a new session (Plan is Opus·`xhigh`, Build is Sonnet·`high` — at new-session start, guide the `/model sonnet`·`/effort high` switch)
+6. `/clear` → execute via `/ce-work <plan-path>` in a new session (Plan is Opus·`xhigh`, Build is Sonnet·`medium` — at new-session start, guide the `/model sonnet`·`/effort medium` switch)
 7. NEVER implement inline in the same planning session — this wastes planning context tokens
 
 ### When Stuck (Max 3 Attempts)
