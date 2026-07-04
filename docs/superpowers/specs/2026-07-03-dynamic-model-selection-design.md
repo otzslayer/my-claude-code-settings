@@ -1,0 +1,165 @@
+# 동적 모델 선택: 복잡도 채점 기반 워크플로우 개선 설계
+
+- 작성일: 2026-07-03
+- 대상: `~/.claude/` 하이브리드 워크플로우(7단계 파이프라인)의 모델·effort 배정 방식
+- 상태: 설계 확정 (spec) → 다음 단계 `/ce-plan`
+
+## 1. 배경과 문제
+
+현재 워크플로우는 **파이프라인 단계별로 model·effort를 고정 배정**한다(Phase 1 Opus·xhigh, Phase 2' Sonnet·medium 등). 이 고정 방식을 택한 명시적 이유는 하드 제약이었다 — "메인 에이전트는 세션 도중 자기 모델을 바꿀 수 없고 `/clear` 경계나 사용자 `/model` 입력으로만 전환된다."
+
+그러나 단계 고정은 **같은 단계 안의 과업 복잡도 편차**를 반영하지 못한다. 예: 빌드 단계의 단순 리네임과, 동시성이 얽힌 8파일 교차 리팩터는 둘 다 "Sonnet·medium"으로 처리된다. 참조 사례(다른 사용자의 CLAUDE.md)는 단계가 아니라 **과업의 실제 복잡도**로 모델을 고르는 방식을 쓴다.
+
+목표: 단계 고정을 **복잡도 채점 공식으로 완전 대체**하여, 메인 세션과 서브에이전트 디스패치 양쪽에서 과업별로 model·effort가 동적으로 결정되게 한다.
+
+## 2. 재보정된 모델 표 (검색 기반, 2026-07)
+
+참조 사례의 순위는 그 사용자에게 주관적이므로(특히 cost 컬럼은 OpenAI의 넉넉한 한도를 반영), Anthropic 실비와 내 워크로드(대부분 Python 백엔드)에 맞게 재보정한다. gpt-5.5/Codex 계열은 사용하지 않으므로 제외한다.
+
+| 모델 | 실제 요금(입력/출력, 100만 토큰) | 지능 | 비용 부담 | 성격 |
+|---|---|---|---|---|
+| **fable-5** | $10 / $50 (실효 3–5×) · 30일 데이터 보존 | 최상 (SWE-bench Pro 80.3 vs Opus 69.2) | 매우 높음 | 길고 복잡한 long-horizon 과업일수록 격차 확대 |
+| **opus-4.8** | $5 / $25 · ZDR | 상 | 중 | 잘 정의된 과업의 합리적 상시 기본값(flagship) |
+| **sonnet-5** | ~$3 / $15 | 중 | 저 | 확정된 계획의 실행 중심 |
+| ~~haiku-4.5~~ | $1 / $5 | 하 | 최저 | **사용하지 않음** (참조 사례 방침 승계) |
+
+핵심 재보정 결과:
+- **지능 서열은 참조 사례와 동일**: fable > opus > sonnet. 실측 벤치마크가 이 방향을 지지한다. 따라서 새 워크플로우의 정점은 **fable-5(진짜 복잡·long-horizon 전용)**, 상시 기본은 **opus-4.8**이 된다. 기존의 "모든 개방형 단계를 일괄 Opus·xhigh로 돌린다"는 전제는 폐기하되, opus·xhigh 자체는 채점 상한(8–10 밴드)으로 남는다.
+- **비용 축은 참조 사례와 반대**: Anthropic 실비 기준 fable이 가장 비싸다(실효 3–5×). 그래서 fable은 진짜 복잡한 과업 전용으로 아껴 쓴다.
+
+출처: truefoundry(Fable5 vs Opus4.8 벤치마크), platform.claude.com/pricing, aipricing.guru, rdworldonline.
+
+## 3. 복잡도 채점 공식 (0–10)
+
+과업의 **인지 성격으로 기저점**을 잡고 **범위 신호를 가산**한다(상한 10).
+
+```
+기저점 (인지 성격)
+  실행·기계적 (빌드·검증·리네임·타입·포맷)          base 1
+  표준 구현 (잘 정의된 기능·바운드된 버그)            base 3
+  개방형 추론 (설계·브레인스토밍·근본원인 디버깅)       base 5
+
+가산 신호 (해당 시 1회씩)
+  파일 수     2개 +1 · 3–5개 +2 · 6개+ +3   (한 구간만 적용)
+  새 모듈·패턴·아키텍처 결정                        +2
+  새 의존성                                      +1
+  public API·데이터 스키마 변경                    +2
+  교차 관심사 (동시성·보안·마이그레이션)              +2
+  실질적 모호성 (요구가 여러 갈래)                   +2
+```
+
+### 밴드 → model·effort
+
+**점수는 sonnet vs opus와 effort를 결정한다.** 점수 라우팅의 상한은 **opus·xhigh**(8–10 밴드)다.
+
+| 점수 | 밴드 | model | effort |
+|---|---|---|---|
+| 0–2 | 사소·기계적 | sonnet-5 | low |
+| 3–5 | 표준 | sonnet-5 | medium |
+| 6–7 | 조금 어려움 | opus-4.8 | high |
+| 8–10 | 복잡함 | opus-4.8 | **xhigh** |
+
+**fable-5는 점수와 무관하게 별도의 명시적 플래그로만 진입한다.** 누적 점수는 "작은 신호 여러 개"와 "진짜 긴 long-horizon 과업"을 구분하지 못하는데, fable의 실측 강점은 후자에 특화되어 있다("과업이 길고 복잡할수록 격차 확대"). 따라서 fable은 raw 점수가 아니라 과업의 *성격*으로 gating한다:
+
+> **long-horizon 플래그** — 다음 중 하나에 명확히 해당할 때만 fable-5(effort high 기본, xhigh는 옵션):
+> - 여러 서브시스템에 걸친 지속적 설계·구현 (단일 세션으로 안 끝나는 규모)
+> - 긴 agentic 체인 (다단계 자율 실행이 오래 이어지는 과업)
+> - opus·xhigh로 시도했으나 규모·깊이가 명백히 그 상한을 넘는다고 판단될 때
+
+즉 hard-but-bounded 작업(대부분의 계획·브레인스토밍·디버깅)은 opus·xhigh가 천장이고, fable은 진짜 sprawling한 과업에만 드물게 옵트인한다.
+
+기존 파이프라인 단계에 대입하면:
+- 빌드/ce-work = base 1~3 → 대개 sonnet low~medium, 단 까다로운 유닛(교차관심사+파일 다수)은 opus high로 자동 상향 ← 동적화의 핵심 이득
+- ce-plan/브레인스토밍 = base 5 + 모호성·아키텍처 → 7~9 → **opus high~xhigh** (fable 아님). long-horizon 플래그가 붙는 대규모 설계일 때만 fable
+- 근본원인 디버깅 = base 5 + 신호 → 7~9 → **opus high~xhigh**
+- 검증/커밋 = base 1 → sonnet low
+
+주의: 개방형 추론(base 5)이 가산 신호 없이 정확히 5로 착지하면 sonnet·medium으로 라우팅된다. 이런 순수 5 경계는 §4.3의 "경계 반올림" 규칙으로 opus·high로 올린다(개방형 추론을 sonnet에 두지 않도록).
+
+즉 **기저점 항이 곧 기존 "단계별 prior"의 역할**을 하므로, 단계 고정표와 복잡도 채점이 하나의 공식으로 통합된다. 단계별 고정표는 문서에서 **삭제**한다(완전 대체).
+
+## 4. 적용 메커니즘
+
+### 4.1 메인 세션 (에이전트가 자기 모델 못 바꾸는 제약 유지)
+
+각 과업/`/clear` 경계 진입 시, 에이전트가 **점수를 계산해 밴드·model·effort를 명시**하고 `/model`·`/effort` 전환을 안내한다(announce & confirm, 강제 아님). 기존 "고정표 조회 후 안내"가 "채점 후 안내"로 바뀌는 것뿐이라 운영 흐름은 동일하다.
+
+예: `"이 과업 복잡도 7/10 (base5 개방형추론 +모호성2) → opus-4.8·high 권장. /model opus·/effort high"`
+
+### 4.2 서브에이전트 디스패치 (완전 동적)
+
+오케스트레이터가 서브태스크마다 점수를 계산해 `Agent`/`Workflow`의 `model` 파라미터(sonnet/opus/fable)와 effort를 **직접 지정**한다. 사용자 개입 없음. ce-work 워커·리서치 에이전트 등이 각자 복잡도에 맞는 모델로 뜬다.
+
+### 4.3 에스컬레이션 정책: 사전 상향 + 좁은 게이트
+
+"상시 허용" 재실행은 2× 비용 꼬리가 크므로 채택하지 않는다. 대신 결정을 **사후 → 사전**으로 옮긴다:
+
+- **경계에서 위로 반올림 (보험료)**: 점수가 밴드 경계(예: 5 vs 6)이거나 **blast radius가 크거나 되돌리기 어려운** 과업이면 tiebreaker로 한 단계 **위**를 택한다. 중요한 일은 첫 선택이 이미 맞아 재실행 자체가 드물어진다.
+- **재실행은 좁은 게이트로만, 객관 신호 우선**: LLM은 자기 신뢰도 보정이 나빠(미달 출력에도 high confidence를 보고) 자기보고만으론 게이트가 정작 필요할 때 안 열린다. 따라서 트리거는 **객관 신호를 1순위**로 둔다 — 테스트 실패·타입체크 실패·검증(verification) 실패 등 결정론적 실패 신호. 이런 객관 신호가 뜨고 *동시에* 되돌리기 어려운 작업일 때 상위 모델로 상향한다. 자기보고 confidence는 객관 신호가 없는 영역(설계·리서치 산출 등)의 보조 신호로만 쓴다. 저스테이크의 그저 그런 출력은 그대로 ship. → 2× 꼬리를 "드물게, 그럴 값어치 있을 때"로 한정한다.
+
+원칙 요약: "값비싼 사고 비용(빈번한 재실행)" 대신 "값싼 보험료(경계 상향)"를 낸다.
+
+## 5. 리뷰어 서브에이전트 정책 (적대적만 상향)
+
+현재 `hybrid-workflow.md`는 ce-doc-review·ce-code-review의 리뷰어 전원을 비용상 sonnet에 고정한다. 그러나 리뷰는 본질적으로 개방형 적대적 추론(base 5)이다. 절충:
+
+- **correctness · security · adversarial** → **opus·high**
+- 나머지(coherence · scope · design-lens · feasibility · product-lens 등) → **sonnet**
+
+6+ 리뷰어 전원 opus 팬아웃의 비용은 피하면서, 가장 중요한 판정만 고지능으로 돌린다. 세션 모델은 전환하지 않는다(캐시 재로딩 비용).
+
+## 6. 변경 파일
+
+| 파일 | 변경 |
+|---|---|
+| `~/.claude/rules/hybrid-workflow.md` | "Per-stage model policy" 표·서술 **삭제** → 복잡도 채점 룰(§3)로 대체. 재보정 모델 표(§2) 추가. "Review-subagent override"를 §5(적대적만 opus·high)로 수정. 에스컬레이션 정책 §4.3 추가. |
+| `~/.claude/CLAUDE.md` | "Model·effort policy" 문단과 High-Priority Workflow Skills 표의 model 열을 **채점 룰 참조**로 교체. 정점 표기(Opus·xhigh) 정리. |
+| `~/.claude/rules/boundaries.md` | Tool Usage에 서브에이전트 `model` 파라미터 동적 지정 원칙 1줄 추가. |
+| `~/.claude/hooks/workflow-stage-inject.sh` | 각 단계 case의 **하드코딩 model·effort 문구**("Sonnet·high 권장" 등) → **"복잡도 채점 후 밴드→model·effort 산출·announce·전환 안내"** 포인터로 교체. 절차 지침(RED→GREEN, Plan Mode 게이트, 다음 단계 안내)은 유지. `*ce-doc-review`·`*ce-code-review` case의 리뷰어 override를 §5로 갱신. salience 보존을 위해 전체 채점표 대신 짧은 포인터만 주입. |
+
+`settings.json`의 `effortLevel: high`는 **세션 resting 기본값**(첫 과업 채점 전)으로 유지하며 변경하지 않는다. 8–10 밴드의 **xhigh는 과업별로 도달**한다 — 메인은 announce 후 `/effort xhigh` 안내, 서브에이전트는 effort 파라미터로 직접 지정. 즉 문서의 "모든 개방형 단계 일괄 xhigh" 서술을 채점 룰로 대체하는 것이지, resting 기본값을 바꾸는 게 아니다.
+
+## 7. 범위 밖 (Out of scope)
+
+- gpt-5.5/Codex 등 외부 모델 편입 — 사용하지 않음.
+- haiku 재도입 — 사용하지 않음.
+- 파이프라인 단계 구조 자체의 변경 — 단계는 유지, 모델 배정 방식만 교체.
+- 부분 에스컬레이션(checkpoint 인계, 후보 B) — 이번 범위에서 제외(향후 검토 여지).
+
+## 8. 성공 기준
+
+- 단계 고정표가 문서·훅에서 완전히 제거되고 채점 공식으로 대체됨.
+- 메인 세션 진입 시 채점 결과에 따른 model·effort가 announce됨.
+- 서브에이전트 디스패치가 과업 복잡도에 따라 `model` 파라미터를 다르게 지정함.
+- fable-5가 raw 점수가 아니라 명시적 long-horizon 플래그로만 라우팅됨(점수 라우팅 상한은 opus·xhigh).
+- 8–10 밴드에서 opus·xhigh가 과업별로 도달됨(resting 기본값 high는 유지).
+- 에스컬레이션 트리거가 객관 신호(테스트·타입체크·검증 실패)를 1순위로 둠.
+- 리뷰어가 적대적/비적대적로 분기되어 dispatch됨.
+- 훅이 하드코딩 대신 채점 포인터를 주입함.
+- 문서의 effort 표기가 실제 설정(high)과 일치함.
+
+## 9. 파이프라인 재배치 (Plan Mode ↔ plannotator 디커플링) — 2026-07-03 추가
+
+이 절은 §1~§8(모델 선택)과 별개의 결정으로, 같은 거버넌스 파일을 손대므로 조율해 한 계획으로 통합한다(§1~§8 재프레임 아님, 추가만).
+
+**배경.** Plan Mode는 ce-plan의 계획 파일 Write(Phase 5.2)와 ce-doc-review의 autofix를 **차단**한다. 기존 흐름(Plan Mode → ce-plan → ce-doc-review → ExitPlanMode → plannotator)은 이 쓰기들이 막혀 정상 동작하지 못한다(계획 파일이 안 써지면 리뷰·수정 대상도 없음). 또한 plannotator의 품질 기여는 **사람의 읽기 노력에 정비례**하는데, ce-doc-review(다중 페르소나 AI 패스)는 노력과 무관하게 기계적 정합·실현가능성·스코프·적대적 검토를 잡는다.
+
+**메커니즘 정정.** plannotator의 실제 게이트는 **ExitPlanMode에 걸린 `PermissionRequest` 훅**(플러그인 `hooks.json`, timeout 4일)으로, 브라우저 승인 전까지 ExitPlanMode tool을 **거부(hard block)**한다(EnterPlanMode 훅은 5초 context-enrich, 게이트 아님). 따라서 단순히 non-plan-mode로 옮기면 이 **하드 강제 리뷰 게이트가 사라진다** — 스킴하는 사용자에겐 사람 리뷰가 통째로 증발할 위험.
+
+**결정.** Phase 2 파이프라인을 다음으로 재배치한다(하드 게이트를 **브라켓으로 복구**):
+
+> **non-plan-mode** → `/ce-plan`(계획 작성) → **자동 ce-doc-review**(headless, §5 리뷰어 분기) → **편집 없는 `EnterPlanMode → 즉시 ExitPlanMode`(finalized 계획 인자) 브라켓 → plannotator 하드 게이트(승인 전 /clear 불가)** → `/clear`.
+
+- Plan Mode의 "ce-plan 전제조건" 역할 제거. **일반 "복잡 작업 전 Plan Mode" 규율은 유지하되, ce-plan 본작업은 non-plan-mode라는 carve-out을 명시**(선택: 최소 디커플링).
+- plannotator 트리거 복구: ce-plan·ce-doc-review는 non-plan-mode(Write·autofix 통과)로 돌리되, **끝난 뒤 편집 없는 EnterPlanMode→ExitPlanMode 브라켓으로 plannotator PermissionRequest 하드 게이트를 재발동**한다. 이 시점엔 Write/autofix가 이미 끝났으므로 차단 문제가 없고, 승인 전까지 /clear가 막힌다(강제 복구). 수동 `/plannotator-annotate`는 브라켓이 막히는 환경의 fallback.
+- 자동 ce-doc-review 패스는 §5 리뷰어 분기(adversarial·security → opus, 나머지 sonnet)를 따른다.
+
+**근거.** 기계적 리뷰(ce-doc-review)를 사람 리뷰(plannotator) 앞에 둬 사람 주의가 잡티가 아닌 의도·우선순위에 집중되게 하고, 브라켓으로 **자동 하드 게이트를 유지**해 스키머에게도 사람 리뷰를 보장한다. 대가: 흐름에 순간 plan-mode 1스텝 + approved-hook의 docs/plans 승격 중복(무해 — 훅이 "식별 못 하면 skip").
+
+**변경 파일(§6에 추가).** `hybrid-workflow.md`(Phase 2 스텝·"Plan Mode is the exception"·Errors 표), `CLAUDE.md`(Plan Persistence 스텝·Plan Mode carve-out), `workflow-stage-inject.sh`(`*ce-plan`·`*brainstorming` 케이스의 EnterPlanMode-먼저 지침 → non-plan-mode 본작업 + "ce-doc-review 후 EnterPlanMode→ExitPlanMode 브라켓으로 plannotator 재발동" 안내, `*ce-doc-review` 케이스에 다음-단계 브라켓 안내).
+
+**성공 기준(§8에 추가).**
+- ce-plan이 non-plan-mode에서 실행되도록 문서·훅에서 "Plan Mode 전제조건"이 제거되고 carve-out이 명시됨.
+- plannotator 하드 게이트가 ce-doc-review 이후 EnterPlanMode→ExitPlanMode 브라켓으로 재발동되고(승인 전 /clear 불가), 훅이 그 브라켓 실행을 안내함.
+- 자동 ce-doc-review 패스가 §5 리뷰어 분기로 실행됨.
+- 일반 Plan Mode 규율은 유지되되 ce-plan 파이프라인 carve-out이 명시되어 문서 자기모순이 없음.
