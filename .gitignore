@@ -34,3 +34,21 @@
 /docs/superpowers/*
 !/docs/superpowers/specs/
 !/docs/solutions/
+
+# doc 스킬 명령어: 디렉토리 opt-in → 전체 무시 → 3개 스킬만 재opt-in
+!/commands/
+/commands/*
+!/commands/tag-doc.md
+!/commands/translate-doc.md
+!/commands/banner-doc.md
+
+# doc 스킬 에셋: 손-콘텐츠만 opt-in
+# tag-doc·banner-doc은 순수 마크다운
+!/tag-doc-assets/
+!/banner-doc-assets/
+# translate-doc은 Python 코드 → 캐시·생성물 제외 위해 .md/.py/testdata만 재opt-in
+!/translate-doc-assets/
+/translate-doc-assets/*
+!/translate-doc-assets/*.md
+!/translate-doc-assets/*.py
+!/translate-doc-assets/testdata/
