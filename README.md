@@ -156,22 +156,29 @@ Phase 3: Ship    verify → /ce-compound → commit+PR
 
 | 점수 | 밴드 | model | effort | 예시 |
 |---|---|---|---|---|
-| 0–2 | 사소·기계적 | sonnet-5 | low | "테스트 통과 확인만" |
-| 3–5 | 표준 | sonnet-5 | medium | "새 엔드포인트 하나 추가, 파일 3개" |
+| 0–2 | 사소·기계적 | opus-4.8 | low | "테스트 통과 확인만" |
+| 3–5 | 표준 | opus-4.8 | medium | "새 엔드포인트 하나 추가, 파일 3개" |
 | 6–7 | 조금 어려움 | opus-4.8 | high | "새 의존성 도입 + 데이터 스키마 변경" |
 | 8–10 | 복잡함 | opus-4.8 | xhigh | "새 아키텍처 결정 + API 스키마 변경 + 교차 관심사" |
 
 예: "표준 구현(base 3) + 파일 3–5개(+2) + 동시성 얽힘(+2)" = 7점 → **opus·high**를 announce하고 현재 세션과 다르면 `/model`·`/effort` 전환을 안내한다(강제 아님).
 
-**단, Build 단계(ce-work)는 예외다**: 완성된 계획을 실행하는 build 작업은 계획이 이미 판단을 front-load했으므로 base 1(기계적 실행)로 채점하고, 계획-시점 가산 신호(파일 수·새 모듈·API/스키마 변경)를 **다시 세지 않는다** — 그래서 파일이 아무리 많아도 기본값은 **sonnet·medium**이다(파일 수는 모델 등급이 아니라 유닛 분량으로 처리). build가 opus로 올라가는 건 오직 **반응적**일 때뿐이다: 실행이 계획이 예견 못 한 것을 드러낼 때 — RED→GREEN 정체가 개방형 근본원인 디버깅으로 전환되거나(그 서브태스크는 base-5 디버깅으로 재채점), 되돌리기 어려운 변경에서 테스트/타입체크가 실패할 때(§4 re-run 게이트). 계획-시점 범위로는 선불 승격하지 않는다.
+**단, Build 단계(ce-work)는 예외다**: 완성된 계획을 실행하는 build 작업은 계획이 이미 판단을 front-load했으므로 base 1(기계적 실행)로 채점하고, 계획-시점 가산 신호(파일 수·새 모듈·API/스키마 변경)를 **다시 세지 않는다** — 그래서 파일이 아무리 많아도 기본값은 **opus·medium**이다 — 모든 밴드가 opus인 지금, 이 예외는 모델 등급을 낮추는 게 아니라 **effort를 medium으로 캡**한다(계획이 아무리 커도 build를 high/xhigh로 올리지 않음). 파일 수는 유닛 분량으로 처리한다. build가 opus로 올라가는 건 오직 **반응적**일 때뿐이다: 실행이 계획이 예견 못 한 것을 드러낼 때 — RED→GREEN 정체가 개방형 근본원인 디버깅으로 전환되거나(그 서브태스크는 base-5 디버깅으로 재채점), 되돌리기 어려운 변경에서 테스트/타입체크가 실패할 때(§4 re-run 게이트). 계획-시점 범위로는 선불 승격하지 않는다.
 
 **fable-5**는 점수로는 절대 도달하지 않는다 — 여러 서브시스템을 넘나드는 지속적 설계·구현이나 긴 agentic 체인처럼 "진짜로 길고 복잡한" 과업임을 명시적으로 판단했을 때만 옵트인한다(점수 라우팅 상한은 opus·xhigh). haiku는 이 파이프라인에서 쓰지 않는다.
 
-**메커니즘 제약**: 메인 에이전트는 세션 도중 자기 모델을 못 바꾼다 — `/model`·`/effort`로 announce & 전환 안내만 가능. 서브에이전트 디스패치는 두 갈래다: `Agent` 툴은 `model`만 지정 가능(effort는 디스패치 세션에서 상속), `Workflow`의 `agent()`는 `model`+`effort` 둘 다 개별 지정 가능(완전 동적).
+**메커니즘 제약**: 메인 에이전트는 세션 도중 자기 모델을 못 바꾼다 — `/model`·`/effort`로 announce & 전환 안내만 가능. 점수 기반 밴드가 전부 opus인 지금 `/model`은 fable long-horizon flag가 켜질 때(혹은 세션이 opus가 아닐 때)만 바뀌고, 밴드별 변화는 사실상 `/effort`만 담당한다. 서브에이전트 디스패치는 두 갈래다: `Agent` 툴은 `model`만 지정 가능(effort는 디스패치 세션에서 상속), `Workflow`의 `agent()`는 `model`+`effort` 둘 다 개별 지정 가능(완전 동적).
 
-**리뷰어 분기**: 코드/문서 리뷰는 본질적으로 개방형 적대적 추론(base 5)이라, 가장 중요한 판정만 opus로 올린다 — `ce-code-review`는 correctness·security·adversarial, `ce-doc-review`는 adversarial·security-lens가 `model=opus`, 나머지는 `model=sonnet`.
+**리뷰어 분기**: 코드/문서 리뷰는 본질적으로 개방형 적대적 추론(base 5)이다. 원래는 가장 중요한 판정만 opus(`ce-code-review`의 correctness·security·adversarial, `ce-doc-review`의 adversarial·security-lens)로 올리고 나머지는 sonnet으로 돌렸으나, **현재는 sonnet이 라우팅에서 제외되어 전 리뷰어가 `model=opus`로 통일**되어 있다(아래 "Sonnet-5 제외" 참고). 이 opus-vs-sonnet 분기는 Sonnet 재도입 시 복원할 기준으로 `hybrid-workflow.md` §5에 기록되어 있다.
 
 세션 resting 기본값(`settings.json`)은 `effortLevel: high`다 — `xhigh`는 8–10 밴드에서 과업별로만 도달하며 상시 기본값이 아니다.
+
+**Sonnet-5 제외 (비용 역전, 한시적)**: per-token 단가만 보면 Sonnet-5가 가장 싸지만, 이 파이프라인의 다단계 agentic 작업에서는 토큰·반복이 3~4배로 불어나 **실효 비용이 Opus 4.8 이상으로 뒤집히고 정확도는 낮다**. 근거 — BrowseComp에서 Opus·low($5/67.7%)가 Sonnet·high($7/64.8%)를 비용·정확도 모두에서 앞서고, Artificial Analysis 인덱스 전체 실행 비용은 Opus 4.8 max $3,753 < Sonnet 5 max $6,015이며, 실측 agentic 태스크에서 Opus 4.8 단독은 70회/$7.07인 반면 Sonnet 5 단독은 309회/$20.95였다(가장 싼 모델이 최종 비용은 가장 큼). 그래서 0–5 밴드와 §5 비적대 리뷰어까지 전부 Opus 4.8로 통일한다. **추후 Sonnet 비용이 정상화되면** — 재벤치마크에서 해당 밴드의 검증된-결과당(cost-per-verified-outcome) 비용이 다시 Opus 아래로 내려오면 — 저비용 밴드(0–5)와 비적대 리뷰어에 Sonnet을 언제든 재도입한다. haiku는 이 파이프라인에서 쓰지 않는다.
+
+> 참고:
+> - <https://www.reddit.com/r/ClaudeAI/comments/1ujx3rw/sonnet_5_is_worse_than_opus_at_the_same_price_at/>
+> - <https://www.reddit.com/r/theprimeagen/comments/1ukscqq/the_new_claude_sonnet_5_is_more_costly_than_fable/>
+> - <https://devbrothers.ai/blog/advisor-%EC%A0%84%EB%9E%B5-claude-fable-5%EC%97%90%EA%B2%8C-%EC%9D%BC%EC%9D%84-%EC%8B%9C%ED%82%A4%EC%A7%80-%EB%A7%90%EA%B3%A0-%EC%8B%9C%ED%82%A4%EB%8A%94-%EC%97%AD%ED%95%A0%EC%9D%84-%EC%8B%9C%EC%BC%9C%EB%9D%BC/>
 
 ### Plan 단계 흐름 (Plan Mode ↔ Plannotator 디커플링)
 
