@@ -42,19 +42,23 @@ Parse:
 섞이도록. 각 컨셉마다 영어/라틴어 검색어 세트(작가·유파·매체·시대)를 준비한다.
 
 ### Step 3 — 검색
-1. **1차 소스 = Wikimedia Commons** (자산 § Wikimedia 완전 배선):
-   - **`Bash` curl + `-H 'User-Agent: …'` 로 API JSON을 발행한다. `WebFetch` 사용 금지**
-     (헤더·raw JSON 불가 → 403·파싱 실패).
-   - `generator=search`, `gsrnamespace=6`, `iiprop=url|extmetadata|mime|size`, `iiurlwidth=1200`.
-   - 배너 값은 **`thumburl` 우선, 없으면 `url` 폴백**.
-2. **보조 소스 best-effort** (자산 § 보조 소스): Met·Rijksmuseum·NYPL·Internet Archive 등을
-   `WebSearch`/`WebFetch`로 탐색하되 **직접 래스터 URL을 안정 추출 가능할 때만** 보강; 못 뽑으면
-   스킵.
+1. **공동 1차 소스 2종 = Wikimedia Commons · Library of Congress P&P(LoC)** (자산 § 1차 소스
+   개관 + 각 소스 완전 배선). 컨셉당 둘을 함께 조회해 후보 묶음에 소스가 섞이도록 한다.
+   - **둘 다 `Bash` curl + `-H 'User-Agent: …'` 로 raw JSON을 발행한다. `WebFetch` 금지**
+     (커스텀 헤더·raw JSON 불가 → 403·파싱 실패).
+   - **Wikimedia** — `generator=search`, `gsrnamespace=6`, `iiprop=url|extmetadata|mime|size`,
+     `iiurlwidth=1200`; 배너 값은 `thumburl` 우선, 없으면 `url` 폴백.
+   - **LoC** — 2-콜: 검색 `image.full`(직접 .jpg) → 아이템 JSON 최상위 `unrestricted==true`인
+     것만 통과.
+   - **AIC(시카고 미술관)는 배너 소스에서 제외** — Cloudflare 핫링크 불가(자산 § 보조 소스 하단).
+2. **보조 소스 best-effort** (자산 § 보조 소스): NYPL(토큰 필요)·Met·Rijksmuseum·Internet
+   Archive 등을 `WebSearch`/`WebFetch`로 탐색하되 **직접 래스터 URL을 안정 추출 가능할 때만**
+   보강; 못 뽑으면 스킵.
 
 ### Step 4 — 감별
-자산 § 감별 휴리스틱 순서대로: **R7 라이선스 필터(PD/CC0/자유만) → R8 mime 필터(image/* 만,
-SVG·PDF·GIF 배제) → R9 시각 판정**(썸네일 curl → 스크래치패드 임시 저장 → `Read`로 실제 확인,
-볼트엔 저장 안 함).
+자산 § 감별 휴리스틱 순서대로: **R7 라이선스 필터(PD/CC0/자유만; LoC는 아이템 JSON
+`unrestricted==true`) → R8 mime 필터(image/* 만, SVG·PDF·GIF 배제) → R9 시각 판정**(썸네일 curl
+→ 스크래치패드 임시 저장 → `Read`로 실제 확인, 볼트엔 저장 안 함).
 
 **최소 2개 확보 실패 시** 임의 저품질 후보로 채우지 말고 사용자에게 **검색어 조정을 요청하고
 중단**한다.
@@ -79,7 +83,8 @@ SVG·PDF·GIF 배제) → R9 시각 판정**(썸네일 curl → 스크래치패�
 선택 후보를 프론트매터의 `banner`·`banner_source`·`banner_license`·`banner_title`·
 `banner_creator`·`banner_year` 6필드에 기록한다.
 
-- `extmetadata.Artist`의 HTML(`<bdi><a>…</a></bdi>`)을 **제거해 평문화**한 뒤 `banner_creator`에.
+- **Wikimedia 한정** — `extmetadata.Artist`의 HTML(`<bdi><a>…</a></bdi>`)을 **제거해 평문화**한
+  뒤 `banner_creator`에. LoC `creator`는 평문이라 평문화 불필요.
 - **소스 파생 값은 신뢰하지 않는다** — 6개 `banner*` 스칼라 전부(URL 포함)를 **인용/이스케이프된
   YAML 문자열**로 기록하고(내부 `"`·`\` 이스케이프), **개행·제어문자를 제거**한다. HTML 제거는
   평문을 만들 뿐 YAML 구조 메타문자(`:`·선두 `-`·`#`·`|`·`"`)를 남기므로 이스케이프 없이
@@ -113,8 +118,9 @@ SVG·PDF·GIF 배제) → R9 시각 판정**(썸네일 curl → 스크래치패�
 - **제자리 편집**: 입력 파일을 in-place 수정한다. `_banner` 사본·백업을 만들지 않는다(git이 소스
   관리).
 - **본문 불변**: 본문은 바이트 단위 보존. `banner*` 6필드만 쓴다. `title` 등 다른 필드 날조 금지.
-- **네트워크 규약**: Wikimedia API JSON 호출은 **`Bash` curl + `-H 'User-Agent: …'` 헤더 필수**
-  (`WebFetch` 금지 — 헤더·raw JSON 불가). 인증 토큰을 쿼리에 넣지 않는다.
+- **네트워크 규약**: 1차 소스 2종(Wikimedia·LoC) API JSON 호출은 모두 **`Bash` curl +
+  `-H 'User-Agent: …'` 헤더 필수**(`WebFetch` 금지 — 커스텀 헤더·raw JSON 불가). 인증 토큰을
+  쿼리에 넣지 않는다.
 - **쓰기 안전**: 소스 파생 값은 신뢰 불가 → 노트에 기록 전 **YAML 인용/이스케이프·개행/제어문자
   제거**. HTML 제거만으로는 YAML 구조 메타문자가 남는다.
 - **최소 2개 미확보 시 중단**: 임의 저품질 후보로 채우지 않는다.

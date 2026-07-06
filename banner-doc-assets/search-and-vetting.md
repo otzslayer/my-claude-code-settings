@@ -43,10 +43,26 @@
 
 ---
 
+## § 1차 소스 개관 (공동 1차 2종)
+
+**1차 소스는 2종을 공동으로 검색한다: Wikimedia Commons · Library of Congress Prints &
+Photographs (LoC).** 각각 아래에 완전 배선(엔드포인트·필드매핑·라이선스 태그)이 있다. 컨셉당
+둘을 함께 조회해 후보 묶음에 소스가 섞이도록 하고, 감별(§ 감별 휴리스틱)은 소스 구분 없이
+동일하게 적용한다.
+
+- **공통 transport** — 둘 다 **`Bash` curl + `-H 'User-Agent: …'` 헤더로 raw JSON을 발행**한다.
+  `WebFetch`는 금지(커스텀 헤더·raw JSON 불가). `WebSearch`/`WebFetch`는 § 보조 소스 탐색용이다.
+- **라이선스 태그** — Wikimedia `LicenseShortName` · LoC `unrestricted`. 둘 다 소스가 명시한
+  태그만 신뢰하며 저작권을 독자 판단하지 않는다(§ 감별 1).
+- NYPL·Met·Rijksmuseum·Internet Archive는 § 보조 소스(best-effort)다. **AIC(시카고 미술관)는
+  Cloudflare 핫링크 불가로 배너 소스에서 제외**됐다(§ 보조 소스 하단 상세).
+
+---
+
 ## § Wikimedia 1차 소스 (완전 배선)
 
-**1차 소스는 Wikimedia Commons.** MediaWiki API 한 번의 호출로 래스터 URL·라이선스·작가·연도를
-모두 얻는다.
+**1차 소스의 하나는 Wikimedia Commons.** MediaWiki API 한 번의 호출로 래스터 URL·라이선스·작가·
+연도를 모두 얻는다.
 
 ### 호출 transport — `Bash` curl + User-Agent 헤더 (필수)
 
@@ -111,14 +127,66 @@ curl -s -H 'User-Agent: banner-doc/1.0 (Claude Code; contact via user)' \
 
 ---
 
+## § Library of Congress P&P (LoC) 1차 소스 (완전 배선)
+
+미 의회도서관 Prints & Photographs 온라인 카탈로그. **2-콜**이다 — 검색으로 직접 래스터 URL을
+얻고, 아이템 JSON으로 라이선스 태그를 확인한다.
+
+### 1단계 — 검색
+
+```
+https://www.loc.gov/pictures/search/?q=<검색어>&fo=json
+```
+
+```bash
+curl -s -H 'User-Agent: banner-doc/1.0 (Claude Code; contact via user)' \
+  'https://www.loc.gov/pictures/search/?q=steam%20engine&fo=json'
+```
+
+`results[*]`에서 뽑는다:
+
+| 반환 필드 | 매핑 대상 | 비고 |
+|---|---|---|
+| `image.full` | `banner` | 직접 `.jpg` 래스터 URL(`tile.loc.gov/…`) |
+| `title` | `banner_title` | |
+| `creator` | `banner_creator` | 없으면 비운다 |
+| `created_published_date` | `banner_year` | |
+| `links.item` | `banner_source` | 아이템 페이지 URL |
+| `pk` | (2단계 입력) | 라이선스 확인용 아이템 키 |
+
+### 2단계 — 라이선스 태그 확인 (필수)
+
+검색 JSON에는 **라이선스 필드가 없다.** 후보마다 아이템 JSON을 조회해 최상위 `unrestricted`
+불리언을 확인한다:
+
+```bash
+curl -s -H 'User-Agent: banner-doc/1.0 (Claude Code; contact via user)' \
+  'https://www.loc.gov/pictures/item/<pk>/?fo=json'
+```
+
+- 최상위 **`unrestricted == true` 인 항목만 통과**시켜 `banner_license`에
+  `No known restrictions (LoC)`로 기록한다. `false`이거나 필드가 없으면 **제외**한다(§ 감별 1 —
+  저작권을 독자 판단하지 않고 소스 태그만 신뢰).
+- `image.full`은 `.jpg`이므로 mime 필터는 자동 충족(§ 감별 2).
+- 6개 `banner*` 스칼라는 § 쓰기 안전(모든 소스 파생 값) 규칙을 동일하게 적용한다.
+
+---
+
 ## § 보조 소스 (한 문단 원칙)
 
-Met Museum·Rijksmuseum·NYPL Digital Collections·Internet Archive 등 다른 PD 소스는
-**직접 래스터 URL을 안정적으로 추출할 수 있을 때만** best-effort로 보강한다. 이들 상당수는
+NYPL Digital Collections(API 토큰 필요)·Met Museum·Rijksmuseum·Internet Archive 등 다른 PD
+소스는 **직접 래스터 URL을 안정적으로 추출할 수 있을 때만** best-effort로 보강한다. (LoC는
+§ 1차 소스로 승격돼 완전 배선됐다.) 이들 상당수는
 IIIF 뷰어·아이템 페이지만 노출하고 직접 이미지 URL을 안정적으로 주지 않으므로, 안 뽑히면 그
 후보를 **스킵**한다. 개별 소스의 API 엔드포인트·IIIF 매니페스트 파싱을 여기에 열거하지 않는다 —
 유지비만 늘고 실패율이 높다. 안정 URL 추출은 에이전트 재량의 best-effort이며, 못 뽑으면 미련
-없이 버린다. 1차 소스(Wikimedia)만으로 최소 후보 수를 채우는 것이 정상 경로다.
+없이 버린다. 1차 소스(Wikimedia·LoC)만으로 최소 후보 수를 채우는 것이 정상 경로다.
+
+**AIC(시카고 미술관) 제외** — AIC IIIF 이미지 호스트(`www.artic.edu/iiif/…`)는 Cloudflare 봇
+차단 뒤에 있어 `AIC-User-Agent` 헤더나 `Referer: artic.edu` 없이는 403이다. Obsidian Pixel
+Banner의 fetch는 이 조건을 못 붙이고 JS 챌린지도 못 풀어 **배너가 렌더되지 않음이 실측 확인**됐다
+(서버측 이미지 프록시도 datacenter IP라 더 막힌다). 따라서 AIC는 1차·보조 어디에서도 배너 소스로
+쓰지 않는다. AIC의 대표 PD 작품 상당수는 Wikimedia Commons에 미러링돼 있어 그쪽으로 커버된다.
 
 ---
 
