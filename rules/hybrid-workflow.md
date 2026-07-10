@@ -4,7 +4,7 @@ Operating rules binding Superpowers · Compound Engineering · CodeGraph · grap
 
 ---
 
-## 7-Stage Pipeline (compressed)
+## 7-Stage Pipeline (§1, compressed)
 
 Stage **structure** (phases, `/clear` boundaries) is fixed. Model·effort is not fixed per stage — each task is scored (see §3) and routed to a band.
 
@@ -21,9 +21,9 @@ Phase 2: Plan  (when the Plan Mode trigger is met)
               + ce-learnings-researcher: query docs/solutions/ — only when 3+ files)
               → docs/plans/<draft>.md
   2. ce-doc-review  (AUTOMATIC as ce-plan's Phase 5.3.8, headless, md-only; reviewer branching — §5)
-  3. EnterPlanMode → immediately ExitPlanMode, edit-free bracket (finalized plan as argument) — re-triggers the plannotator hard gate
-  4. plannotator hook fires → browser UI annotation · approval (blocks `/clear` until approved)
-     (annotations request changes: edit in non-plan-mode, repeat step 3's bracket)
+  3. plannotator annotate docs/plans/<file> — review the canonical plan in place
+     (blocks until the browser returns approved/dismissed/annotated; no ExitPlanMode bracket, no ~/.claude/plans/ copy)
+  4. approved → stop, do NOT implement inline; annotated → address in non-plan-mode on the same file, re-run until approved; dismissed → not an approval, do not proceed
   5. /clear
        │
        ▼  fresh context, plan file as input
@@ -40,10 +40,11 @@ Phase 3: Verify · Learn · Ship
   11. superpowers:finishing-a-development-branch  (Korean commit format)
 ```
 
-**Phase 2 note (§9 — Plan Mode ↔ plannotator decoupling)**:
+**Phase 2 note (§1 — Plan Mode ↔ plannotator decoupling)**:
 
 - ce-plan core work (plan-file `Write`, ce-doc-review autofix) runs in **non-plan-mode** — Plan Mode blocks both.
-- The plannotator `ExitPlanMode` hard gate (browser approval before `/clear`) is re-triggered afterward via the edit-free `EnterPlanMode → ExitPlanMode` bracket. Order enforced: mechanical AI review (ce-doc-review) → forced human review (plannotator).
+- The plannotator human gate runs on the canonical file afterward: `plannotator annotate docs/plans/<file>`, blocking until the browser returns `approved`/`dismissed`/`annotated`; only `approved` proceeds to `/clear`. Order enforced: mechanical AI review (ce-doc-review) → forced human review (plannotator). No `ExitPlanMode` bracket and no `~/.claude/plans/` copy — the annotated artifact **is** the canonical `docs/plans/` file, so ce-doc-review's autofixes cannot be overwritten by re-pasted plan text.
+- The enforcement shifts from a hook-level tool-deny to the annotate command's block-until-decision plus the skill loop (address `annotated` → re-run until `approved`). Both paths block progression until a browser decision; the annotate path additionally keeps a single source of truth. The general Plan Mode `ExitPlanMode` path (with its `PermissionRequest` plannotator gate and `~/.claude/plans/` promotion) still serves non-ce-plan work.
 - Narrow carve-out for ce-plan's own execution only. The general "Plan Mode before complex work" discipline (CLAUDE.md) governs elsewhere.
 
 ---
@@ -134,7 +135,7 @@ Review is open-ended adversarial reasoning (base 5) — only the highest-stakes 
 
 ---
 
-## Unit granularity & execution strategy (token discipline under 1-hour caching)
+## Unit granularity & execution strategy (§6 — token discipline under 1-hour caching)
 
 Under 1-hour caching, cache **writes cost 2× base input** (reads stay 0.1×), and every subagent spawn re-establishes its full prefix (CLAUDE.md + skill injection + unit packet) as a fresh 2× write. **Spawn count — not per-token price — is the dominant reducible cost.** Two defaults, one per stage:
 
@@ -145,7 +146,7 @@ Under 1-hour caching, cache **writes cost 2× base input** (reads stay 0.1×), a
 
 ---
 
-## 95% confidence opener (Phase 1 first turn — model utterance)
+## 95% confidence opener (§7 — Phase 1 first turn, model utterance)
 
 First question the model poses when entering the brainstorming skill:
 
@@ -170,7 +171,7 @@ For non-product work (large refactors · broad documentation · tooling), skip t
 
 ---
 
-## Triggers
+## Triggers (§8)
 
 **Full pipeline activation** (same as the Plan Mode trigger) — any one of:
 
@@ -198,7 +199,7 @@ These typically land in the 0–2 band per §3 (guide the switch if the session 
 
 ---
 
-## Memory · documentation tiers
+## Memory · documentation tiers (§9)
 
 | Tier | Location | Responsibility | Who changes it |
 | --- | --- | --- | --- |
@@ -216,12 +217,13 @@ These typically land in the 0–2 band per §3 (guide the switch if the session 
 
 ---
 
-## Errors / edge cases
+## Errors / edge cases (§10)
 
 | Situation | Policy |
 | --- | --- |
-| plannotator hard gate (normal path) | Re-triggered via the edit-free `EnterPlanMode → ExitPlanMode` bracket after ce-doc-review (§9) — the `PermissionRequest` hook on `ExitPlanMode` blocks `/clear` until browser approval |
-| plannotator bracket fails to fire / bypassed | Manually invoke `/plannotator-annotate docs/plans/<file>` |
+| plannotator human gate (normal path) | `plannotator annotate docs/plans/<file>` after ce-doc-review (§1 Phase 2 note) — blocks until the browser returns `approved`/`dismissed`/`annotated`; only `approved` proceeds to `/clear` |
+| annotate returns `annotated` | address feedback in non-plan-mode on the same file, re-run `plannotator annotate docs/plans/<file>` until `approved` |
+| annotate returns `dismissed` (closed without approving) | not an approval — do not `/clear` or start `/ce-work`; re-run annotate or confirm intent with the user |
 | ce-work parallel subagent worktree conflict | ce-work's built-in policy (abort → retry serially) |
 | ce-compound headless misclassification | docs/solutions/ is git tracked; user manually corrects·deletes |
 | ce-compound token overflow | Pass only summary·headers as input, leverage RTK compression |

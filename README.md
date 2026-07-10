@@ -135,7 +135,7 @@ Claude Code가 `settings.json`의 `enabledPlugins`와 `extraKnownMarketplaces`�
 
 ```
 Phase 1: Spec    superpowers:brainstorming → docs/superpowers/specs/
-Phase 2: Plan    non-plan-mode: /ce-plan → docs/plans/  (자동 ce-doc-review → EnterPlanMode→ExitPlanMode 브라켓으로 Plannotator 하드 게이트 재발동)
+Phase 2: Plan    non-plan-mode: /ce-plan → docs/plans/  (자동 ce-doc-review → plannotator annotate docs/plans/<file>로 정본 승인 게이트)
 Phase 2': Build  /ce-work <plan-path>
 Phase 3: Ship    verify → /ce-compound → commit+PR
 ```
@@ -182,11 +182,11 @@ Phase 3: Ship    verify → /ce-compound → commit+PR
 
 ### Plan 단계 흐름 (Plan Mode ↔ Plannotator 디커플링)
 
-`/ce-plan`의 본작업(계획 파일 작성, ce-doc-review의 자동 수정)은 Plan Mode 밖(non-plan-mode)에서 실행된다 — Plan Mode가 파일 쓰기와 자동 수정을 막기 때문이다. 대신 계획이 확정된 뒤, **편집 없이 `EnterPlanMode` → 곧바로 `ExitPlanMode`**를 호출하는 "브라켓"으로 Plannotator의 승인 게이트를 다시 건다 — 이 게이트는 브라우저에서 승인하기 전까지 `/clear`를 막는 하드 게이트라서, non-plan-mode로 옮겨도 사람 리뷰가 사라지지 않는다.
+`/ce-plan`의 본작업(계획 파일 작성, ce-doc-review의 자동 수정)은 Plan Mode 밖(non-plan-mode)에서 실행된다 — Plan Mode가 파일 쓰기와 자동 수정을 막기 때문이다. 대신 계획이 확정된 뒤, **`plannotator annotate docs/plans/<file>`로 정본 계획 파일을 제자리에서** 리뷰한다 — 이 커맨드는 브라우저가 `approved`/`dismissed`/`annotated`를 반환할 때까지 블로킹이고 `approved`만 `/clear`로 진행하므로, non-plan-mode로 옮겨도 사람 리뷰가 사라지지 않는다. `ExitPlanMode` 브라켓도 `~/.claude/plans/` 복사본도 없어, ce-doc-review 자동 수정이 재-붙여넣기 텍스트에 덮이지 않는다(정본이 곧 리뷰 대상). 승인 게이트의 강제는 훅 tool-deny에서 annotate 커맨드의 블로킹 + 스킬 루프(`annotated` → `approved`까지 재실행)로 옮겨간다. 일반 Plan Mode의 `ExitPlanMode` 경로(그 `PermissionRequest` Plannotator 게이트 + `~/.claude/plans/` 승격)는 ce-plan 외 작업에 그대로 남는다.
 
 ```
-non-plan-mode → /ce-plan (계획 작성) → 자동 ce-doc-review(리뷰어 model 분기)
-  → EnterPlanMode→ExitPlanMode 브라켓 → Plannotator 승인(브라우저) → /clear
+non-plan-mode → /ce-plan (계획 작성) → 자동 ce-doc-review(전 리뷰어 opus)
+  → plannotator annotate docs/plans/<file> → approved(브라우저) → /clear
 ```
 
 일반적인 "복잡한 작업 전에는 Plan Mode로 먼저 분석한다"는 규율(CLAUDE.md)은 그대로 유지된다 — 위 흐름은 `/ce-plan` 자체의 실행 방식에 대한 예외(carve-out)일 뿐이다.
@@ -201,10 +201,10 @@ non-plan-mode → /ce-plan (계획 작성) → 자동 ce-doc-review(리뷰어 mo
 | `context7@claude-plugins-official` | 라이브러리 문서 실시간 조회 |
 | `skill-creator@claude-plugins-official` | 스킬 생성·최적화 |
 | `claude-md-management@claude-plugins-official` | CLAUDE.md 감사·개선 |
+| `security-guidance@claude-plugins-official` | 보안 가이드 (보안 리뷰 규칙·security-reviewer) |
 | `code-simplifier@claude-plugins-official` | 코드 단순화 |
 | `commit-commands@claude-plugins-official` | 커밋·PR 워크플로우 |
 | `claude-dashboard@claude-dashboard` | statusLine |
-| `claude-hud@claude-hud` | 상태 HUD |
 
 ### 의존 MCP 서버
 

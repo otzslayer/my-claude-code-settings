@@ -34,7 +34,7 @@ The `superpowers` SessionStart hook already injects the full `using-superpowers`
 
 Domain skills (FastAPI, LangChain, etc.) layer on top when relevant. Available skills are auto-listed in session context — invoke via `Skill(skill="...")`. Model·effort for every row above is computed by scoring the task's complexity, not fixed per skill — see the policy below.
 
-**Model · effort policy**: The agent cannot switch its own model mid-session, so at each task or `/clear` boundary, score the task's complexity (base + additive signals → band → model·effort — see "Complexity scoring" §3 in `~/.claude/rules/hybrid-workflow.md`) and announce the result; if it differs from the current setting, guide the switch via `/model`·`/effort` — announce and confirm, never enforce. **Exception — ce-code-review / ce-doc-review**: no session switch (avoids a costly in-session cache reload); their reviewer subagents are currently pinned to `model=opus` across the board — the adversarial-vs-rest opus/sonnet split is collapsed while sonnet is suspended from routing (hybrid-workflow.md §3/§5) — with effort inherited from the dispatching session. Full definition: the "Model recalibration" (§2), "Complexity scoring" (§3), "Escalation policy" (§4.3), and "Reviewer branching" (§5) sections in `~/.claude/rules/hybrid-workflow.md`.
+**Model · effort policy**: The agent cannot switch its own model mid-session, so at each task or `/clear` boundary, score the task's complexity (base + additive signals → band → model·effort — see "Complexity scoring" §3 in `~/.claude/rules/hybrid-workflow.md`) and announce the result; if it differs from the current setting, guide the switch via `/model`·`/effort` — announce and confirm, never enforce. **Exception — ce-code-review / ce-doc-review**: no session switch (avoids a costly in-session cache reload); their reviewer subagents are currently pinned to `model=opus` across the board — the adversarial-vs-rest opus/sonnet split is collapsed while sonnet is suspended from routing (hybrid-workflow.md §3/§5) — with effort inherited from the dispatching session. Full definition: the "Model recalibration" (§2), "Complexity scoring" (§3), "Escalation policy" (§4), and "Reviewer branching" (§5) sections in `~/.claude/rules/hybrid-workflow.md`.
 
 ## Core Principles
 
@@ -76,15 +76,15 @@ Before complex tasks: Plan Mode → Analyze → Draft plan → Resolve ambiguiti
 - Modifies public API or data schema
 - User explicitly requests planning
 
-**Carve-out — ce-plan's own execution runs in non-plan-mode**: the general Plan Mode discipline above still governs *whether* to plan and covers Plan Mode itself. But ce-plan's core work — writing `docs/plans/<draft>.md` and ce-doc-review's autofix — runs in **non-plan-mode**, because Plan Mode blocks both `Write` and autofix. This does not weaken review: the plannotator hard gate is re-triggered afterward via the `EnterPlanMode → ExitPlanMode` bracket in step 3 below, so forced human review still blocks `/clear`. See `~/.claude/rules/hybrid-workflow.md` (Phase 2 note, §9) for the full mechanism rationale.
+**Carve-out — ce-plan's own execution runs in non-plan-mode**: the general Plan Mode discipline above still governs *whether* to plan and covers Plan Mode itself. But ce-plan's core work — writing `docs/plans/<draft>.md` and ce-doc-review's autofix — runs in **non-plan-mode**, because Plan Mode blocks both `Write` and autofix. This does not weaken review: the plannotator human gate runs afterward on the canonical file (`plannotator annotate docs/plans/<file>`, step 3 below), so forced human review still precedes `/clear`. See `~/.claude/rules/hybrid-workflow.md` (Phase 2 note, §1) for the full mechanism rationale.
 
 **Plan Persistence (MANDATORY — Complex tasks)**:
 
 1. Author `docs/plans/<draft>.md` via `/ce-plan` in non-plan-mode (answer ce-plan's interactive questions; create the `docs/plans/` directory if it doesn't exist)
 2. ce-doc-review runs automatically as ce-plan's Phase 5.3.8 (headless, md-only; reviewer model branching per hybrid-workflow.md §5)
-3. Re-trigger the plannotator hard gate with an edit-free bracket: call `EnterPlanMode`, then immediately `ExitPlanMode` with the finalized plan as argument
-4. The plannotator hook fires automatically on `ExitPlanMode` → annotate and approve in the browser UI (blocks `/clear` until approved)
-5. Approve, or if annotations request changes: edit the plan in non-plan-mode, then repeat step 3's bracket to re-trigger the gate. The plan is already saved at `docs/plans/YYYY-MM-DD-<summary>.md` from step 1 (on revision, reuse the same file and keep the original date)
+3. Run `plannotator annotate docs/plans/<file>` on the canonical plan file to open the browser review (blocks until it returns `approved`/`dismissed`/`annotated`)
+4. `approved` → forced human review passed, proceed to `/clear` (do NOT implement inline); `dismissed` → closed without approving, do not proceed
+5. `annotated` → address the feedback in non-plan-mode on the same `docs/plans/YYYY-MM-DD-<summary>.md` file (reuse it, keep the original date), then re-run step 3 until `approved`
 6. `/clear` → execute via `/ce-work <plan-path>` in a new session (score the build task's complexity per hybrid-workflow.md §3 and guide the resulting `/model`·`/effort` switch)
 7. NEVER implement inline in the same planning session — this wastes planning context tokens
 
