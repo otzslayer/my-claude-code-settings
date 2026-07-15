@@ -20,10 +20,12 @@
   직접 그리지 않아도 정서·시대감이 통하는 자료. "분산 시스템"이면 고지도의 교역로망, "기억과
   누적"이면 중세 필사본·고서 삽화. 은유적으로 글에 맞는 자료.
 
-### 검색어 세트 만들기
+### 검색어 만들기 (컨셉당 1개)
 
-각 컨셉마다 **영어/라틴어 검색어 세트**를 만든다. 노트가 한국어일 수 있으므로 검색은 반드시
-영어/라틴어 개념어로 한다(Wikimedia Commons는 영어 메타데이터가 지배적). 세트에 넣을 축:
+각 컨셉마다 **영어/라틴어 검색어를 하나씩** 고른다(§ 호출 레시피 예산 — 컨셉 3개 × 검색어 1개).
+노트가 한국어일 수 있으므로 검색은 반드시 영어/라틴어 개념어로 한다(Wikimedia Commons는 영어
+메타데이터가 지배적). 아래 축을 **한 줄로 조합**해 하나를 만든다 — 변형을 여러 개 준비해 순차
+시도하는 방식은 라운드트립만 먹는다:
 
 - **작가·유파** — `Piranesi`, `Albrecht Dürer`, `Ortelius`, `Hokusai`, `Dutch Golden Age`
 - **매체** — `engraving`, `etching`, `woodcut`, `lithograph`, `copperplate`, `mezzotint`,
@@ -41,60 +43,139 @@
   `medieval network diagram`
 - "식물 분류" → `botanical illustration`, `herbarium plate`, `Redouté`, `flora engraving`
 
+### 텍스트 밀집 자료 주의
+
+**필사본·팔림프세스트·고서 페이지**는 개념적으로 매력적일 때가 많다(팔림프세스트 = 지우고 다시
+쓴 기록). 하지만 실물은 대개 **텍스트로 빽빽한 문서 스캔**이라 배너로 얹으면 갈색 텍스처로만
+읽히고 § 감별 4에서 탈락한다. 메타데이터로는 미리 알 수 없으니 — 이건 눈으로 봐야 안다 —
+**같은 컨셉을 시각적 구조가 있는 자료(도해·지도·판화)로 바꿔 잡는 편**이 낫다. 예: "기록의
+재작성" → 팔림프세스트 대신 `geological cross section`·`meander belt map`(지층·물길로 과거가
+층층이 남은 도판).
+
 ---
 
-## § 1차 소스 개관 (공동 1차 2종)
+## § 1차 소스 개관 (Wikimedia 단일)
 
-**1차 소스는 2종을 공동으로 검색한다: Wikimedia Commons · Library of Congress Prints &
-Photographs (LoC).** 각각 아래에 완전 배선(엔드포인트·필드매핑·라이선스 태그)이 있다. 컨셉당
-둘을 함께 조회해 후보 묶음에 소스가 섞이도록 하고, 감별(§ 감별 휴리스틱)은 소스 구분 없이
-동일하게 적용한다.
+**1차 소스는 Wikimedia Commons 하나다.** 정상 경로는 Wikimedia만으로 최소 후보 수를 채우는
+것이고, 못 채울 때만 § 보조 소스(LoC 포함)로 내려간다.
 
-- **공통 transport** — 둘 다 **`Bash` curl + `-H 'User-Agent: …'` 헤더로 raw JSON을 발행**한다.
-  `WebFetch`는 금지(커스텀 헤더·raw JSON 불가). `WebSearch`/`WebFetch`는 § 보조 소스 탐색용이다.
-- **라이선스 태그** — Wikimedia `LicenseShortName` · LoC `unrestricted`. 둘 다 소스가 명시한
-  태그만 신뢰하며 저작권을 독자 판단하지 않는다(§ 감별 1).
-- NYPL·Met·Rijksmuseum·Internet Archive는 § 보조 소스(best-effort)다. **AIC(시카고 미술관)는
+- **왜 단일인가** — Wikimedia 검색 JSON은 한 번의 호출로 래스터 URL·라이선스·mime·**width/height**를
+  전부 준다. 즉 라이선스·mime·해상도 **3중 사전 필터가 추가 호출 없이 공짜**다. LoC를 비롯한 다른
+  소스는 이 셋 중 일부를 검색 JSON에 담지 않아 후보당 별도 호출이 필요하고, 그 호출은 대부분
+  탈락할 후보에 쓰인다(§ 보조 소스 — LoC).
+- **transport** — **`Bash` curl + `-H 'User-Agent: …'` 헤더로 raw JSON을 발행**한다. `WebFetch`는
+  금지(커스텀 헤더·raw JSON 불가). `WebSearch`/`WebFetch`는 § 보조 소스 탐색용이다. 구체적 호출은
+  **§ 호출 레시피**를 그대로 따른다.
+- **라이선스 태그** — `LicenseShortName`. 소스가 명시한 태그만 신뢰하며 저작권을 독자 판단하지
+  않는다(§ 감별 1).
+- LoC·NYPL·Met·Rijksmuseum·Internet Archive는 § 보조 소스(best-effort)다. **AIC(시카고 미술관)는
   Cloudflare 핫링크 불가로 배너 소스에서 제외**됐다(§ 보조 소스 하단 상세).
+
+---
+
+## § 호출 레시피 (필수 — 라운드트립 예산)
+
+검색 단계의 지배적 비용은 토큰이 아니라 **Bash 라운드트립 수**다. 아래를 그대로 따르면 검색이
+**Bash 2콜**로 끝난다. 벗어나면 아래 § 실측 함정에 걸린다.
+
+### 예산
+
+| 항목 | 상한 |
+|---|---|
+| 컨셉 | 3개 (직결형 ≥1 + 연상형 1~2) |
+| 컨셉당 검색어 | **1개** |
+| 검색 Bash 콜 | **1콜** (전 컨셉 fan-out) |
+| 파싱 Bash 콜 | **1콜** (전 파일 일괄) |
+| 시각 감별 `Read` | 통과 후보 **2~3개 확보까지** (하드 상한 아님 — § 감별 4) |
+
+**빈 결과가 나온 검색어는 버린다.** 변형을 만들어 재시도하지 않는다 — 통과 후보가 2개 미만이면
+사용자에게 검색어 조정을 요청하고 중단한다(§ 최소 확보 실패).
+
+### 콜 1 — 전 컨셉 fan-out (파일로 저장)
+
+```bash
+cd <scratchpad>
+f(){ curl -s -H 'User-Agent: banner-doc/1.0 (Claude Code; contact via user)' \
+  "https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=$2&gsrnamespace=6&gsrlimit=25&prop=imageinfo&iiprop=url%7Cextmetadata%7Cmime%7Csize&iiurlwidth=1200&format=json" -o "wm_$1.json"; }
+f tree    "genealogical%20tree%20engraving"                  # 직결형
+f meander "ancient%20courses%20mississippi%20meander%20belt"  # 연상형
+f strata  "geological%20cross%20section%20engraving"          # 연상형
+```
+
+(예시는 "기록·계보·과거의 층" 결의 컨셉 3갈래. 실제 컨셉은 노트 주제에서 도출한다.)
+
+### 콜 2 — 일괄 파싱 (라이선스·mime·해상도 필터 적용 후 컴팩트 표만 출력)
+
+```bash
+cd <scratchpad>
+python3 - <<'EOF'
+import json,glob,re
+strip=lambda s: re.sub(r'<[^>]*>','',s or '').strip()
+for fn in sorted(glob.glob('wm_*.json')):
+    print('='*12, fn)
+    pages=json.load(open(fn)).get('query',{}).get('pages',{})
+    if not pages: print('  (none)'); continue
+    for p in pages.values():
+        ii=p['imageinfo'][0]; em=ii.get('extmetadata',{})
+        if ii['mime'] not in ('image/jpeg','image/png','image/webp'): continue  # § 감별 2
+        if (ii.get('width') or 0) < 1000: continue                              # § 감별 3
+        print(f"* {p['title'][5:]}\n  {strip(em.get('LicenseShortName',{}).get('value'))} | "
+              f"{ii.get('width')}x{ii.get('height')} | {strip(em.get('Artist',{}).get('value'))[:45]} | "
+              f"{strip(em.get('DateTimeOriginal',{}).get('value'))[:30]}\n  {ii.get('thumburl') or ii.get('url')}")
+EOF
+```
+
+최종 후보가 정해지면 같은 파일들을 한 번 더 파싱해 `descriptionurl`·`ObjectName` 등 기록용
+필드를 뽑는다(§ 반환 필드 매핑). 재검색하지 않는다 — JSON은 이미 스크래치패드에 있다.
+
+### RTK 상호작용 — `-o <file>`이 필수인 **진짜** 이유
+
+이 환경에는 `PreToolUse:Bash` 훅(`~/.claude/hooks/rtk-rewrite.sh`)이 있어 **`curl …`을
+`rtk curl …`로 자동 재작성**한다. 파이프·리다이렉트 유무와 **무관**하게 항상 재작성된다.
+
+`rtk curl`은 토큰 최적화기라 **응답 본문 대신 "스키마 개요"를 stdout에 출력**한다:
+
+```
+{
+  batchcomplete: string,
+  continue: { continue: string, gsroffset: int }
+  ...
+```
+
+즉 **stdout으로 나온 것은 JSON이 아니다.** 반면 `-o <file>`은 stdout을 거치지 않아 rtk가 가로챌
+것이 없으므로 **파일에는 원본 응답 바이트가 그대로** 떨어진다. 실측 비교:
+
+| 형태 | 파일/파서가 받는 것 |
+|---|---|
+| `curl … -o out.json` | **진짜 JSON** ✅ ← 레시피가 쓰는 형태 |
+| `curl … > out.json` (셸 리다이렉트) | 스키마 개요 ❌ — **조용히** 잘못된다. 나중 파싱에서야 터져 원인이 멀어진다 |
+| `curl … \| python3` | 스키마 개요 ❌ → `JSONDecodeError` |
+| `rtk proxy curl … -o out.json` | 진짜 JSON ✅ (문서화된 명시적 우회 — `-o`가 막힐 때의 탈출구) |
+
+**"파이프가 문제"가 아니다.** 문제는 **stdout 자체**다. 파이프를 리다이렉트로 바꾸는 "수정"은
+증상만 조용하게 만들 뿐 더 나쁘다.
+
+**RTK를 끄지 않는다.** `-o`가 이미 우회하고, 평범한 `curl -o`는 rtk가 없는 환경에서도 그대로
+동작한다(훅은 rtk 부재 시 경고 후 통과시킨다). `rtk proxy`는 rtk 설치를 전제하므로 오히려
+이식성이 낮다. 훅은 전역 `matcher: Bash`라 커맨드 단위 off 스위치도 없다.
+
+### 그 밖의 실측 함정
+
+| 함정 | 증상 | 규칙 |
+|---|---|---|
+| 검색어에 `+`를 공백으로 | 결과 0건 (조용히 실패) | `gsrsearch` 인코딩은 **`%20`만** |
+| bash 연관배열 `${!Q[@]}` | zsh `bad substitution` | 셸은 **zsh**. 연관배열 대신 위 `f()` 반복 호출 |
+| raw JSON 그대로 출력 | 한 묶음에 20k자 | 파싱 출력은 **후보당 2~3줄**로 투영 |
 
 ---
 
 ## § Wikimedia 1차 소스 (완전 배선)
 
-**1차 소스의 하나는 Wikimedia Commons.** MediaWiki API 한 번의 호출로 래스터 URL·라이선스·작가·
-연도를 모두 얻는다.
+**1차 소스는 Wikimedia Commons.** MediaWiki API 한 번의 호출로 래스터 URL·라이선스·mime·크기·
+작가·연도를 모두 얻는다.
 
-### 호출 transport — `Bash` curl + User-Agent 헤더 (필수)
-
-이 API JSON 쿼리는 **반드시 `Bash` curl로, `-H 'User-Agent: …'` 헤더를 붙여** 발행한다.
-
-- `WebFetch`는 **금지** — 커스텀 헤더 설정 불가, raw JSON 반환 불가라 UA 필수 요건(누락 시
-  Wikimedia가 403 반환)과 `extmetadata` JSON 파싱을 만족하지 못한다.
-- `WebSearch`/`WebFetch`는 **보조 소스(R6) 탐색·페이지 조회**용이며 1차 API 호출에는 쓰지 않는다.
-- User-Agent에는 도구·연락 식별을 넣는다(Wikimedia 정책). 예:
-  `User-Agent: banner-doc/1.0 (Claude Code; contact via user)`.
-
-### API 엔드포인트 템플릿
-
-```
-https://commons.wikimedia.org/w/api.php
-  ?action=query
-  &generator=search
-  &gsrsearch=<검색어>
-  &gsrnamespace=6
-  &gsrlimit=20
-  &prop=imageinfo
-  &iiprop=url|extmetadata|mime|size
-  &iiurlwidth=1200
-  &format=json
-```
-
-curl 예시(URL 인코딩 유의, `gsrnamespace=6`은 File 네임스페이스):
-
-```bash
-curl -s -H 'User-Agent: banner-doc/1.0 (Claude Code; contact via user)' \
-  'https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=celestial%20map%20engraving&gsrnamespace=6&gsrlimit=20&prop=imageinfo&iiprop=url%7Cextmetadata%7Cmime%7Csize&iiurlwidth=1200&format=json'
-```
+호출 방식은 **§ 호출 레시피**를 그대로 쓴다(여기서 반복하지 않는다). UA에는 도구·연락 식별을
+넣는다 — Wikimedia 정책이며 누락 시 403. `gsrnamespace=6`은 File 네임스페이스.
 
 ### 반환 필드 매핑 (`query.pages[*].imageinfo[0]`)
 
@@ -102,7 +183,7 @@ curl -s -H 'User-Agent: banner-doc/1.0 (Claude Code; contact via user)' \
 |---|---|---|
 | `imageinfo[0].thumburl` (우선) / `imageinfo[0].url` (폴백) | `banner` | `iiurlwidth=1200`이 만든 썸 URL 우선, 없으면 원본 URL |
 | `imageinfo[0].mime` | mime 필터 | `image/*`(jpg·png·webp) 확인 |
-| `imageinfo[0].size` / `width` / `height` | 품질 참고 | 저해상 배제 판단 |
+| `imageinfo[0].width` / `height` / `size` | 해상도 게이트 | **`width < 1000` 배제**(§ 감별 3). 다운로드 전 공짜로 걸러진다 |
 | `extmetadata.LicenseShortName.value` | `banner_license` | 라이선스 필터의 근거 |
 | `extmetadata.Artist.value` | `banner_creator` | **HTML 태그 제거 후** 아래 쓰기 안전 규칙 적용 |
 | `extmetadata.DateTimeOriginal.value` (없으면 `DateTime`) | `banner_year` | |
@@ -127,10 +208,18 @@ curl -s -H 'User-Agent: banner-doc/1.0 (Claude Code; contact via user)' \
 
 ---
 
-## § Library of Congress P&P (LoC) 1차 소스 (완전 배선)
+## § 보조 소스 — LoC (배선은 완전하되 1차 아님)
 
-미 의회도서관 Prints & Photographs 온라인 카탈로그. **2-콜**이다 — 검색으로 직접 래스터 URL을
-얻고, 아이템 JSON으로 라이선스 태그를 확인한다.
+미 의회도서관 Prints & Photographs 온라인 카탈로그. 유일하게 **완전 배선된 보조 소스**다.
+
+**호출 조건 — Wikimedia만으로 통과 후보가 2개 미만일 때만 부른다.** 매 실행 무조건 도는 소스가
+아니다.
+
+**왜 1차가 아닌가** — LoC 검색 JSON에는 **`width`/`height`도 라이선스 필드도 없다.** 그래서
+Wikimedia가 검색 JSON 하나로 공짜로 끝내는 3중 사전 필터(§ 감별 1·2·3)를 LoC는 후보당 별도
+호출(라이선스) + 실제 다운로드(해상도) 없이는 못 한다. 즉 **탈락할 후보에 라운드트립을 먼저
+지불하는 구조**다. 이는 소스 품질 문제가 아니라 API 구조의 비대칭이며, § 보조 소스의 "직접 래스터
+URL을 안정 추출 가능할 때만 보강한다"는 원칙과 같은 결이다.
 
 ### 1단계 — 검색
 
@@ -175,8 +264,8 @@ curl -s -H 'User-Agent: banner-doc/1.0 (Claude Code; contact via user)' \
 ## § 보조 소스 (한 문단 원칙)
 
 NYPL Digital Collections(API 토큰 필요)·Met Museum·Rijksmuseum·Internet Archive 등 다른 PD
-소스는 **직접 래스터 URL을 안정적으로 추출할 수 있을 때만** best-effort로 보강한다. (LoC는
-§ 1차 소스로 승격돼 완전 배선됐다.) 이들 상당수는
+소스는 **직접 래스터 URL을 안정적으로 추출할 수 있을 때만** best-effort로 보강한다. (LoC는 위
+§ 보조 소스 — LoC에 완전 배선돼 있으니 폴백이 필요하면 그쪽을 먼저 쓴다.) 이들 상당수는
 IIIF 뷰어·아이템 페이지만 노출하고 직접 이미지 URL을 안정적으로 주지 않으므로, 안 뽑히면 그
 후보를 **스킵**한다. 개별 소스의 API 엔드포인트·IIIF 매니페스트 파싱을 여기에 열거하지 않는다 —
 유지비만 늘고 실패율이 높다. 안정 URL 추출은 에이전트 재량의 best-effort이며, 못 뽑으면 미련
@@ -192,8 +281,9 @@ Banner의 fetch는 이 조건을 못 붙이고 JS 챌린지도 못 풀어 **배�
 
 ## § 감별 휴리스틱
 
-통과 순서: **라이선스 필터 → mime 필터 → 시각 판정**. 이 순서로 걸러야 시각 확인 비용(썸네일
-다운로드)을 라이선스·mime가 이미 통과한 후보에만 쓴다.
+통과 순서: **라이선스 → mime → 해상도 → 시각 판정**. 앞의 셋은 Wikimedia 검색 JSON만으로 **추가
+호출 없이** 판정되므로, 비싼 시각 확인(다운로드 + `Read`)은 셋을 모두 통과한 후보에만 쓴다.
+§ 호출 레시피의 콜 2 파서가 1~3을 이미 적용하니, 표에 남은 것만 눈으로 보면 된다.
 
 ### 1. 라이선스 필터
 
@@ -207,10 +297,26 @@ Banner의 fetch는 이 조건을 못 붙이고 JS 챌린지도 못 풀어 **배�
 - `imageinfo[0].mime`이 `image/*`(`image/jpeg`·`image/png`·`image/webp`)인지 확인.
 - SVG(`image/svg+xml`)·PDF·GIF는 배너로 부적합하므로 **배제**.
 
-### 3. 시각 판정
+### 3. 해상도 게이트
 
-라이선스·mime를 통과한 후보의 썸네일(`iiurlwidth`로 얻은 800px급 URL)을 `Bash`(curl)로
+- `imageinfo[0].width`가 **1000 미만이면 배제**한다. 배너는 노트 상단을 가로로 채우므로 저해상은
+  얹는 순간 뭉개진다.
+- 이 판정은 검색 JSON에 이미 들어 있어 **공짜**다. 다운로드하고 `Read`한 뒤에야 "작네" 하고
+  버리는 것이 시각 감별 단계에서 가장 흔한 낭비였다 — 그 왕복을 여기서 없앤다.
+
+### 4. 시각 판정
+
+라이선스·mime·해상도를 통과한 후보의 썸네일(`iiurlwidth`로 얻은 1200px급 URL)을 `Bash`(curl)로
 **스크래치패드에 임시 저장** → `Read`로 실제 이미지를 본다. **볼트엔 저장하지 않는다.**
+
+**보는 순서** — ① 컨셉당 1장씩 먼저(직결형/연상형 믹스를 보존한다) → ② 그다음 해상도 높은 순.
+아래 배제 사유는 **메타데이터로 알 수 없는 것들**이라 여기서 탈락이 나오는 건 설계상 정상이다.
+탈락하면 같은 컨셉의 다음 후보로 **대체 `Read`**를 한 장 더 쓰고, **통과 후보 2~3개가 모이면
+멈춘다**.
+
+`Read`가 이 단계에서 가장 비싼 연산이지만 **횟수 상한을 걸지는 않는다** — 상한 때문에 통과
+후보가 2개 미만인 채로 § 최소 확보 실패에 빠지면 전체 재검색(콜 1+2+추가 `Read`)을 부르는데,
+그게 `Read` 한 장보다 훨씬 비싸다. 아끼려다 더 쓰는 구조를 만들지 않는다.
 
 - **적합** — 고판화의 고대비·인쇄판 질감, 고지도·빈티지 도표의 선명한 선, 고전 회화의 구성.
   배너로 얹었을 때 상단에 걸쳐 읽히는 자료.
