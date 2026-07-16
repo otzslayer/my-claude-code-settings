@@ -97,12 +97,16 @@
 cd <scratchpad>
 f(){ curl -s -H 'User-Agent: banner-doc/1.0 (Claude Code; contact via user)' \
   "https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=$2&gsrnamespace=6&gsrlimit=25&prop=imageinfo&iiprop=url%7Cextmetadata%7Cmime%7Csize&iiurlwidth=1200&format=json" -o "wm_$1.json"; }
-f tree    "genealogical%20tree%20engraving"                  # 직결형
-f meander "ancient%20courses%20mississippi%20meander%20belt"  # 연상형
-f strata  "geological%20cross%20section%20engraving"          # 연상형
+f tree    "filetype%3Abitmap%20genealogical%20tree%20engraving"                  # 직결형
+f meander "filetype%3Abitmap%20ancient%20courses%20mississippi%20meander%20belt"  # 연상형
+f strata  "filetype%3Abitmap%20geological%20cross%20section%20engraving"          # 연상형
 ```
 
 (예시는 "기록·계보·과거의 층" 결의 컨셉 3갈래. 실제 컨셉은 노트 주제에서 도출한다.)
+
+**모든 `gsrsearch`는 `filetype%3Abitmap%20`으로 시작한다.** File 네임스페이스 전문 검색은 Internet
+Archive의 PDF 책 스캔이 지배한다 — 빼면 § 감별 2의 mime 필터를 통과하는 후보가 0건에 수렴하고,
+결과에 섞인 PDF 한 건이 검색 전체를 죽인다(§ 실측 함정).
 
 ### 콜 2 — 일괄 파싱 (라이선스·mime·해상도 필터 적용 후 컴팩트 표만 출력)
 
@@ -163,6 +167,7 @@ EOF
 
 | 함정 | 증상 | 규칙 |
 |---|---|---|
+| `filetype:bitmap` 누락 | IA의 PDF 책 스캔이 결과를 뒤덮어 mime 필터 후 **0건**. 게다가 PDF가 한 건이라도 섞이면 `iiurlwidth` 정규화가 실패해 **검색 자체가 `urlparamnormal` 에러**로 죽는다 | `gsrsearch`는 **`filetype%3Abitmap%20`으로 시작** |
 | 검색어에 `+`를 공백으로 | 결과 0건 (조용히 실패) | `gsrsearch` 인코딩은 **`%20`만** |
 | bash 연관배열 `${!Q[@]}` | zsh `bad substitution` | 셸은 **zsh**. 연관배열 대신 위 `f()` 반복 호출 |
 | raw JSON 그대로 출력 | 한 묶음에 20k자 | 파싱 출력은 **후보당 2~3줄**로 투영 |
@@ -185,8 +190,8 @@ EOF
 | `imageinfo[0].mime` | mime 필터 | `image/*`(jpg·png·webp) 확인 |
 | `imageinfo[0].width` / `height` / `size` | 해상도 게이트 | **`width < 1000` 배제**(§ 감별 3). 다운로드 전 공짜로 걸러진다 |
 | `extmetadata.LicenseShortName.value` | `banner_license` | 라이선스 필터의 근거 |
-| `extmetadata.Artist.value` | `banner_creator` | **HTML 태그 제거 후** 아래 쓰기 안전 규칙 적용 |
-| `extmetadata.DateTimeOriginal.value` (없으면 `DateTime`) | `banner_year` | |
+| `extmetadata.Artist.value` | `banner_creator` | **HTML 태그 제거 후** 아래 쓰기 안전 규칙 적용. 개인 닉네임·`Photograph by …`면 **사진본 신호** — § 정본 우선 |
+| `extmetadata.DateTimeOriginal.value` (없으면 `DateTime`) | `banner_year` | `date QS:` 잔여물 절단(아래). 최근 타임스탬프면 **사진본 신호** — § 정본 우선 |
 | `imageinfo[0].descriptionurl` | `banner_source` | Commons 파일 설명 페이지 URL |
 | `imageinfo[0].url`의 파일명(원제) | `banner_title` | URL 마지막 세그먼트 → 확장자·`File:` 정리 |
 
@@ -194,6 +199,41 @@ EOF
 
 `Artist.value`는 흔히 `<bdi><a href="…">이름</a></bdi>` 형태의 HTML이다. `banner_creator`에
 넣기 전 **모든 HTML 태그를 제거해 평문화**한다(`<bdi>`·`<a>` 등 흔적 없이). 이름만 남긴다.
+
+### 정본 우선 — `Artist`가 원작자가 아닐 때
+
+유명 PD 회화·판화는 Commons에 **원작 스캔(정본)**과 **미술관에서 찍은 사진본**이 나란히 있다.
+사진본의 `Artist`는 **촬영자**, `DateTimeOriginal`은 **촬영 일자**, `LicenseShortName`은 **사진의
+CC 라이선스**다. 필드를 곧이곧대로 기록하면 1766년 회화가
+`Joseph Wright of Derby / circa 1766 / Public domain`이 아니라
+`kitmasterbloke / 2025-12-11 / CC BY 4.0`으로 남는다 — 사진에 대해선 정확한 태깅이지만, 배너가
+가리키는 **작품**에 대해선 오귀속이다.
+
+**이건 파일 선택 tiebreaker이지 필터가 아니다.**
+
+1. **판별 신호** — 제목 stem이 같은(= 같은 작품) 통과 후보들 중 `DateTimeOriginal`이 **역사적
+   연도**인 것을 **최근 타임스탬프**인 것보다 우선한다. 최근 날짜는 "작품 연도가 아니라 촬영·업로드
+   일자"라는 결정적 신호다. 보조 신호: `Artist`가 개인 닉네임이거나 `Photograph by …`, 또는
+   오래된 작품인데 라이선스가 CC BY·CC BY-SA.
+2. **6개 `banner*`는 한 파일에서 통째로 가져온다.** 사진본에서 URL만 빼고 `banner_creator`만
+   원작자로 바꾸는 **필드 교차 혼합은 날조**다 — `banner_source`는 사진본을 가리키는데
+   `banner_creator`는 원작자인 모순이 남는다. 파일을 통째로 고르거나, 통째로 버린다.
+3. **정본이 없고 사진본만 통과하면 그 파일의 라이선스를 곧이곧대로 기록한다.** "PD 작품을 찍은
+   사진이니 PD" 같은 재판정은 § 감별 1(저작권을 독자 판단하지 않고 소스 태깅만 신뢰)을 정면으로
+   깨므로 하지 않는다.
+4. **재검색하지 않는다** — 정본은 대개 같은 검색 결과 안에 이미 있다. 콜 2의 표를 다시 훑으면
+   된다(§ 호출 레시피 예산).
+
+### `DateTimeOriginal`의 `date QS:` 잔여물
+
+값에 Wikidata 문장이 들러붙어
+`circa 1766date QS:P571,+1766-00-00T00:00:00Z/9,P1480,Q5727902`처럼 오는 경우가 있다.
+**`date QS:` 이후를 잘라** `circa 1766`만 남긴다. **그 이상은 하지 않는다** — 날짜 값은
+`1660. Date published…` 등 형태가 제각각이라 범용 파서를 만들면 금세 취약해진다. 잘라낸 뒤에도
+남는 잡음은 그대로 둔다.
+
+이건 **미관 문제이지 아래 § 쓰기 안전(YAML 손상·키 주입 방지)과 다른 사안**이다. 잔여물을
+잘랐든 아니든 인용·이스케이프는 그것대로 반드시 적용한다.
 
 ### 쓰기 안전 — 모든 소스 파생 값 (신뢰 불가)
 
