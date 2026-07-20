@@ -87,13 +87,13 @@ After forming the mental model, **before producing any Korean text**, confirm tw
 **Question 2 — 번역 의역 강도** (header: `의역 강도`, 4 options, mutually exclusive — 4단계 슬라이더; AskUserQuestion의 옵션 상한이 4개라 정확히 한 화면에 맞는다. 보수→균형→적극→과감 순으로 단조 증가)
 
 1. 보수 — 원문 구조 유지, 정확성 우선. 한국어 자연스러움보다 원문 충실. (≤30% 문장 재구성)
-2. 균형 — Korean rhythm으로 재구성하되 원문 의미와 구조에 충실. (~50–65% 문장 재구성) `(Recommended)` by default unless the document obviously calls for another level.
-3. 적극 — 균형보다 더 과감하게 Korean rhythm으로 재구성하되, 문장 전면 재창작까지는 가지 않는다. 균형과 과감의 중간 지점. (~65–80% 문장 재구성)
+2. 균형 — Korean rhythm으로 재구성하되 원문 의미와 구조에 충실. (~55–70% 문장 재구성) `(Recommended)` by default unless the document obviously calls for another level.
+3. 적극 — 과감에 근접할 만큼 대담하게 Korean rhythm으로 재편하되, 논증·비유·tone만 남기고 문장을 통째로 재창작하는 과감 특유의 자유(전면 재작성)까지는 절제한다. 기존 적극과 과감의 중간. (~80–90% 문장 재구성)
 4. 과감 — 한국어 에세이체로 자유롭게 재작성. 논증·비유·tone만 유지하고 문장 구조는 한국어식으로 전면 재구성. (GPT-5.1-style fluency)
 
 Use the user's answers to tune translation:
 - **글 톤** → register, vocabulary formality, idiom range, sentence ending texture
-- **의역 강도** → how far you deviate from source sentence structure (보수: minimal restructuring ≤30%; 균형: 50–65%; 적극: 65–80%, 균형보다 과감하되 문장 전면 재창작은 아님; 과감: full Korean essayistic flow). 4단계는 단조 증가하는 슬라이더이며, "균형과 과감 중간"이 적극(레벨 3)이다.
+- **의역 강도** → how far you deviate from source sentence structure (보수: minimal restructuring ≤30%; 균형: 55–70%; 적극: 80–90%, 과감에 근접하게 대담히 재편하되 문장 전면 재작성(과감)은 절제; 과감: full Korean essayistic flow, 문장 전면 재작성). 4단계는 단조 증가하는 슬라이더이며, 적극(레벨 3)은 균형보다 훨씬 과감하게 재편해 과감(레벨 4)에 근접한다(기존 적극과 과감의 중간).
 
 If the user selects `Other` (free-form) for either question, parse the answer and apply your best interpretation.
 
@@ -120,6 +120,24 @@ Em dashes (—) in source: never copy into Korean prose. Apply this priority ord
 **Default to collapse first.** Splitting fragments the rhythm and often produces awkward repeats. Watch for the failure mode where splitting forces you to repeat a word like `무엇이든 ... 무엇이든 마찬가지다` — that is the symptom of having split when you should have collapsed.
 
 Exception: em dashes inside code, inline code, or URLs are preserved verbatim.
+
+#### 쉼표 절제 — comma discipline (translationese-patterns.md C-11 확장 · 표면 교정형 · 모든 의역 강도)
+
+한국어는 영어보다 쉼표를 훨씬 적게 쓴다. 쉼표를 **번역하지 않는다** — 원문의 `,`나 영어식 호흡을 1대1로 옮기면 문장이 잘게 끊겨 번역투가 된다. 이 규칙은 C-11(연결어미 뒤 쉼표)을 **주어·부사어·삽입어 뒤 pause 쉼표까지** 넓힌 것으로, **번역하는 그 순간(Step 4)에 지켜 사후 "쉼표 다이어트"가 필요 없게 한다.**
+
+한국어에서 쉼표를 쓰는 자리는 다음 넷뿐이다. 그 외에는 찍지 않는다:
+- (a) **3항 이상 나열** — `취향, 뉘앙스, 소신` (2항 `A와 B`는 쉼표 없이 `~와/과`·`~고`로 잇는다)
+- (b) **명백한 절 경계** — 조건·양보·시간절 뒤(`~한다면, …` / `~했을 때, …`)
+- (c) **병렬 대조** — `A는 X를, B는 Y를 …`
+- (d) **진짜 삽입구 경계** — 앞뒤로 짝을 이루는 삽입(`…, 그의 말대로, …`은 과함 → 한쪽만)
+
+찍지 **않는** 자리(영어 pause 쉼표의 이식 — 전부 제거):
+- 주어·주제어 뒤 호흡 쉼표: `우리가 만드는 건, 개발자가…` → `우리가 만드는 건 개발자가…`
+- 부사어·접속부사 뒤: `얼마 전, AI를…` → `얼마 전 AI를…` · `솔직히, 퍽 외롭다` → `솔직히 퍽 외롭다`
+- 연결어미 `-고/-며/-면서` 뒤(C-11): `다듬고, 던지고, 뜯어보고` → `다듬고 던지고 뜯어보고`
+- 극적 효과를 노린 쉼표: `희귀한 것은, 값지다` → `희귀한 것은 값지다`
+
+**의역 강도가 높을수록(적극·과감) 리듬용 쉼표를 흩뿌리기 쉽다 — 특히 경계하라.** 한국어의 리듬은 쉼표가 아니라 **문장 길이와 연결어미**에서 나온다. 짧은 호흡이 필요하면 쉼표 대신 마침표로 끊는다. **기준: 번역본의 쉼표 수가 원문 쉼표 수를 넘기지 않는다.** 문법적으로 (a)~(d) 중 하나로 설명되지 않는 쉼표는 찍지 말고, 이미 찍었다면 지운다.
 
 #### Metaphor and figurative language
 
@@ -162,7 +180,7 @@ The English `so that I can ...` pattern is a particular trap — do not let it t
 
 `translationese-patterns.md`는 `im-not-ai` 분류 체계에서 흡수한 번역투 패턴의 규칙·예문을 담는다. **규칙 본문은 그 파일에 있다 — 여기서 반복하지 않는다.** 영어 원문을 보며 번역하는 동안, 다음 **문장 단위 패턴**을 원문과 대조하며 적용한다(각 패턴의 정의·처방·`영어 원문 → BAD → GOOD` 예문은 translationese-patterns.md 참조):
 
-- **C-11** 연결어미 뒤 쉼표 — 일괄 제거
+- **C-11** 연결어미 뒤 쉼표 — 일괄 제거 (주어·부사어·삽입어 뒤 pause 쉼표까지: 위 "쉼표 절제" 참조)
 - **A-7** light verb (have/make/take/give + 명사) — 동사 환원
 - **A-15** 무생물·추상 주어 + 만능 동사 — 행위자 환원 / `…에 따르면` 분리
 - **A-18** 관계절 직역(긴 좌향 수식) — 문장 분리 / 동격 후치
@@ -296,6 +314,7 @@ Items 9 (pronouns, A-16) and 15–17 below are **density patterns** absorbed fro
 15. **이중 조사 결합 (A-19, density).** Scan the whole document for double-particle stacks (`~에서의·~에로의·~으로의·~에의·~으로부터의·~로부터의`). At 3+ occurrences, unfold them into clauses/phrases (`긴장으로부터의 해방 → 긴장에서 벗어남`). 단순 `~의`는 제외(caveat C5). 표면 교정형 — apply at every 의역 강도. (See translationese-patterns.md.)
 16. **Hedging 남발 (G-1/G-2, density).** Are observation-form endings (`~로 보인다`/`~인 듯하다`/`~로 판단된다`) or double/triple hedges (`~할 가능성이 있을 수 있다`/`~로 보여질 수 있다`) piling up across the document? Assert where the English source asserts; keep one hedge layer only where the source itself hedges. 표면 교정형 — apply at every 의역 강도. (See translationese-patterns.md.)
 17. **메타 진입 (H-3, density).** Count meta-entry phrases (`이는 ~을 의미한다`/`이 점에서`/`이 관점에서 보면`/`이 말은`). At 3+ occurrences, merge into the preceding sentence or state the content directly (`이는 X를 의미한다 → X다`). 표면 교정형 — apply at every 의역 강도. (See translationese-patterns.md.)
+18. **쉼표 절제 (C-11 확장, density).** 문서 전체의 쉼표를 훑어, "쉼표 절제" 규칙 (a)~(d)로 설명되지 않는 것 — 주어·부사어·삽입어 뒤 pause 쉼표, 연결어미 뒤 쉼표, 극적 쉼표 — 을 지운다. **번역본 쉼표 수 ≤ 원문 쉼표 수**인지 확인한다. 이미 Step 4에서 지켰다면 여기서 걸리는 건 거의 없어야 한다(사후 다이어트가 아니라 사전 예방이 목적). 표면 교정형 — apply at every 의역 강도. (See Step 4 "쉼표 절제".)
 
 After this pass, the translation should read as if originally written in Korean by a skilled essayist. If you finish the checklist and made zero rewrites, you have probably skimmed — go back and re-read with fresh eyes once more.
 
