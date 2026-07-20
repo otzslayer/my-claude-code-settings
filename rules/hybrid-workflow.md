@@ -45,6 +45,7 @@ Phase 3: Verify · Learn · Ship
 - ce-plan core work (plan-file `Write`, ce-doc-review autofix) runs in **non-plan-mode** — Plan Mode blocks both.
 - The plannotator human gate runs on the canonical file afterward: `plannotator annotate docs/plans/<file>`, blocking until the browser returns `approved`/`dismissed`/`annotated`; only `approved` proceeds to `/clear`. Order enforced: mechanical AI review (ce-doc-review) → forced human review (plannotator). No `ExitPlanMode` bracket and no `~/.claude/plans/` copy — the annotated artifact **is** the canonical `docs/plans/` file, so ce-doc-review's autofixes cannot be overwritten by re-pasted plan text.
 - The enforcement shifts from a hook-level tool-deny to the annotate command's block-until-decision plus the skill loop (address `annotated` → re-run until `approved`). Both paths block progression until a browser decision; the annotate path additionally keeps a single source of truth. The general Plan Mode `ExitPlanMode` path (with its `PermissionRequest` plannotator gate and `~/.claude/plans/` promotion) still serves non-ce-plan work.
+- **Gate salience reinforced by a hook** (`~/.claude/settings.json`): a `PostToolUse` `Write|Edit` hook on `docs/plans/*.md` re-injects the plannotator-gate reminder every time the plan file is written — draft at Phase 5.2, then deepening and ce-doc-review autofix Edits at 5.3/5.3.8, all in the main session (ce-doc-review is skill-invoked in-session; only its reviewer personas are subagents). So the reminder lands right before the Phase 5.4 handoff menu instead of decaying from the start-of-ce-plan injection over the long run — countering ce-plan's own 5.4 menu (Publish/Open/ce-work) that omits the gate. A paired `PreToolUse` `Write|Edit` hook injects the Korean-prose requirement at the same plan-write moment (see §9).
 - Narrow carve-out for ce-plan's own execution only. The general "Plan Mode before complex work" discipline (CLAUDE.md) governs elsewhere.
 
 ---
@@ -205,7 +206,7 @@ These typically land in the 0–2 band per §3 (guide the switch if the session 
 | --- | --- | --- | --- |
 | 0. Global behavior rules | `~/.claude/CLAUDE.md`, `~/.claude/rules/` | Collaboration principles, gating | **User manual only** |
 | 1. Global meta-memory | `~/.claude/projects/.../memory/`, `~/.claude/.remember/` | user/feedback/project/reference, per-session | Model auto-updates only for user/feedback utterances |
-| 2. Project decisions | `<proj>/docs/superpowers/specs/`, `<proj>/docs/plans/` | spec, plan | Model authors, user approval gate |
+| 2. Project decisions | `<proj>/docs/superpowers/specs/`, `<proj>/docs/plans/` | spec, plan (**plan body prose in Korean**, code·identifiers·file paths·frontmatter keys·enum values stay English) | Model authors, user approval gate |
 | 3. Project learning accumulation | `<proj>/docs/solutions/` | ce-compound output (**content in Korean**, frontmatter keys·enum values stay English) write + ce-learnings-researcher query read | Model auto (headless) |
 | 4. Project visualization | `<proj>/graphify-out/`, `<proj>/docs/solutions/*.graph.md` | graphify output | User or model on invocation |
 
@@ -214,6 +215,7 @@ These typically land in the 0–2 band per §3 (guide the switch if the session 
 - No automatic `/ce-compound` propagation into Tier 0/1. The user manually promotes a valuable Tier 3 solution.
 - Tier 3 is not write-only: in Phase 2's `/ce-plan` research, `ce-learnings-researcher` queries docs/solutions/ and reflects past learnings into the plan — closing the compound learning loop.
 - ce-learnings-researcher invocation gate: fires only when `docs/solutions/` has **3+ files**. Below that, noise overwhelms signal — skip it.
+- Tier 2 plan language: the `docs/plans/` body is Korean prose (identifiers, code, file paths, frontmatter keys/enum values stay English), mirroring Tier 3. Enforced at plan-write time by the `PreToolUse` `Write|Edit` hook (§1 Phase 2 note) — the global "respond in Korean" rule never reached it because a written file artifact is not a chat response.
 
 ---
 
