@@ -82,7 +82,7 @@ Before complex tasks: Plan Mode → Analyze → Draft plan → Resolve ambiguiti
 
 1. Author `docs/plans/<draft>.md` via `/ce-plan` in non-plan-mode (answer ce-plan's interactive questions; create the `docs/plans/` directory if it doesn't exist)
 2. ce-doc-review runs automatically as ce-plan's Phase 5.3.8 (headless, md-only; reviewer model branching per hybrid-workflow.md §5)
-3. (Optional) For a human browser pass, run `plannotator annotate docs/plans/<file>` manually (terminal or Claude Code) on the canonical plan file; address any `annotated` feedback on the same `docs/plans/YYYY-MM-DD-<summary>.md` file (reuse it, keep the original date). Not a mandatory gate — `/clear` does not block on it.
+3. (Optional) For a human browser pass, run `plannotator annotate docs/plans/<file>` manually (terminal or Claude Code) on the canonical plan file. There is no Approve button — closing without feedback counts as approval; if you leave feedback, address it on the same `docs/plans/YYYY-MM-DD-<summary>.md` file (reuse it, keep the original date). Not a mandatory gate — `/clear` does not block on it.
 4. `/clear` → execute via `/ce-work <plan-path>` in a new session (score the build task's complexity per hybrid-workflow.md §3 and guide the resulting `/model`·`/effort` switch)
 5. NEVER implement inline in the same planning session — this wastes planning context tokens
 
