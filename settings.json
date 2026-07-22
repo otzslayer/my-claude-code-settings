@@ -62,15 +62,6 @@
             "command": "bash $HOME/.claude/hooks/workflow-stage-inject.sh"
           }
         ]
-      },
-      {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "jq -c 'if (.tool_input.file_path // \"\") | test(\"docs/plans/.*\\\\.md$\") then {hookSpecificOutput:{hookEventName:\"PostToolUse\",additionalContext:\"docs/plans/ 계획 파일이 방금 쓰였다(초안·ce-doc-review autofix·annotated 수정 중 하나). hybrid-workflow.md §1 Phase 2 게이트 리마인더: ce-doc-review(자동 5.3.8)가 끝나면 다음 액션은 반드시 plannotator annotate <이 파일 경로> 를 실행해 정본을 제자리 리뷰하는 것이다. ce-plan 자체 핸드오프 메뉴(Publish to Proof·Open in browser 등)를 골라 이 게이트를 건너뛰지 말 것. 반환 approved 전에는 /clear·ce-work·인라인 구현 금지. annotated면 같은 파일에 피드백 반영 후 approved까지 재실행, dismissed는 승인 아님이므로 진행 금지.\"}} else empty end'"
-          }
-        ]
       }
     ],
     "SessionStart": [
