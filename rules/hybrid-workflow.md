@@ -1,6 +1,6 @@
 # Compound + Superpowers Hybrid Workflow
 
-Operating rules binding Superpowers · Compound Engineering · CodeGraph · graphify · RTK · .remember into a single 7-stage pipeline, under an active Plannotator auto-gate. This document is the single source of truth for the pipeline — no separate spec to sync.
+Operating rules binding Superpowers · Compound Engineering · CodeGraph · graphify · RTK · .remember into a single 7-stage pipeline. This document is the single source of truth for the pipeline — no separate spec to sync.
 
 ---
 
@@ -21,10 +21,8 @@ Phase 2: Plan  (when the Plan Mode trigger is met)
               + ce-learnings-researcher: query docs/solutions/ — only when 3+ files)
               → docs/plans/<draft>.md
   2. ce-doc-review  (AUTOMATIC as ce-plan's Phase 5.3.8, headless, md-only; reviewer branching — §5)
-  3. plannotator annotate docs/plans/<file> — review the canonical plan in place
-     (blocks until the browser returns approved/dismissed/annotated; no ExitPlanMode bracket, no ~/.claude/plans/ copy)
-  4. approved → stop, do NOT implement inline; annotated → address in non-plan-mode on the same file, re-run until approved; dismissed → not an approval, do not proceed
-  5. /clear
+  3. (optional, manual) plannotator annotate docs/plans/<file> — human browser pass if desired; not a mandatory gate, /clear does not block on it
+  4. /clear  (do NOT implement inline in the planning session)
        │
        ▼  fresh context, plan file as input
 Phase 2': Build  (single session across Phase 2'–3; ce-code-review reviewer branching — §5)
@@ -40,12 +38,12 @@ Phase 3: Verify · Learn · Ship
   11. superpowers:finishing-a-development-branch  (Korean commit format)
 ```
 
-**Phase 2 note (§1 — Plan Mode ↔ plannotator decoupling)**:
+**Phase 2 note (§1 — ce-plan runs in non-plan-mode)**:
 
 - ce-plan core work (plan-file `Write`, ce-doc-review autofix) runs in **non-plan-mode** — Plan Mode blocks both.
-- The plannotator human gate runs on the canonical file afterward: `plannotator annotate docs/plans/<file>`, blocking until the browser returns `approved`/`dismissed`/`annotated`; only `approved` proceeds to `/clear`. Order enforced: mechanical AI review (ce-doc-review) → forced human review (plannotator). No `ExitPlanMode` bracket and no `~/.claude/plans/` copy — the annotated artifact **is** the canonical `docs/plans/` file, so ce-doc-review's autofixes cannot be overwritten by re-pasted plan text.
-- The enforcement shifts from a hook-level tool-deny to the annotate command's block-until-decision plus the skill loop (address `annotated` → re-run until `approved`). Both paths block progression until a browser decision; the annotate path additionally keeps a single source of truth. The general Plan Mode `ExitPlanMode` path (with its `PermissionRequest` plannotator gate and `~/.claude/plans/` promotion) still serves non-ce-plan work.
-- **Gate salience reinforced by a hook** (`~/.claude/settings.json`): a `PostToolUse` `Write|Edit` hook on `docs/plans/*.md` re-injects the plannotator-gate reminder every time the plan file is written — draft at Phase 5.2, then deepening and ce-doc-review autofix Edits at 5.3/5.3.8, all in the main session (ce-doc-review is skill-invoked in-session; only its reviewer personas are subagents). So the reminder lands right before the Phase 5.4 handoff menu instead of decaying from the start-of-ce-plan injection over the long run — countering ce-plan's own 5.4 menu (Publish/Open/ce-work) that omits the gate. A paired `PreToolUse` `Write|Edit` hook injects the Korean-prose requirement at the same plan-write moment (see §9).
+- Review still happens: ce-doc-review runs automatically on the canonical file (Phase 5.3.8). A human browser pass via `plannotator annotate docs/plans/<file>` is **optional and manual** — run it from the terminal or Claude Code if you want one; it is not a mandatory gate and nothing blocks `/clear` on its result. The annotated artifact **is** the canonical `docs/plans/` file (no `~/.claude/plans/` copy), so ce-doc-review's autofixes are never overwritten by re-pasted plan text.
+- The general Plan Mode `ExitPlanMode` path (with its `PermissionRequest` plannotator gate and `~/.claude/plans/` promotion) still serves non-ce-plan work.
+- **Korean-prose enforcement** (`~/.claude/settings.json`): a `PreToolUse` `Write|Edit` hook on `docs/plans/*.md` injects the Korean-prose requirement at plan-write time (see §9).
 - Narrow carve-out for ce-plan's own execution only. The general "Plan Mode before complex work" discipline (CLAUDE.md) governs elsewhere.
 
 ---
@@ -223,9 +221,7 @@ These typically land in the 0–2 band per §3 (guide the switch if the session 
 
 | Situation | Policy |
 | --- | --- |
-| plannotator human gate (normal path) | `plannotator annotate docs/plans/<file>` after ce-doc-review (§1 Phase 2 note) — blocks until the browser returns `approved`/`dismissed`/`annotated`; only `approved` proceeds to `/clear` |
-| annotate returns `annotated` | address feedback in non-plan-mode on the same file, re-run `plannotator annotate docs/plans/<file>` until `approved` |
-| annotate returns `dismissed` (closed without approving) | not an approval — do not `/clear` or start `/ce-work`; re-run annotate or confirm intent with the user |
+| optional manual plannotator pass | `plannotator annotate docs/plans/<file>` is optional (§1 Phase 2 note) — run it manually (terminal or Claude Code) for a human browser pass; address any `annotated` feedback on the same file. Not a gate; `/clear` does not block on it |
 | ce-work parallel subagent worktree conflict | ce-work's built-in policy (abort → retry serially) |
 | ce-compound headless misclassification | docs/solutions/ is git tracked; user manually corrects·deletes |
 | ce-compound token overflow | Pass only summary·headers as input, leverage RTK compression |
