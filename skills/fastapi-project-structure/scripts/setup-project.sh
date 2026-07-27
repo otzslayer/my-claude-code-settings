@@ -334,16 +334,29 @@ dev = [
     "pytest-asyncio>=0.24.0",
     "httpx>=0.27.0",
     "ruff>=0.6.0",
-    "mypy>=1.11.0",
+    "ty>=0.0.63",
 ]
 
+# python-coding-style 스킬의 기준 설정
 [tool.ruff]
-line-length = 100
+line-length = 80
 target-version = "py311"
 
-[tool.mypy]
-python_version = "3.11"
-strict = true
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "N", "S", "SIM", "ARG", "B", "C4"]
+ignore = ["E501", "S603"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+    "fastapi.Depends", "fastapi.Query", "fastapi.Path",
+    "fastapi.Body", "fastapi.Header",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/**" = ["S101", "S106", "SIM117", "ARG001", "E741"]
+
+[tool.ty]
 EOF
 
     cat > "$PROJECT_DIR/tests/conftest.py" << 'EOF'
@@ -465,10 +478,10 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 pytest
 
 # Lint
-ruff check .
+ruff check --fix . && ruff format .
 
 # Type check
-mypy app/
+uv run ty check
 \`\`\`
 
 ## API Documentation

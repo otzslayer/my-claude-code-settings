@@ -338,19 +338,25 @@ dev = [
     "pytest-asyncio>=0.24.0",
     "httpx>=0.27.0",
     "ruff>=0.6.0",
-    "mypy>=1.11.0",
+    "ty>=0.0.63",
 ]
 mcp = [
     "mcp>=1.0.0",
 ]
 
+# python-coding-style 스킬의 기준 설정 (전문은 templates/pyproject-template.toml)
 [tool.ruff]
-line-length = 100
+line-length = 80
 target-version = "py311"
 
-[tool.mypy]
-python_version = "3.11"
-strict = true
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "N", "S", "SIM", "ARG", "B", "C4"]
+ignore = ["E501", "S603"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Path"]
+
+[tool.ty]
 ```
 
 ### main.py (Standard Template)
@@ -516,7 +522,7 @@ curl http://localhost:8000/health
 
 **MCP server not starting**: Verify .mcp.json configuration and mcp package installed
 
-**Type checking errors**: Run `mypy app/` to see detailed type errors, ensure all dependencies have type stubs
+**Type checking errors**: Run `uv run ty check` to see detailed type errors, ensure all dependencies have type stubs
 
 ---
 
