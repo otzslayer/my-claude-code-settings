@@ -1,6 +1,6 @@
 # Security Guidelines
 
-Security rules (secrets, input validation, SQL, XSS/CSRF, auth, rate limiting) live in `boundaries.md` → Security. This file holds only what boundaries doesn't.
+Standard practice (secrets in env, validated input, parameterized queries, XSS/CSRF, authz, rate limiting) is assumed; the hard prohibitions are in `boundaries.md` → Never → Security. This file holds only what neither covers.
 
 ## Secret Management
 

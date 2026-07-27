@@ -106,7 +106,7 @@ Claude Code가 `settings.json`의 `enabledPlugins`와 `extraKnownMarketplaces`�
 | `CLAUDE.md` | 메인 개발 가이드라인 |
 | `settings.json` | 포터블화된 플러그인·훅 설정 |
 | `rules/` | 행동 규칙 파일 5종 (boundaries · git-workflow · hybrid-workflow · karpathy-principles · security) |
-| `skills/hybrid-workflow-reference/` | hybrid-workflow §6·§7·§9를 담은 지연 로드 스킬 — `rules/`에서 분리한 손-콘텐츠라 유일하게 추적하는 스킬 |
+| `skills/hybrid-workflow-reference/` | hybrid-workflow §2–§5·§6·§7·§9를 담은 지연 로드 스킬 — `rules/`에서 분리한 손-콘텐츠라 유일하게 추적하는 스킬 |
 | `memory-templates/` | 세션 간 메모리 seed (현재 본문 seed 없음, 인덱스 스캐폴드만) |
 | `hooks/*.sh` | rtk-rewrite, workflow-stage-inject, graphify-install-check |
 | `scripts/sync-memory-templates.sh` | 메모리 템플릿 동기화 |
@@ -126,14 +126,18 @@ Claude Code가 `settings.json`의 `enabledPlugins`와 `extraKnownMarketplaces`�
 - **플러그인 스킬** (compound-engineering, superpowers 등): Claude Code 재실행 시 자동 복원
 - **npm 스킬** (slides-grab, slides-grab-design, slides-grab-export, slides-grab-plan): `npm install -g slides-grab`
 - **CLI 스킬** (graphify): `uv tool install graphifyy`. CLI·`graphify-install-check.sh` 훅(CLAUDE.md의 graphify 섹션 자동 주입)·스킬이 한 세트로 움직인다
-- **추적하는 손-작성 스킬** (`hybrid-workflow-reference`): clone만으로 복원됨. `rules/hybrid-workflow.md`가 §6·§7·§9 자리에서 이 스킬을 가리키므로 **둘은 같이 움직여야 한다**
+- **추적하는 손-작성 스킬** (`hybrid-workflow-reference`): clone만으로 복원됨. `rules/hybrid-workflow.md`가 §2–§5·§6·§7·§9 자리에서 이 스킬을 가리키므로 **둘은 같이 움직여야 한다**
 - **순수 bespoke 스킬** (peon-ping-*, plannotator-annotate 등): 별도 보존 필요 (현재 미추적)
 
 ---
 
 ## 메인 하네스: Hybrid Workflow
 
-`rules/hybrid-workflow.md`가 정식 운영 가이드다. 이 파일은 매 세션 컨텍스트에 상주하므로, 특정 시점에만 참조하는 **§6(유닛 분량·직렬 실행) · §7(95% confidence opener) · §9(메모리·문서 tier)** 는 본문을 `skills/hybrid-workflow-reference/`로 빼고 자리에 포인터만 남겼다. 나머지 §1–§5·§8·§10과 "Tier 0/1 자동 변경 금지" 금지 규칙은 상주한다(금지 규칙은 지연 로드로 내리지 않는다).
+`rules/hybrid-workflow.md`가 정식 운영 가이드다. 이 파일은 매 세션 컨텍스트에 상주하므로, 특정 시점에만 참조하는 **§2–§5(모델 재보정표·채점 근거·에스컬레이션·리뷰어 분기) · §6(유닛 분량·직렬 실행) · §7(95% confidence opener) · §9(메모리·문서 tier)** 는 본문을 `skills/hybrid-workflow-reference/`로 빼고 자리에 포인터만 남겼다.
+
+§2–§5만은 예외적으로 **routing quick card**(채점 기저점·가산 신호·밴드표·build carve-out·sonnet 배제·리뷰어 opus 고정)를 상주 자리에 남긴다 — 라우팅 판정은 `/clear` 경계마다 필요해 매번 스킬을 로드하면 오히려 손해이기 때문이다. 스킬에는 그 판정의 *근거*(비용 역전 벤치마크, 재실행 게이트 상세, sonnet 복귀 시 되돌릴 리뷰어 분기표)만 남는다.
+
+§1·§8·§10과 "Tier 0/1 자동 변경 금지" 금지 규칙은 전문 그대로 상주한다(금지 규칙은 지연 로드로 내리지 않는다).
 
 요약:
 
@@ -144,7 +148,7 @@ Phase 2': Build  /ce-work <plan-path>
 Phase 3: Ship    verify → /ce-compound → commit+PR
 ```
 
-각 단계의 model·effort는 더 이상 단계별 고정값이 아니라, **과업 복잡도를 채점**해 정해진다(`rules/hybrid-workflow.md` §3 "Complexity scoring"이 정본).
+각 단계의 model·effort는 더 이상 단계별 고정값이 아니라, **과업 복잡도를 채점**해 정해진다(`rules/hybrid-workflow.md`의 routing quick card가 정본, 근거는 `hybrid-workflow-reference` 스킬).
 
 ### model·effort는 어떻게 정해지나 (복잡도 채점)
 
@@ -173,7 +177,7 @@ Phase 3: Ship    verify → /ce-compound → commit+PR
 
 **메커니즘 제약**: 메인 에이전트는 세션 도중 자기 모델을 못 바꾼다 — `/model`·`/effort`로 announce & 전환 안내만 가능. 점수 기반 밴드가 전부 opus인 지금 `/model`은 fable long-horizon flag가 켜질 때(혹은 세션이 opus가 아닐 때)만 바뀌고, 밴드별 변화는 사실상 `/effort`만 담당한다. 서브에이전트 디스패치는 두 갈래다: `Agent` 툴은 `model`만 지정 가능(effort는 디스패치 세션에서 상속), `Workflow`의 `agent()`는 `model`+`effort` 둘 다 개별 지정 가능(완전 동적).
 
-**리뷰어 분기**: 코드/문서 리뷰는 본질적으로 개방형 적대적 추론(base 5)이다. 원래는 가장 중요한 판정만 opus(`ce-code-review`의 correctness·security·adversarial, `ce-doc-review`의 adversarial·security-lens)로 올리고 나머지는 sonnet으로 돌렸으나, **현재는 sonnet이 라우팅에서 제외되어 전 리뷰어가 `model=opus`로 통일**되어 있다(아래 "Sonnet-5 제외" 참고). 이 opus-vs-sonnet 분기는 Sonnet 재도입 시 복원할 기준으로 `hybrid-workflow.md` §5에 기록되어 있다.
+**리뷰어 분기**: 코드/문서 리뷰는 본질적으로 개방형 적대적 추론(base 5)이다. 원래는 가장 중요한 판정만 opus(`ce-code-review`의 correctness·security·adversarial, `ce-doc-review`의 adversarial·security-lens)로 올리고 나머지는 sonnet으로 돌렸으나, **현재는 sonnet이 라우팅에서 제외되어 전 리뷰어가 `model=opus`로 통일**되어 있다(아래 "Sonnet-5 제외" 참고). 이 opus-vs-sonnet 분기는 Sonnet 재도입 시 복원할 기준으로 `hybrid-workflow-reference` 스킬 §5에 기록되어 있다.
 
 세션 resting 기본값(`settings.json`)은 `effortLevel: high`다 — `xhigh`는 8–10 밴드에서 과업별로만 도달하며 상시 기본값이 아니다.
 

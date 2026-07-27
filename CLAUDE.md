@@ -25,7 +25,7 @@ The `superpowers` SessionStart hook already injects the full `using-superpowers`
 | Plan execution | `ce-work <plan-path>` |
 | Bug or failing test | `superpowers:systematic-debugging` |
 | Implementation work | `superpowers:test-driven-development` (trivial-case exemption) |
-| Code review | `ce-code-review` (reviewer model branching — see hybrid-workflow.md §5) |
+| Code review | `ce-code-review` (all reviewer subagents pinned to `model=opus`) |
 | Before claiming task complete | `superpowers:verification-before-completion` |
 | Learning accumulation (after work completes) | `/ce-compound mode:headless` |
 | Commit · push · PR | `superpowers:finishing-a-development-branch` |
@@ -34,7 +34,7 @@ The `superpowers` SessionStart hook already injects the full `using-superpowers`
 
 Domain skills (FastAPI, LangChain, etc.) layer on top when relevant. Available skills are auto-listed in session context — invoke via `Skill(skill="...")`. Model·effort for every row above is computed by scoring the task's complexity, not fixed per skill — see the policy below.
 
-**Model · effort policy**: The agent cannot switch its own model mid-session, so at each task or `/clear` boundary, score the task's complexity (base + additive signals → band → model·effort — see "Complexity scoring" §3 in `~/.claude/rules/hybrid-workflow.md`) and announce the result; if it differs from the current setting, guide the switch via `/model`·`/effort` — announce and confirm, never enforce. **Exception — ce-code-review / ce-doc-review**: no session switch (avoids a costly in-session cache reload); their reviewer subagents are currently pinned to `model=opus` across the board — the adversarial-vs-rest opus/sonnet split is collapsed while sonnet is suspended from routing (hybrid-workflow.md §3/§5) — with effort inherited from the dispatching session. Full definition: the "Model recalibration" (§2), "Complexity scoring" (§3), "Escalation policy" (§4), and "Reviewer branching" (§5) sections in `~/.claude/rules/hybrid-workflow.md`.
+**Model · effort policy**: The agent cannot switch its own model mid-session, so at each task or `/clear` boundary, score the task's complexity against the **routing quick card** in `~/.claude/rules/hybrid-workflow.md` (§2–§5) and announce the result; if it differs from the current setting, guide the switch via `/model`·`/effort` — announce and confirm, never enforce. **Exception — ce-code-review / ce-doc-review**: no session switch (avoids a costly in-session cache reload); their reviewer subagents are pinned to `model=opus` with effort inherited from the dispatching session. When a routing call is non-obvious, `Skill(skill="hybrid-workflow-reference")` holds the full §2–§5 rationale.
 
 ## Core Principles
 
@@ -81,9 +81,9 @@ Before complex tasks: Plan Mode → Analyze → Draft plan → Resolve ambiguiti
 **Plan Persistence (MANDATORY — Complex tasks)**:
 
 1. Author `docs/plans/<draft>.md` via `/ce-plan` in non-plan-mode (answer ce-plan's interactive questions; create the `docs/plans/` directory if it doesn't exist)
-2. ce-doc-review runs automatically as ce-plan's Phase 5.3.8 (headless, md-only; reviewer model branching per hybrid-workflow.md §5)
+2. ce-doc-review runs automatically as ce-plan's Phase 5.3.8 (headless, md-only; all reviewers `model=opus`)
 3. (Optional) For a human browser pass, run `plannotator annotate docs/plans/<file>` manually (terminal or Claude Code) on the canonical plan file. There is no Approve button — closing without feedback counts as approval; if you leave feedback, address it on the same `docs/plans/YYYY-MM-DD-<summary>.md` file (reuse it, keep the original date). Not a mandatory gate — `/clear` does not block on it.
-4. `/clear` → execute via `/ce-work <plan-path>` in a new session (score the build task's complexity per hybrid-workflow.md §3 and guide the resulting `/model`·`/effort` switch)
+4. `/clear` → execute via `/ce-work <plan-path>` in a new session (build against a finalized plan is base 1 → `opus`·`medium`; guide the switch)
 5. NEVER implement inline in the same planning session — this wastes planning context tokens
 
 ### When Stuck (Max 3 Attempts)

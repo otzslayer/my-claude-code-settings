@@ -2,26 +2,12 @@
 
 ## ✅ Always (Auto-execute)
 
-### Code Quality
-- Run tests before committing
-- Run linters/formatters
-- Run type checker (`uv run ty check`; fall back to `mypy` only when project pins it)
-- Add type hints
-- Write docstrings for public functions
+Standard engineering hygiene is assumed, not enumerated. Listed here is only what is
+specific to this setup. Hard prohibitions live in the Never tier below.
 
-### Security
-- Manage secrets via environment variables
-- Validate user input (Pydantic)
-- Use parameterized SQL queries
-- Exclude sensitive info from error messages
-- Prevent XSS; enable CSRF protection
-- Verify auth/authz; rate-limit endpoints
-
-### Patterns
-- Follow existing code patterns
-- Adhere to project naming conventions
-- Add proper error handling
-- Use logging (no print statements)
+### Toolchain
+- Type check with `uv run ty check`. Fall back to `mypy` only when the project pins `[tool.mypy]` in `pyproject.toml` and has no `[tool.ty]`.
+- Use `logging`, never `print`.
 
 ### Surgical Changes
 - Remove imports/variables/functions that YOUR changes made unused
@@ -36,7 +22,7 @@
 - **Broad navigation / architecture**: CodeGraph `codegraph_explore` with a natural-language question.
 - **Read tool**: non-code files (`.md`/`.json`/`.toml`/`.yaml`) or areas `codegraph_explore` misses.
 - **Never** `cat`/`head`/`tail`/`sed`/`awk`.
-- **Subagent dispatch**: score the subtask's complexity (`~/.claude/rules/hybrid-workflow.md` §3) and set `model` dynamically (opus/fable — sonnet currently suspended from routing, see hybrid-workflow.md §3) accordingly. `Agent` tool: `model` only, no `effort` param — effort inherits from the dispatching session. `Workflow` `agent()`: `model` + `effort` both settable per-agent.
+- **Subagent dispatch**: score the subtask's complexity against the routing quick card in `~/.claude/rules/hybrid-workflow.md` and set `model` accordingly (opus/fable — sonnet is suspended from routing). `Agent` tool: `model` only, no `effort` param — effort inherits from the dispatching session. `Workflow` `agent()`: `model` + `effort` both settable per-agent.
 
 ## ⚠️ Ask First (Require Approval)
 

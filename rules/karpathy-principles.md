@@ -28,11 +28,7 @@ Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, sim
 
 ## 3. Surgical Changes
 
-**Touch only what you must. Clean up only your own mess.**
-
-The test: Every changed line should trace directly to the user's request.
-
-The actionable Auto/Never rules (what you may touch, what you must not) live in `boundaries.md` → "Surgical Changes". This section is the principle behind them.
+**Touch only what you must. Clean up only your own mess.** The test: every changed line should trace directly to the user's request. Actionable rules: `boundaries.md` → "Surgical Changes".
 
 ## 4. Goal-Driven Execution
 
