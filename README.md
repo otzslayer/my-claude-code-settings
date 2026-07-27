@@ -126,32 +126,34 @@ Claude Code가 `settings.json`의 `enabledPlugins`와 `extraKnownMarketplaces`�
 - **플러그인 스킬** (compound-engineering, superpowers 등): Claude Code 재실행 시 자동 복원
 - **npm 스킬** (slides-grab, slides-grab-design, slides-grab-export, slides-grab-plan): `npm install -g slides-grab`
 - **CLI 스킬** (graphify): `uv tool install graphifyy`. CLI·`graphify-install-check.sh` 훅(CLAUDE.md의 graphify 섹션 자동 주입)·스킬이 한 세트로 움직인다
-- **추적하는 손-작성 스킬** (`hybrid-workflow-reference`): clone만으로 복원됨. `rules/hybrid-workflow.md`가 §2–§5·§6·§7·§9 자리에서 이 스킬의 `references/` 파일을 **파일명으로** 가리키므로 **둘은 같이 움직여야 한다** (파일을 옮기거나 이름을 바꾸면 상주 포인터도 같이 고칠 것)
+- **추적하는 손-작성 스킬** (`hybrid-workflow-reference`): clone만으로 복원됨. `rules/hybrid-workflow.md`가 §3–§5·§6·§7·§9 자리에서 이 스킬의 `references/` 파일을 **파일명으로** 가리키므로 **둘은 같이 움직여야 한다** (파일을 옮기거나 이름을 바꾸면 상주 포인터도 같이 고칠 것)
 - **순수 bespoke 스킬** (peon-ping-*, plannotator-annotate 등): 별도 보존 필요 (현재 미추적)
 
 ---
 
 ## 메인 하네스: Hybrid Workflow
 
-`rules/hybrid-workflow.md`가 정식 운영 가이드다. 이 파일은 매 세션 컨텍스트에 상주하므로, 특정 시점에만 참조하는 **§2–§5(모델 재보정표·채점 근거·에스컬레이션·리뷰어 분기) · §6(유닛 분량·직렬 실행) · §7(95% confidence opener) · §9(메모리·문서 tier)** 는 본문을 `skills/hybrid-workflow-reference/`로 빼고 자리에 포인터만 남겼다.
+`rules/hybrid-workflow.md`가 정식 운영 가이드다. 이 파일은 매 세션 컨텍스트에 상주하므로, 특정 시점에만 참조하는 **§3–§5(채점 근거·에스컬레이션·리뷰어 dispatch) · §6(유닛 분량·직렬 실행) · §7(95% confidence opener) · §9(메모리·문서 tier)** 는 본문을 `skills/hybrid-workflow-reference/`로 빼고 자리에 포인터만 남겼다.
 
-§2–§5만은 예외적으로 **routing quick card**(채점 기저점·가산 신호·밴드표·build carve-out·sonnet 배제·리뷰어 opus 고정)를 상주 자리에 남긴다 — 라우팅 판정은 `/clear` 경계마다 필요해 매번 파일을 로드하면 오히려 손해이기 때문이다. 지연 로드 쪽에는 그 판정의 *근거*만 남는다.
+§3–§5만은 예외적으로 **routing quick card**(채점 기저점·가산 신호·밴드표·build carve-out·리뷰어 opus 고정)를 상주 자리에 남긴다 — 라우팅 판정은 `/clear` 경계마다 필요해 매번 파일을 로드하면 오히려 손해이기 때문이다. 지연 로드 쪽에는 그 판정의 *근거*만 남는다.
 
 **스킬 내부도 주제별로 쪼개져 있다.** 스킬 본문은 한 번 로드되면 세션 끝까지 컨텍스트에 남고, 이 파이프라인은 단계마다 `/clear`를 강제한다 — 380토큰이 필요해 3.7k를 통째로 불러오면 그 세션 내내 나머지를 짊어진다. 그래서 `SKILL.md`는 1k 미만 인덱스만 두고 본문을 나눴다:
 
 | 파일 | 내용 | 읽는 시점 |
 | --- | --- | --- |
-| `references/scoring.md` | §2 모델표 · §3 채점 근거 · §4 에스컬레이션 | 라우팅 판정이 애매할 때 |
-| `references/reviewers.md` | §5 리뷰어 분기 | 리뷰어 dispatch 시 |
+| `references/scoring.md` | §3 채점 근거 · §4 에스컬레이션 | effort 판정이 애매할 때 |
+| `references/reviewers.md` | §5 리뷰어 dispatch | 리뷰어 dispatch 시 |
 | `references/units.md` | §6 유닛 분량·직렬 실행 | ce-plan U-ID 묶을 때, ce-work 직렬/병렬 고를 때 |
 | `references/brainstorming.md` | §7 5렌즈 정의 | **제품성** 브레인스토밍일 때만 |
 | `references/tiers.md` | §9 메모리·문서 tier | 파일 배치 결정 시 |
 
-§2·§3·§4는 서로를 계속 되참조해서(§3의 경계 반올림→§4, §4의 build 격상→§3 carve-out) 한 파일로 묶었다. 더 쪼개면 한쪽을 열자마자 다른 쪽이 필요해져 왕복만 늘어난다. §5는 리뷰어 dispatch라는 별개 시점이라 분리했다.
+§3·§4는 서로를 계속 되참조해서(§3의 경계 반올림→§4, §4의 build 격상→§3 carve-out) 한 파일로 묶었다. 더 쪼개면 한쪽을 열자마자 다른 쪽이 필요해져 왕복만 늘어난다. §5는 리뷰어 dispatch라는 별개 시점이라 분리했다.
 
 §7의 opener 원문과 "한 번에 한 질문" 계약은 **어느 파일에도 없다** — `hooks/workflow-stage-inject.sh`가 brainstorming 호출 직후 그 자리에 주입한다(상주 비용 0). `references/brainstorming.md`에는 훅이 이름만 던지는 5렌즈의 정의만 있다.
 
 §1·§8·§10과 "Tier 0/1 자동 변경 금지" 금지 규칙은 전문 그대로 상주한다(금지 규칙은 지연 로드로 내리지 않는다).
+
+**§2(모델 재보정표)는 없앴다.** 모델을 Opus 5 하나로 고정했으므로 모델 간 비교표·비용 근거는 어디에도 두지 않는다 — 채점이 정하는 건 `effort`뿐이다.
 
 요약:
 
@@ -162,11 +164,11 @@ Phase 2': Build  /ce-work <plan-path>
 Phase 3: Ship    verify → /ce-compound → commit+PR
 ```
 
-각 단계의 model·effort는 더 이상 단계별 고정값이 아니라, **과업 복잡도를 채점**해 정해진다(`rules/hybrid-workflow.md`의 routing quick card가 정본, 근거는 `hybrid-workflow-reference` 스킬).
+각 단계의 effort는 더 이상 단계별 고정값이 아니라, **과업 복잡도를 채점**해 정해진다(`rules/hybrid-workflow.md`의 routing quick card가 정본, 근거는 `hybrid-workflow-reference` 스킬). 모델은 **Opus 5 고정**이다.
 
-### model·effort는 어떻게 정해지나 (복잡도 채점)
+### effort는 어떻게 정해지나 (복잡도 채점)
 
-과업마다 **기저점**(인지 성격)에 **가산 신호**(범위)를 더해 0–10점을 매기고, 점수 구간(밴드)이 model·effort를 정한다.
+과업마다 **기저점**(인지 성격)에 **가산 신호**(범위)를 더해 0–10점을 매기고, 점수 구간(밴드)이 effort를 정한다.
 
 | 기저점 | 예 | 점수 |
 |---|---|---|
@@ -176,31 +178,22 @@ Phase 3: Ship    verify → /ce-compound → commit+PR
 
 여기에 파일 수(+1~+3), 새 모듈/아키텍처 결정(+2), 새 의존성(+1), API·스키마 변경(+2), 동시성/보안/마이그레이션 같은 교차 관심사(+2), 실질적 모호성(+2)이 해당할 때마다 더해진다(상한 10).
 
-| 점수 | 밴드 | model | effort | 예시 |
-|---|---|---|---|---|
-| 0–2 | 사소·기계적 | opus-5 | low | "테스트 통과 확인만" |
-| 3–5 | 표준 | opus-5 | medium | "새 엔드포인트 하나 추가, 파일 3개" |
-| 6–7 | 조금 어려움 | opus-5 | high | "새 의존성 도입 + 데이터 스키마 변경" |
-| 8–10 | 복잡함 | opus-5 | xhigh | "새 아키텍처 결정 + API 스키마 변경 + 교차 관심사" |
+| 점수 | 밴드 | effort | 예시 |
+|---|---|---|---|
+| 0–2 | 사소·기계적 | low | "테스트 통과 확인만" |
+| 3–5 | 표준 | medium | "새 엔드포인트 하나 추가, 파일 3개" |
+| 6–7 | 조금 어려움 | high | "새 의존성 도입 + 데이터 스키마 변경" |
+| 8–10 | 복잡함 | xhigh | "새 아키텍처 결정 + API 스키마 변경 + 교차 관심사" |
 
-예: "표준 구현(base 3) + 파일 3–5개(+2) + 동시성 얽힘(+2)" = 7점 → **opus·high**를 announce하고 현재 세션과 다르면 `/model`·`/effort` 전환을 안내한다(강제 아님).
+예: "표준 구현(base 3) + 파일 3–5개(+2) + 동시성 얽힘(+2)" = 7점 → **high**를 announce하고 현재 세션과 다르면 `/effort` 전환을 안내한다(강제 아님).
 
-**단, Build 단계(ce-work)는 예외다**: 완성된 계획을 실행하는 build 작업은 계획이 이미 판단을 front-load했으므로 base 1(기계적 실행)로 채점하고, 계획-시점 가산 신호(파일 수·새 모듈·API/스키마 변경)를 **다시 세지 않는다** — 그래서 파일이 아무리 많아도 기본값은 **opus·medium**이다 — 모든 밴드가 opus인 지금, 이 예외는 모델 등급을 낮추는 게 아니라 **effort를 medium으로 캡**한다(계획이 아무리 커도 build를 high/xhigh로 올리지 않음). 파일 수는 유닛 분량으로 처리한다. build가 opus로 올라가는 건 오직 **반응적**일 때뿐이다: 실행이 계획이 예견 못 한 것을 드러낼 때 — RED→GREEN 정체가 개방형 근본원인 디버깅으로 전환되거나(그 서브태스크는 base-5 디버깅으로 재채점), 되돌리기 어려운 변경에서 테스트/타입체크가 실패할 때(§4 re-run 게이트). 계획-시점 범위로는 선불 승격하지 않는다.
+**단, Build 단계(ce-work)는 예외다**: 완성된 계획을 실행하는 build 작업은 계획이 이미 판단을 front-load했으므로 base 1(기계적 실행)로 채점하고, 계획-시점 가산 신호(파일 수·새 모듈·API/스키마 변경)를 **다시 세지 않는다** — 그래서 파일이 아무리 많아도 기본값은 **medium**이다. 이 예외는 계획이 아무리 커도 build를 high/xhigh로 올리지 못하도록 **effort에 상한을 씌우는** 장치이며, 파일 수는 effort가 아니라 유닛 분량으로 처리한다. build가 올라가는 건 오직 **반응적**일 때뿐이다: 실행이 계획이 예견 못 한 것을 드러낼 때 — RED→GREEN 정체가 개방형 근본원인 디버깅으로 전환되거나(그 서브태스크는 base-5 디버깅으로 재채점), 되돌리기 어려운 변경에서 테스트/타입체크가 실패할 때(§4 re-run 게이트). 계획-시점 범위로는 선불 승격하지 않는다.
 
-**fable-5**는 점수로는 절대 도달하지 않는다 — 여러 서브시스템을 넘나드는 지속적 설계·구현이나 긴 agentic 체인처럼 "진짜로 길고 복잡한" 과업임을 명시적으로 판단했을 때만 옵트인한다(점수 라우팅 상한은 opus·xhigh). haiku는 이 파이프라인에서 쓰지 않는다.
+**메커니즘 제약**: 메인 에이전트는 세션 도중 자기 effort를 못 바꾼다 — `/effort`로 announce & 전환 안내만 가능하다. 모델은 Opus 5 고정이라 `/model`은 세션이 Opus 5가 아닐 때만 언급하면 된다. 서브에이전트 디스패치는 두 갈래다: `Agent` 툴은 `model`만 지정 가능(effort는 디스패치 세션에서 상속), `Workflow`의 `agent()`는 `model`+`effort` 둘 다 개별 지정 가능(완전 동적).
 
-**메커니즘 제약**: 메인 에이전트는 세션 도중 자기 모델을 못 바꾼다 — `/model`·`/effort`로 announce & 전환 안내만 가능. 점수 기반 밴드가 전부 opus인 지금 `/model`은 fable long-horizon flag가 켜질 때(혹은 세션이 opus가 아닐 때)만 바뀌고, 밴드별 변화는 사실상 `/effort`만 담당한다. 서브에이전트 디스패치는 두 갈래다: `Agent` 툴은 `model`만 지정 가능(effort는 디스패치 세션에서 상속), `Workflow`의 `agent()`는 `model`+`effort` 둘 다 개별 지정 가능(완전 동적).
-
-**리뷰어 분기**: 코드/문서 리뷰는 본질적으로 개방형 적대적 추론(base 5)이다. 원래는 가장 중요한 판정만 opus(`ce-code-review`의 correctness·security·adversarial, `ce-doc-review`의 adversarial·security-lens)로 올리고 나머지는 sonnet으로 돌렸으나, **현재는 sonnet이 라우팅에서 제외되어 전 리뷰어가 `model=opus`로 통일**되어 있다(아래 "Sonnet-5 제외" 참고). 이 opus-vs-sonnet 분기는 Sonnet 재도입 시 복원할 기준으로 `hybrid-workflow-reference` 스킬 §5에 기록되어 있다.
+**리뷰어**: 코드/문서 리뷰는 본질적으로 개방형 적대적 추론(base 5)이라 리뷰어는 전원 `model=opus`로 dispatch한다. 이 pin은 "어차피 Opus만 쓰니까 불필요"가 아니다 — 플러그인 스킬(`~/.claude/plugins/...`)이 자체 모델 티어링을 갖고 있고 업데이트마다 되살아나므로, 상주 규칙 파일이 그걸 덮어쓰는 강제 지점이다. 플러그인 스킬 자체를 고쳐서 해결하지 않는다(머신 상태라 덮어써진다).
 
 세션 resting 기본값(`settings.json`)은 `effortLevel: high`다 — `xhigh`는 8–10 밴드에서 과업별로만 도달하며 상시 기본값이 아니다.
-
-**Sonnet-5 제외 (비용 역전, 한시적)**: per-token 단가만 보면 Sonnet-5가 가장 싸지만, 이 파이프라인의 다단계 agentic 작업에서는 토큰·반복이 3~4배로 불어나 **실효 비용이 Opus 4.8 이상으로 뒤집히고 정확도는 낮다**. 근거(**전부 Opus 4.8 기준 측정치다 — Opus 5로 재측정한 값이 아니므로 수치의 모델명을 바꾸지 말 것**) — BrowseComp에서 Opus·low($5/67.7%)가 Sonnet·high($7/64.8%)를 비용·정확도 모두에서 앞서고, Artificial Analysis 인덱스 전체 실행 비용은 Opus 4.8 max $3,753 < Sonnet 5 max $6,015이며, 실측 agentic 태스크에서 Opus 4.8 단독은 70회/$7.07인 반면 Sonnet 5 단독은 309회/$20.95였다(가장 싼 모델이 최종 비용은 가장 큼). 그래서 0–5 밴드와 비적대 리뷰어까지 전부 Opus로 통일한다(현재 Opus 5). **Opus 5 전환 이후 미검증**: 이 배제 판정은 위 4.8 시절 수치에만 근거한다. Opus 5의 비용·정확도 비는 이 파이프라인에서 Sonnet 5와 대조 측정된 바 없으므로, 역전은 *성립한다고 가정*할 뿐 검증된 것이 아니다. **추후 Sonnet 비용이 정상화되면** — 재벤치마크에서 해당 밴드의 검증된-결과당(cost-per-verified-outcome) 비용이 다시 Opus 아래로 내려오면 — 저비용 밴드(0–5)와 비적대 리뷰어에 Sonnet을 언제든 재도입한다. haiku는 이 파이프라인에서 쓰지 않는다.
-
-> 참고:
-> - <https://www.reddit.com/r/ClaudeAI/comments/1ujx3rw/sonnet_5_is_worse_than_opus_at_the_same_price_at/>
-> - <https://www.reddit.com/r/theprimeagen/comments/1ukscqq/the_new_claude_sonnet_5_is_more_costly_than_fable/>
-> - <https://devbrothers.ai/blog/advisor-%EC%A0%84%EB%9E%B5-claude-fable-5%EC%97%90%EA%B2%8C-%EC%9D%BC%EC%9D%84-%EC%8B%9C%ED%82%A4%EC%A7%80-%EB%A7%90%EA%B3%A0-%EC%8B%9C%ED%82%A4%EB%8A%94-%EC%97%AD%ED%95%A0%EC%9D%84-%EC%8B%9C%EC%BC%9C%EB%9D%BC/>
 
 ### Plan 단계 흐름 (Plan Mode ↔ Plannotator 디커플링)
 

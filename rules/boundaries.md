@@ -22,7 +22,7 @@ specific to this setup. Hard prohibitions live in the Never tier below.
 - **Broad navigation / architecture**: CodeGraph `codegraph_explore` with a natural-language question.
 - **Read tool**: non-code files (`.md`/`.json`/`.toml`/`.yaml`) or areas `codegraph_explore` misses.
 - **Never** `cat`/`head`/`tail`/`sed`/`awk`.
-- **Subagent dispatch**: score the subtask's complexity against the routing quick card in `~/.claude/rules/hybrid-workflow.md` and set `model` accordingly (opus/fable — sonnet is suspended from routing). `Agent` tool: `model` only, no `effort` param — effort inherits from the dispatching session. `Workflow` `agent()`: `model` + `effort` both settable per-agent.
+- **Subagent dispatch**: the model is fixed at opus; score the subtask's complexity against the routing quick card in `~/.claude/rules/hybrid-workflow.md` to set effort. `Agent` tool: `model` only, no `effort` param — effort inherits from the dispatching session. `Workflow` `agent()`: `model` + `effort` both settable per-agent.
 
 ## ⚠️ Ask First (Require Approval)
 

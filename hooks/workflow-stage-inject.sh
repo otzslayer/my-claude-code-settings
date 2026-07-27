@@ -5,11 +5,11 @@
 # 주입 내용은 "announce + 사용자에게 전환 안내"이며 강제가 아니라 강한 넛지다.
 #
 # 중복 금지 원칙: "복잡도를 채점해 model·effort를 announce하라"는 지시는 CLAUDE.md와
-# hybrid-workflow.md의 §2-§5 quick card가 이미 담고 있으므로 각 case에서 반복하지 않는다.
+# hybrid-workflow.md의 §3-§5 quick card가 이미 담고 있으므로 각 case에서 반복하지 않는다.
 # 각 case는 그 단계에서만 성립하는 정보(기본 밴드가 일반값과 다른 경우, 단계 고유 산출물·다음 단계)만 담는다.
 # brainstorming opener는 just-in-time 전달 지점이라 full 문단으로 유지한다.
-# 리뷰어 모델: sonnet 배제 → 현재 전면 opus. ce-doc-review·ce-code-review·ce-work(build) 셋의
-# model=opus 정렬 + effort 취급(리뷰어=세션 상속, build=opus·medium)을 이 파일에서 일관되게 강제한다.
+# 리뷰어 모델: 전 리뷰어 model=opus. ce-doc-review·ce-code-review·ce-work(build) 셋의
+# model=opus 정렬 + effort 취급(리뷰어=세션 상속, build=medium)을 이 파일에서 일관되게 강제한다.
 # plannotator: 게이트가 아니다. ce-plan 경로에서는 사용자가 원할 때만 수동 실행하는 선택적 패스이며,
 # 훅은 approved/annotated/dismissed 반환값 시맨틱을 주입하지 않는다(rules/hybrid-workflow.md §1·§10과 정합).
 

@@ -34,7 +34,7 @@ The `superpowers` SessionStart hook already injects the full `using-superpowers`
 
 Domain skills (FastAPI, LangChain, etc.) layer on top when relevant. Available skills are auto-listed in session context — invoke via `Skill(skill="...")`. Model·effort for every row above is computed by scoring the task's complexity, not fixed per skill — see the policy below.
 
-**Model · effort policy**: The agent cannot switch its own model mid-session, so at each task or `/clear` boundary, score the task's complexity against the **routing quick card** in `~/.claude/rules/hybrid-workflow.md` (§2–§5) and announce the result; if it differs from the current setting, guide the switch via `/model`·`/effort` — announce and confirm, never enforce. **Exception — ce-code-review / ce-doc-review**: no session switch (avoids a costly in-session cache reload); their reviewer subagents are pinned to `model=opus` with effort inherited from the dispatching session. When a routing call is non-obvious, `Skill(skill="hybrid-workflow-reference")` holds the full §2–§5 rationale.
+**Model · effort policy**: The agent cannot switch its own model mid-session, so at each task or `/clear` boundary, score the task's complexity against the **routing quick card** in `~/.claude/rules/hybrid-workflow.md` (§3–§5) and announce the result; if it differs from the current setting, guide the switch via `/model`·`/effort` — announce and confirm, never enforce. **Exception — ce-code-review / ce-doc-review**: no session switch (avoids a costly in-session cache reload); their reviewer subagents are pinned to `model=opus` with effort inherited from the dispatching session. When a routing call is non-obvious, `Skill(skill="hybrid-workflow-reference")` holds the full §3–§5 rationale.
 
 ## Core Principles
 
