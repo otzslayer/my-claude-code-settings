@@ -20,13 +20,18 @@ bash ~/.claude/scripts/install.sh
 `scripts/install.sh`는 gum TUI 기반 인터랙티브 설치기다. macOS와 WSL2를 지원하며, gum이 없으면 plain read 폴백으로 동작한다.
 
 **설치기가 처리하는 항목**:
-- rtk (token optimizer) + jq (rtk-rewrite 훅의 하드 의존) + `rtk init -g` (RTK.md 생성 — 순서 보장)
+- **jq** — 컴포넌트 선택과 무관하게 항상 확인·설치한다. `rtk-rewrite.sh` · `workflow-stage-inject.sh` · `settings.json` 인라인 `PreToolUse` 훅 2종(`.py` 편집 시 python-coding-style 주입, `docs/plans/*.md` 한국어 강제)이 전부 jq 하드 의존이라, 없으면 이들이 **조용히** 죽는다
+- **node/npm 전제 확인** — statusLine(claude-dashboard)이 `node`로 직접 실행되므로 slides-grab을 고르지 않아도 확인한다 (없으면 경고)
+- rtk (token optimizer) + `rtk init -g` (RTK.md 생성 — 순서 보장)
 - codegraph (symbol-level code intelligence) — `~/.claude.json`에 MCP 자동 등록 (idempotent)
 - graphify (knowledge graph CLI)
 - slides-grab (npm 패키지)
 - plannotator (계획 파일 브라우저 리뷰 UI 바이너리 — plannotator 플러그인 prerequisite)
 - 메모리 seed 동기화 (`memory-templates/`)
 - `settings.json` skip-worktree 적용 (permissions 재유입 방지)
+- **훅·의존성 점검** — 설치 말미에 `settings.json`이 실제로 호출하는 훅·statusLine 커맨드를 **설정에서 추출해** PATH·존재·실행권한을 확인하고(커맨드 목록을 하드코딩하지 않으므로 저장소에 없는 머신 로컬 훅도 그대로 걸린다), 추적 스킬 4종과 `RTK.md`가 제자리에 있는지 본다. 미해결 항목은 마지막 요약에 모아 출력한다
+
+> **추적 스킬은 설치 단계가 없다**: 저장소 루트가 곧 `~/.claude`라 `skills/` 4종은 clone만으로 Claude Code가 읽는 위치에 놓이고, 실행 비트도 git이 보존한다. 위 점검 섹션은 설치가 아니라 **누락 감지**용이다.
 
 > **skip-worktree**: Claude 세션 중 grant가 `settings.json`에 재기입되어 `git status`가 dirty가 되는 현상을 방지한다. `install.sh`가 자동 실행하나, clone 후 재실행이 필요하다. 해제: `git update-index --no-skip-worktree settings.json`
 
@@ -44,7 +49,8 @@ bash ~/.claude/scripts/install.sh
 # RTK (token optimizer) 설치 — brew tap이 없다면 GitHub Releases에서 직접 설치
 brew install reachingforthejack/rtk/rtk   # 또는 릴리즈 바이너리 직접 설치
 
-# jq — rtk-rewrite 훅의 하드 의존 (없으면 명령 재작성 훅이 조용히 비활성화됨)
+# jq — 훅 전체의 하드 의존 (rtk-rewrite · workflow-stage-inject ·
+#      settings.json 인라인 훅 2종이 모두 조용히 비활성화됨). rtk를 안 써도 필요하다.
 brew install jq   # Linux/WSL2: sudo apt-get install -y jq
 
 # RTK.md 글로벌 초기화 — 이 단계 없이는 CLAUDE.md @RTK.md import가 깨짐

@@ -4,12 +4,19 @@
 # 지원: macOS (brew) / WSL2 (apt/release binary)
 # TUI:  gum (없으면 plain read 폴백)
 # 순서: 플랫폼 감지 -> gum bootstrap -> 컴포넌트 선택 -> 전제 확인 ->
-#        툴 설치 -> RTK.md 생성 -> 메모리 seed -> skip-worktree -> 요약
+#        툴 설치 -> RTK.md 생성 -> 메모리 seed -> skip-worktree ->
+#        훅·의존성 점검 -> 요약
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# 훅·statusLine 점검 대상 설정 파일.
+# 저장소를 ~/.claude로 clone하는 것이 정식 경로이므로 라이브 설정이 우선이고,
+# 다른 위치에서 실행했을 때만 저장소 사본으로 폴백한다.
+SETTINGS_FILE="$HOME/.claude/settings.json"
+[[ -f "$SETTINGS_FILE" ]] || SETTINGS_FILE="$REPO_ROOT/settings.json"
 
 # ---------------------------------------------------
 # 0. 플랫폼 감지
@@ -238,17 +245,18 @@ echo
 # ---------------------------------------------------
 echo "=== 전제 확인 ==="
 
-if [[ "$INSTALL_SLIDES" == "true" ]]; then
-    if ! command -v node &>/dev/null || ! command -v npm &>/dev/null; then
-        warn "node/npm이 없습니다. slides-grab 설치를 위해 수동 설치 필요:"
-        if [[ "$PLATFORM" == "macOS" ]]; then
-            echo "  brew install node  또는  nvm install --lts"
-        else
-            echo "  nvm install --lts  또는  sudo apt-get install -y nodejs npm"
-        fi
+# node/npm: 컴포넌트 선택과 무관한 전제다.
+# statusLine(claude-dashboard 플러그인)이 `node dist/index.js`로 직접 실행되므로,
+# slides-grab을 고르지 않아도 node가 없으면 statusLine이 점등되지 않는다.
+if ! command -v node &>/dev/null || ! command -v npm &>/dev/null; then
+    warn "node/npm이 없습니다. statusLine(claude-dashboard)이 node로 실행되며, slides-grab도 npm이 필요합니다:"
+    if [[ "$PLATFORM" == "macOS" ]]; then
+        echo "  brew install node  또는  nvm install --lts"
     else
-        ok "node $(node --version), npm $(npm --version)"
+        echo "  nvm install --lts  또는  sudo apt-get install -y nodejs npm"
     fi
+else
+    ok "node $(node --version), npm $(npm --version)"
 fi
 
 if [[ "$INSTALL_GRAPHIFY" == "true" ]]; then
@@ -271,49 +279,52 @@ if [[ "$INSTALL_RTK" == "true" ]] && [[ "$PLATFORM" == "macOS" ]]; then
     fi
 fi
 
-# jq: rtk-rewrite.sh 훅의 하드 의존 (없으면 명령 재작성 훅이 조용히 비활성화됨).
+# jq: 이 저장소 전체의 하드 의존이다 (rtk 컴포넌트 선택 여부와 무관).
+# 없으면 아래가 전부 조용히 죽는다:
+#   - hooks/rtk-rewrite.sh          (Bash 명령 rtk 재작성)
+#   - hooks/workflow-stage-inject.sh (Skill 호출 시 단계 지침 주입)
+#   - settings.json 인라인 PreToolUse 훅 2종
+#     (.py 편집 시 python-coding-style 주입 / docs/plans/*.md 한국어 강제)
 # _register_mcp / 플러그인 안내도 jq를 선호하므로 section 4 이전에 확보한다.
-if [[ "$INSTALL_RTK" == "true" ]]; then
-    if command -v jq &>/dev/null; then
-        ok "jq $(jq --version)"
+if command -v jq &>/dev/null; then
+    ok "jq $(jq --version)"
+else
+    echo "jq가 없습니다. 자동 설치를 시도합니다 (훅 전체의 하드 의존)..."
+    _jq_installed=false
+    if [[ "$PLATFORM" == "macOS" ]]; then
+        if command -v brew &>/dev/null && spin "jq 설치 중 (brew)..." brew install jq; then
+            _jq_installed=true
+        fi
     else
-        echo "jq가 없습니다. 자동 설치를 시도합니다 (rtk 훅 전제)..."
-        _jq_installed=false
-        if [[ "$PLATFORM" == "macOS" ]]; then
-            if command -v brew &>/dev/null && spin "jq 설치 중 (brew)..." brew install jq; then
-                _jq_installed=true
-            fi
-        else
-            if command -v apt-get &>/dev/null \
-                && spin "jq 설치 중 (apt)..." bash -c 'sudo apt-get install -y jq'; then
-                _jq_installed=true
-            fi
-            # apt 실패 시 release binary fallback
-            if [[ "$_jq_installed" == "false" ]]; then
-                _local_bin="$HOME/.local/bin"
-                mkdir -p "$_local_bin"
-                case "$(uname -m)" in
-                    x86_64)  _jq_arch="amd64" ;;
-                    aarch64) _jq_arch="arm64" ;;
-                    *)       _jq_arch="amd64" ;;
-                esac
-                _jq_url="https://github.com/jqlang/jq/releases/latest/download/jq-linux-${_jq_arch}"
-                if curl -fsSL "$_jq_url" -o "$_local_bin/jq" 2>/dev/null && chmod +x "$_local_bin/jq"; then
-                    export PATH="$_local_bin:$PATH"
-                    command -v jq &>/dev/null && _jq_installed=true
-                fi
+        if command -v apt-get &>/dev/null \
+            && spin "jq 설치 중 (apt)..." bash -c 'sudo apt-get install -y jq'; then
+            _jq_installed=true
+        fi
+        # apt 실패 시 release binary fallback
+        if [[ "$_jq_installed" == "false" ]]; then
+            _local_bin="$HOME/.local/bin"
+            mkdir -p "$_local_bin"
+            case "$(uname -m)" in
+                x86_64)  _jq_arch="amd64" ;;
+                aarch64) _jq_arch="arm64" ;;
+                *)       _jq_arch="amd64" ;;
+            esac
+            _jq_url="https://github.com/jqlang/jq/releases/latest/download/jq-linux-${_jq_arch}"
+            if curl -fsSL "$_jq_url" -o "$_local_bin/jq" 2>/dev/null && chmod +x "$_local_bin/jq"; then
+                export PATH="$_local_bin:$PATH"
+                command -v jq &>/dev/null && _jq_installed=true
             fi
         fi
+    fi
 
-        if [[ "$_jq_installed" == "true" ]]; then
-            ok "jq 설치 완료 ($(jq --version))"
+    if [[ "$_jq_installed" == "true" ]]; then
+        ok "jq 설치 완료 ($(jq --version))"
+    else
+        warn "jq 설치 실패 -- rtk 재작성·워크플로우 단계 주입·python-coding-style·계획 한국어 강제 훅이 모두 비활성화됩니다."
+        if [[ "$PLATFORM" == "macOS" ]]; then
+            echo "  수동: brew install jq"
         else
-            warn "jq 설치 실패 -- rtk 명령 재작성 훅이 비활성화됩니다."
-            if [[ "$PLATFORM" == "macOS" ]]; then
-                echo "  수동: brew install jq"
-            else
-                echo "  수동: sudo apt-get install -y jq  또는  https://jqlang.github.io/jq/download/"
-            fi
+            echo "  수동: sudo apt-get install -y jq  또는  https://jqlang.github.io/jq/download/"
         fi
     fi
 fi
@@ -482,14 +493,22 @@ echo
 # 5. 플러그인 안내
 # ---------------------------------------------------
 echo "=== 플러그인 안내 ==="
-_settings="$REPO_ROOT/settings.json"
-if [[ -f "$_settings" ]]; then
+# enabledPlugins는 배열이 아니라 {"플러그인@마켓플레이스": true|false} 객체다.
+# `.[]`로 순회하면 이름이 아니라 true/false만 찍히므로 to_entries로 켜진 키만 뽑는다.
+if [[ -f "$SETTINGS_FILE" ]]; then
     if command -v jq &>/dev/null; then
-        echo "settings.json enabledPlugins:"
-        jq -r '.enabledPlugins // [] | .[]' "$_settings" 2>/dev/null | LC_ALL=C sed 's/^/  * /' || true
+        echo "settings.json enabledPlugins (활성):"
+        jq -r '(.enabledPlugins // {}) | to_entries[] | select(.value) | "  * " + .key' \
+            "$SETTINGS_FILE" 2>/dev/null || true
+        _disabled="$(jq -r '(.enabledPlugins // {}) | to_entries[] | select(.value | not) | "  - " + .key' \
+            "$SETTINGS_FILE" 2>/dev/null || true)"
+        if [[ -n "$_disabled" ]]; then
+            echo "비활성 (필요하면 /plugin으로 되살림):"
+            echo "$_disabled"
+        fi
     else
-        echo "settings.json enabledPlugins (jq 없음 -- 일부만 표시):"
-        LC_ALL=C grep -A20 '"enabledPlugins"' "$_settings" 2>/dev/null | head -15 || true
+        echo "settings.json enabledPlugins (jq 없음 -- 원문 일부만 표시):"
+        LC_ALL=C grep -A20 '"enabledPlugins"' "$SETTINGS_FILE" 2>/dev/null | head -20 || true
     fi
 fi
 echo "-> Claude Code 재시작 시 위 플러그인이 자동 설치됩니다."
@@ -531,7 +550,102 @@ fi
 echo
 
 # ---------------------------------------------------
-# 8. 요약 + 수동 단계 출력
+# 8. 훅·의존성 점검 (doctor)
+# ---------------------------------------------------
+# 툴을 설치했다고 훅이 도는 건 아니다. 훅은 실패해도 조용하므로
+# (Claude Code가 hook stderr를 세션 로그로만 남김) 여기서 명시적으로 확인한다.
+echo "=== 훅·의존성 점검 ==="
+DOCTOR_ISSUES=()
+
+_doctor_fail() {
+    warn "$1"
+    DOCTOR_ISSUES+=("$1")
+}
+
+# 8-1. settings.json이 실제로 호출하는 커맨드가 해석되는지
+# 커맨드 목록을 하드코딩하지 않고 settings.json에서 추출한다 --
+# 그래야 이 저장소에 없는 머신 로컬 훅(알림 훅 등)까지 같은 방식으로 걸린다.
+if [[ ! -f "$SETTINGS_FILE" ]]; then
+    _doctor_fail "settings.json을 찾을 수 없습니다: $SETTINGS_FILE"
+elif ! command -v jq &>/dev/null; then
+    _doctor_fail "jq 없음 -- 훅 커맨드 점검 불가. jq 자체가 훅의 하드 의존이므로, 이 상태에서는 rtk 재작성·워크플로우 단계 주입·python-coding-style·계획 한국어 강제 훅이 전부 동작하지 않습니다."
+else
+    _hook_cmds="$(jq -r '
+        [ (.hooks // {}) | .. | objects | select(.type? == "command") | .command? // empty ]
+        + [ (.statusLine // {}) | select(.type? == "command") | .command? // empty ]
+        | .[]
+    ' "$SETTINGS_FILE" 2>/dev/null || true)"
+
+    _seen=" "
+    while IFS= read -r _cmdline; do
+        [[ -z "$_cmdline" ]] && continue
+        read -r _bin _rest <<< "$_cmdline"
+
+        # `bash <script>` 형태는 인터프리터가 아니라 스크립트 자체가 점검 대상이다.
+        # 단 이 경우 실행권한은 불필요하므로(인터프리터가 읽기만 한다) 존재만 본다.
+        _via_interp=false
+        case "$_bin" in
+            bash|sh|zsh)
+                read -r _bin2 _ <<< "${_rest:-}"
+                if [[ -n "${_bin2:-}" ]]; then
+                    _bin="$_bin2"
+                    _via_interp=true
+                fi
+                ;;
+        esac
+
+        # settings.json은 $HOME 문자열을 그대로 담고 Claude Code가 확장한다.
+        _bin="${_bin//\$HOME/$HOME}"
+        _bin="${_bin/#\~/$HOME}"
+
+        # 셸 빌트인만 쓰는 인라인 훅은 점검 대상이 아니다.
+        case "$_bin" in
+            echo|printf|true|:|"") continue ;;
+        esac
+
+        case "$_seen" in *" $_bin "*) continue ;; esac
+        _seen="$_seen$_bin "
+
+        if [[ "$_bin" == */* ]]; then
+            if [[ ! -f "$_bin" ]]; then
+                _doctor_fail "훅 스크립트 없음: $_bin"
+            elif [[ "$_via_interp" == "true" || -x "$_bin" ]]; then
+                ok "훅 스크립트 $_bin 사용 가능"
+            else
+                # 인터프리터 없이 직접 실행되는 훅만 실행권한이 필요하다.
+                _doctor_fail "훅 스크립트 실행권한 없음: $_bin  (chmod +x 필요)"
+            fi
+        elif command -v "$_bin" &>/dev/null; then
+            ok "훅 커맨드 $_bin 사용 가능"
+        else
+            _doctor_fail "훅 커맨드를 PATH에서 찾을 수 없음: $_bin  (해당 훅이 동작하지 않습니다)"
+        fi
+    done <<< "$_hook_cmds"
+fi
+
+# 8-2. 추적 스킬 4종
+# 별도 설치 경로가 없다 -- clone에 포함되어 그 자리가 곧 로드 위치다.
+# 부분 clone이나 .gitignore opt-in 누락으로 빠지면 CLAUDE.md 스킬 표가
+# 존재하지 않는 스킬을 가리키게 되므로 존재 여부만 확인한다.
+for _skill in hybrid-workflow-reference fastapi-project-structure python-architecture python-coding-style; do
+    if [[ -f "$REPO_ROOT/skills/$_skill/SKILL.md" ]]; then
+        ok "손-작성 스킬 $_skill 존재"
+    else
+        _doctor_fail "손-작성 스킬 누락: skills/$_skill/SKILL.md  (git clone 상태 확인 필요)"
+    fi
+done
+
+# 8-3. RTK.md -- CLAUDE.md가 @RTK.md로 import한다 (없으면 import가 깨짐)
+if [[ -f "$HOME/.claude/RTK.md" ]]; then
+    ok "RTK.md 존재"
+else
+    _doctor_fail "RTK.md 없음 -- CLAUDE.md의 @RTK.md import가 깨집니다. 해결: rtk init -g"
+fi
+
+echo
+
+# ---------------------------------------------------
+# 9. 요약 + 수동 단계 출력
 # ---------------------------------------------------
 echo "======================================"
 echo "         설치 완료 요약"
@@ -543,6 +657,17 @@ if [[ ${#FAILED_TOOLS[@]} -gt 0 ]]; then
     for _t in "${FAILED_TOOLS[@]}"; do
         echo "  * $_t"
     done
+    echo
+fi
+
+if [[ ${#DOCTOR_ISSUES[@]} -gt 0 ]]; then
+    warn "훅·의존성 점검 미해결 항목:"
+    for _t in "${DOCTOR_ISSUES[@]}"; do
+        echo "  * $_t"
+    done
+    echo
+else
+    ok "훅·의존성 점검 전부 통과"
     echo
 fi
 
