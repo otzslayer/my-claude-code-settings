@@ -33,7 +33,7 @@
 - **Project layout**: `codegraph_files` (indexed tree — faster than Glob).
 - **Search / lookup**: `Grep` for text/regex (CodeGraph doesn't do strings); `Glob`·`Bash(ls)` for non-code files or paths `codegraph_files` misses.
 - **Edit**: `Edit`/`Write` are the main path (CodeGraph is read-only); assess blast radius with `codegraph_impact`/`codegraph_callers` BEFORE editing, not during. Index auto-refreshes ~1s.
-- **Broad navigation / architecture**: `/graphify`; symbol-level queries go to CodeGraph.
+- **Broad navigation / architecture**: CodeGraph `codegraph_explore` with a natural-language question.
 - **Read tool**: non-code files (`.md`/`.json`/`.toml`/`.yaml`) or areas `codegraph_explore` misses.
 - **Never** `cat`/`head`/`tail`/`sed`/`awk`.
 - **Subagent dispatch**: score the subtask's complexity (`~/.claude/rules/hybrid-workflow.md` §3) and set `model` dynamically (opus/fable — sonnet currently suspended from routing, see hybrid-workflow.md §3) accordingly. `Agent` tool: `model` only, no `effort` param — effort inherits from the dispatching session. `Workflow` `agent()`: `model` + `effort` both settable per-agent.

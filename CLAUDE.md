@@ -100,12 +100,7 @@ Document failure → Research alternatives → Question fundamentals → Try dif
 
 ## Rules Directory
 
-Extended guidelines in `~/.claude/rules/`:
-- `boundaries.md` — Auto/Ask/Never permission tiers, tool-usage policy
-- `karpathy-principles.md` — Full principles detail
-- `git-workflow.md` — Commit format, branch naming, PR workflow
-- `hybrid-workflow.md` — Operating rules for the Compound + Superpowers hybrid pipeline
-- `security.md` — Secret management, security-issue response
+Extended guidelines live in `~/.claude/rules/` and are loaded in full alongside this file.
 
 Active hooks live in `~/.claude/settings.json` under `hooks` (source of truth — view with `/hooks`).
 

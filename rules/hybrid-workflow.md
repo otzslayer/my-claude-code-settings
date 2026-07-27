@@ -1,6 +1,6 @@
 # Compound + Superpowers Hybrid Workflow
 
-Operating rules binding Superpowers · Compound Engineering · CodeGraph · graphify · RTK · .remember into a single 7-stage pipeline. This document is the single source of truth for the pipeline — no separate spec to sync.
+Operating rules binding Superpowers · Compound Engineering · CodeGraph · RTK · .remember into a single 7-stage pipeline. This document is the source of truth for the pipeline. §6, §7, and §9 are stage-scoped, so their detail lives in the lazily-loaded `hybrid-workflow-reference` skill rather than in context every turn; the sections below point to it where it applies.
 
 ---
 
@@ -10,8 +10,7 @@ Stage **structure** (phases, `/clear` boundaries) is fixed. Model·effort is not
 
 ```
 Phase 1: Spec  (model·effort via complexity scoring — §3)
-  superpowers:brainstorming  (95% confidence opener at the start)
-  (optional) graphify
+  superpowers:brainstorming  (95% confidence opener at the start — §7)
   → docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md
   → user review · approval
        │
@@ -41,6 +40,7 @@ Phase 3: Verify · Learn · Ship
 **Phase 2 note (§1 — ce-plan runs in non-plan-mode)**:
 
 - ce-plan core work (plan-file `Write`, ce-doc-review autofix) runs in **non-plan-mode** — Plan Mode blocks both.
+- `superpowers:writing-plans` is **no longer** the full pipeline's plan stage — `/ce-plan` is. If the user asks for writing-plans while in Plan Mode, point them to `/ce-plan`.
 - Review still happens: ce-doc-review runs automatically on the canonical file (Phase 5.3.8). A human browser pass via `plannotator annotate docs/plans/<file>` is **optional and manual** — run it from the terminal or Claude Code if you want one. It has no Approve button: closing without feedback counts as approval, and any feedback you leave is addressed on the same file. It is not a mandatory gate and nothing blocks `/clear` on its result. The annotated artifact **is** the canonical `docs/plans/` file (no `~/.claude/plans/` copy), so ce-doc-review's autofixes are never overwritten by re-pasted plan text.
 - The general Plan Mode `ExitPlanMode` path (with its `PermissionRequest` plannotator gate and `~/.claude/plans/` promotion) still serves non-ce-plan work.
 - **Korean-prose enforcement** (`~/.claude/settings.json`): a `PreToolUse` `Write|Edit` hook on `docs/plans/*.md` injects the Korean-prose requirement at plan-write time (see §9).
@@ -136,37 +136,13 @@ Review is open-ended adversarial reasoning (base 5) — only the highest-stakes 
 
 ## Unit granularity & execution strategy (§6 — token discipline under 1-hour caching)
 
-Under 1-hour caching, cache **writes cost 2× base input** (reads stay 0.1×), and every subagent spawn re-establishes its full prefix (CLAUDE.md + skill injection + unit packet) as a fresh 2× write. **Spawn count — not per-token price — is the dominant reducible cost.** Two defaults, one per stage:
-
-- **Coarse units (Phase 2, `/ce-plan`)** — group cohesive Implementation Units (shared files, types, dependency chains) into fewer, larger U-IDs. Fewer units = fewer spawns = fewer 2× prefix writes. The primary lever, and it lives in the plan. Do not fragment a cohesive change into fine-grained units just to look granular.
-- **Serial subagents (Phase 2', `/ce-work`)** — prefer serial execution over parallel fan-out unless wall-clock speed is explicitly the priority. Parallelism's only gain is latency; for cost it adds merge/contention/integration overhead (ce-work caps parallel batches at 3–5 workers for this reason). Serial keeps both subagent benefits — clean per-unit rollback and a lean orchestrator context — without the parallel-batch tax.
-
-**Trade-off accepted**: gives up wall-clock speed and cross-unit visibility (separate workers can't see each other's emerging patterns; ce-work's "Simplify as You Go" pass partly mitigates). For a tightly-coupled cluster where cross-unit consolidation beats clean rollback, run that cluster inline in the main context with a `/clear` at the stage boundary — choose per cluster, not globally. Inline vs subagent is roughly a token wash; the real win is fewer spawns from coarser units, which applies to both modes.
+Two defaults: **coarse Implementation Units** in `/ce-plan`, **serial subagents** in `/ce-work` — spawn count, not per-token price, is the dominant reducible cost. Before grouping U-IDs or choosing serial vs parallel fan-out, invoke `Skill(skill="hybrid-workflow-reference")` for the full §6 rationale and the accepted trade-off.
 
 ---
 
 ## 95% confidence opener (§7 — Phase 1 first turn, model utterance)
 
-First question the model poses when entering the brainstorming skill:
-
-> "지금 만들려는 것에 대해 1-2문장으로 설명해 주세요. 저는 95% 확신이 생길 때까지 질문을 던지겠습니다 — 표면적으로 원하는 것이 아니라 진짜로 필요한 것을 짚기 위해서입니다. 가정과 엣지 케이스를 도전하겠습니다."
-
-Operating contract:
-
-- Repeat brainstorming checklist item 3 (clarifying questions) until 95% confidence.
-- One question at a time. Do not accept the user's first answer uncritically.
-- Actively surface unstated edge cases (failure modes, missing data, permissions, concurrency, etc.).
-- Do not move to design-presentation below 95%.
-
-**rigor-probe lens (product-facing work — absorbed from ce-brainstorm)**: for work with a user/value surface (new feature · endpoint · behavior change), derive questions through 5 lenses:
-
-- **evidence** — actual behavior (time·cost·workaround), not just a stated want
-- **specificity** — the concrete beneficiary and what changes for them
-- **counterfactual** — how it's done today, and what changes if it's not built
-- **attachment** — the minimal form delivering the same value
-- **durability** — whether the assumption holds against near-term change
-
-For non-product work (large refactors · broad documentation · tooling), skip this — there is no 'real user need' to press on, so a product-style probe spins idle.
+Entering `superpowers:brainstorming` **requires** invoking `Skill(skill="hybrid-workflow-reference")` first — it holds the verbatim Korean opener utterance, the operating contract (one question at a time, do not stop below 95% confidence), and the 5 rigor-probe lenses for product-facing work.
 
 ---
 
@@ -200,20 +176,9 @@ These typically land in the 0–2 band per §3 (guide the switch if the session 
 
 ## Memory · documentation tiers (§9)
 
-| Tier | Location | Responsibility | Who changes it |
-| --- | --- | --- | --- |
-| 0. Global behavior rules | `~/.claude/CLAUDE.md`, `~/.claude/rules/` | Collaboration principles, gating | **User manual only** |
-| 1. Global meta-memory | `~/.claude/projects/.../memory/`, `~/.claude/.remember/` | user/feedback/project/reference, per-session | Model auto-updates only for user/feedback utterances |
-| 2. Project decisions | `<proj>/docs/superpowers/specs/`, `<proj>/docs/plans/` | spec, plan (**plan body prose in Korean**, code·identifiers·file paths·frontmatter keys·enum values stay English) | Model authors, user approval gate |
-| 3. Project learning accumulation | `<proj>/docs/solutions/` | ce-compound output (**content in Korean**, frontmatter keys·enum values stay English) write + ce-learnings-researcher query read | Model auto (headless) |
-| 4. Project visualization | `<proj>/graphify-out/`, `<proj>/docs/solutions/*.graph.md` | graphify output | User or model on invocation |
+**NEVER auto-propagate into Tier 0/1** — `~/.claude/CLAUDE.md`, `~/.claude/rules/`, and `~/.claude/projects/.../memory/` are user-manual-only; `/ce-compound` writes Tier 3 (`docs/solutions/`) exclusively, and the user manually promotes anything worth keeping. This prohibition stays resident; it is not deferred.
 
-**Policy**:
-
-- No automatic `/ce-compound` propagation into Tier 0/1. The user manually promotes a valuable Tier 3 solution.
-- Tier 3 is not write-only: in Phase 2's `/ce-plan` research, `ce-learnings-researcher` queries docs/solutions/ and reflects past learnings into the plan — closing the compound learning loop.
-- ce-learnings-researcher invocation gate: fires only when `docs/solutions/` has **3+ files**. Below that, noise overwhelms signal — skip it.
-- Tier 2 plan language: the `docs/plans/` body is Korean prose (identifiers, code, file paths, frontmatter keys/enum values stay English), mirroring Tier 3. Enforced at plan-write time by the `PreToolUse` `Write|Edit` hook (§1 Phase 2 note) — the global "respond in Korean" rule never reached it because a written file artifact is not a chat response.
+For the full 5-tier location/responsibility table and the remaining policy (ce-learnings-researcher's 3+ file gate, Tier 2/3 Korean-prose rule), invoke `Skill(skill="hybrid-workflow-reference")` when deciding where a spec, plan, solution, or memory file belongs.
 
 ---
 
