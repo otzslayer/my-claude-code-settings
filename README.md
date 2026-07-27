@@ -106,7 +106,7 @@ Claude Code가 `settings.json`의 `enabledPlugins`와 `extraKnownMarketplaces`�
 | `CLAUDE.md` | 메인 개발 가이드라인 |
 | `settings.json` | 포터블화된 플러그인·훅 설정 |
 | `rules/` | 행동 규칙 파일 5종 (boundaries · git-workflow · hybrid-workflow · karpathy-principles · security) |
-| `skills/hybrid-workflow-reference/` | hybrid-workflow §2–§5·§6·§7·§9를 담은 지연 로드 스킬 — `rules/`에서 분리한 손-콘텐츠라 유일하게 추적하는 스킬 |
+| `skills/hybrid-workflow-reference/` | hybrid-workflow 지연 로드 스킬 — `SKILL.md`는 인덱스뿐이고 본문은 `references/` 5개 파일에 주제별로 나뉘어 있다. `rules/`에서 분리한 손-콘텐츠라 유일하게 추적하는 스킬 |
 | `memory-templates/` | 세션 간 메모리 seed (현재 본문 seed 없음, 인덱스 스캐폴드만) |
 | `hooks/*.sh` | rtk-rewrite, workflow-stage-inject, graphify-install-check |
 | `scripts/sync-memory-templates.sh` | 메모리 템플릿 동기화 |
@@ -126,7 +126,7 @@ Claude Code가 `settings.json`의 `enabledPlugins`와 `extraKnownMarketplaces`�
 - **플러그인 스킬** (compound-engineering, superpowers 등): Claude Code 재실행 시 자동 복원
 - **npm 스킬** (slides-grab, slides-grab-design, slides-grab-export, slides-grab-plan): `npm install -g slides-grab`
 - **CLI 스킬** (graphify): `uv tool install graphifyy`. CLI·`graphify-install-check.sh` 훅(CLAUDE.md의 graphify 섹션 자동 주입)·스킬이 한 세트로 움직인다
-- **추적하는 손-작성 스킬** (`hybrid-workflow-reference`): clone만으로 복원됨. `rules/hybrid-workflow.md`가 §2–§5·§6·§7·§9 자리에서 이 스킬을 가리키므로 **둘은 같이 움직여야 한다**
+- **추적하는 손-작성 스킬** (`hybrid-workflow-reference`): clone만으로 복원됨. `rules/hybrid-workflow.md`가 §2–§5·§6·§7·§9 자리에서 이 스킬의 `references/` 파일을 **파일명으로** 가리키므로 **둘은 같이 움직여야 한다** (파일을 옮기거나 이름을 바꾸면 상주 포인터도 같이 고칠 것)
 - **순수 bespoke 스킬** (peon-ping-*, plannotator-annotate 등): 별도 보존 필요 (현재 미추적)
 
 ---
@@ -135,7 +135,21 @@ Claude Code가 `settings.json`의 `enabledPlugins`와 `extraKnownMarketplaces`�
 
 `rules/hybrid-workflow.md`가 정식 운영 가이드다. 이 파일은 매 세션 컨텍스트에 상주하므로, 특정 시점에만 참조하는 **§2–§5(모델 재보정표·채점 근거·에스컬레이션·리뷰어 분기) · §6(유닛 분량·직렬 실행) · §7(95% confidence opener) · §9(메모리·문서 tier)** 는 본문을 `skills/hybrid-workflow-reference/`로 빼고 자리에 포인터만 남겼다.
 
-§2–§5만은 예외적으로 **routing quick card**(채점 기저점·가산 신호·밴드표·build carve-out·sonnet 배제·리뷰어 opus 고정)를 상주 자리에 남긴다 — 라우팅 판정은 `/clear` 경계마다 필요해 매번 스킬을 로드하면 오히려 손해이기 때문이다. 스킬에는 그 판정의 *근거*(비용 역전 벤치마크, 재실행 게이트 상세, sonnet 복귀 시 되돌릴 리뷰어 분기표)만 남는다.
+§2–§5만은 예외적으로 **routing quick card**(채점 기저점·가산 신호·밴드표·build carve-out·sonnet 배제·리뷰어 opus 고정)를 상주 자리에 남긴다 — 라우팅 판정은 `/clear` 경계마다 필요해 매번 파일을 로드하면 오히려 손해이기 때문이다. 지연 로드 쪽에는 그 판정의 *근거*만 남는다.
+
+**스킬 내부도 주제별로 쪼개져 있다.** 스킬 본문은 한 번 로드되면 세션 끝까지 컨텍스트에 남고, 이 파이프라인은 단계마다 `/clear`를 강제한다 — 380토큰이 필요해 3.7k를 통째로 불러오면 그 세션 내내 나머지를 짊어진다. 그래서 `SKILL.md`는 1k 미만 인덱스만 두고 본문을 나눴다:
+
+| 파일 | 내용 | 읽는 시점 |
+| --- | --- | --- |
+| `references/scoring.md` | §2 모델표 · §3 채점 근거 · §4 에스컬레이션 | 라우팅 판정이 애매할 때 |
+| `references/reviewers.md` | §5 리뷰어 분기 | 리뷰어 dispatch 시 |
+| `references/units.md` | §6 유닛 분량·직렬 실행 | ce-plan U-ID 묶을 때, ce-work 직렬/병렬 고를 때 |
+| `references/brainstorming.md` | §7 5렌즈 정의 | **제품성** 브레인스토밍일 때만 |
+| `references/tiers.md` | §9 메모리·문서 tier | 파일 배치 결정 시 |
+
+§2·§3·§4는 서로를 계속 되참조해서(§3의 경계 반올림→§4, §4의 build 격상→§3 carve-out) 한 파일로 묶었다. 더 쪼개면 한쪽을 열자마자 다른 쪽이 필요해져 왕복만 늘어난다. §5는 리뷰어 dispatch라는 별개 시점이라 분리했다.
+
+§7의 opener 원문과 "한 번에 한 질문" 계약은 **어느 파일에도 없다** — `hooks/workflow-stage-inject.sh`가 brainstorming 호출 직후 그 자리에 주입한다(상주 비용 0). `references/brainstorming.md`에는 훅이 이름만 던지는 5렌즈의 정의만 있다.
 
 §1·§8·§10과 "Tier 0/1 자동 변경 금지" 금지 규칙은 전문 그대로 상주한다(금지 규칙은 지연 로드로 내리지 않는다).
 

@@ -1,6 +1,6 @@
 # Compound + Superpowers Hybrid Workflow
 
-Operating rules binding Superpowers · Compound Engineering · CodeGraph · RTK · .remember into a single 7-stage pipeline. This document is the source of truth for the pipeline. §2–§5, §6, §7, and §9 are stage-scoped or rationale-heavy, so their detail lives in the lazily-loaded `hybrid-workflow-reference` skill rather than in context every turn; what stays here is a routing quick card plus pointers.
+Operating rules binding Superpowers · Compound Engineering · CodeGraph · RTK · .remember into a single 7-stage pipeline. This document is the source of truth for the pipeline. §2–§5, §6, §7, and §9 are stage-scoped or rationale-heavy, so their detail lives in one-topic files under the `hybrid-workflow-reference` skill's `references/` rather than in context every turn; what stays here is a routing quick card plus a pointer naming the exact file to read.
 
 ---
 
@@ -50,7 +50,7 @@ Phase 3: Verify · Learn · Ship
 
 ## Model · effort routing (§2–§5 quick card)
 
-Settles routine routing calls on its own. For the reasoning behind it — the §2 model recalibration table, §3's sonnet cost-inversion evidence, §4's full escalation/re-run gate, §5's reviewer split to restore if sonnet returns — invoke `Skill(skill="hybrid-workflow-reference")`.
+Settles routine routing calls on its own. When one is non-obvious, read `hybrid-workflow-reference/references/scoring.md` (§2 model table, §3 scoring rationale + sonnet cost-inversion evidence, §4 escalation/re-run gate). Reviewer dispatch branching is a separate moment — `references/reviewers.md` (§5).
 
 **Score (§3)** — at every `/clear` boundary, new task, and subagent dispatch. `base + additive signals`, capped at 10.
 
@@ -75,13 +75,13 @@ Settles routine routing calls on its own. For the reasoning behind it — the §
 
 ## Unit granularity & execution strategy (§6 — token discipline under 1-hour caching)
 
-Two defaults: **coarse Implementation Units** in `/ce-plan`, **serial subagents** in `/ce-work` — spawn count, not per-token price, is the dominant reducible cost. Before grouping U-IDs or choosing serial vs parallel fan-out, invoke `Skill(skill="hybrid-workflow-reference")` for the full §6 rationale and the accepted trade-off.
+Two defaults: **coarse Implementation Units** in `/ce-plan`, **serial subagents** in `/ce-work` — spawn count, not per-token price, is the dominant reducible cost. Before grouping U-IDs or choosing serial vs parallel fan-out, read `hybrid-workflow-reference/references/units.md` for the full §6 rationale and the accepted trade-off.
 
 ---
 
-## 95% confidence opener (§7 — Phase 1 first turn, model utterance)
+## 95% confidence opener · rigor-probe lenses (§7 — Phase 1)
 
-Entering `superpowers:brainstorming` **requires** invoking `Skill(skill="hybrid-workflow-reference")` first — it holds the verbatim Korean opener utterance, the operating contract (one question at a time, do not stop below 95% confidence), and the 5 rigor-probe lenses for product-facing work.
+The opener utterance and the operating contract (one question at a time, do not move to design below 95% confidence) are injected by `hooks/workflow-stage-inject.sh` the moment `superpowers:brainstorming` is invoked — nothing to load. For **product-facing** work only, read `hybrid-workflow-reference/references/brainstorming.md` for the 5 rigor-probe lenses' definitions; skip it for refactors, documentation, and tooling.
 
 ---
 
@@ -117,7 +117,7 @@ These typically land in the 0–2 band (guide the switch if the session differs)
 
 **NEVER auto-propagate into Tier 0/1** — `~/.claude/CLAUDE.md`, `~/.claude/rules/`, and `~/.claude/projects/.../memory/` are user-manual-only; `/ce-compound` writes Tier 3 (`docs/solutions/`) exclusively, and the user manually promotes anything worth keeping. This prohibition stays resident; it is not deferred.
 
-For the full 5-tier location/responsibility table and the remaining policy (ce-learnings-researcher's 3+ file gate, Tier 2/3 Korean-prose rule), invoke `Skill(skill="hybrid-workflow-reference")` when deciding where a spec, plan, solution, or memory file belongs.
+For the full 5-tier location/responsibility table and the remaining policy (ce-learnings-researcher's 3+ file gate, Tier 2/3 Korean-prose rule), read `hybrid-workflow-reference/references/tiers.md` when deciding where a spec, plan, solution, or memory file belongs.
 
 ---
 
