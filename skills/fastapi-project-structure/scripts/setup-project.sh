@@ -52,13 +52,13 @@ create_structure() {
 
     case $template in
         minimal)
-            mkdir -p "$PROJECT_DIR"/{tests}
+            mkdir -p "$PROJECT_DIR"/tests
             ;;
         standard)
-            mkdir -p "$PROJECT_DIR"/{app/{core,api/{routes},models,schemas,services},tests/{test_api,test_services}}
+            mkdir -p "$PROJECT_DIR"/{app/{core,api/routes,models,schemas,services},tests/{test_api,test_services}}
             ;;
         mcp-server)
-            mkdir -p "$PROJECT_DIR"/{app/{core,api/{routes},mcp/{tools,resources,prompts},services},tests}
+            mkdir -p "$PROJECT_DIR"/{app/{core,api/routes,mcp/{tools,resources,prompts},services},tests}
             ;;
         full-stack)
             mkdir -p "$PROJECT_DIR"/{app/{core,api/{routes,dependencies},models,schemas,services,db,workers},tests/{test_api,test_services,test_integration},alembic/versions}
@@ -228,7 +228,30 @@ dependencies = [
 dev = [
     "pytest>=8.0.0",
     "httpx>=0.27.0",
+    "ruff>=0.6.0",
+    "ty>=0.0.63",
 ]
+
+# python-coding-style 스킬의 기준 설정
+[tool.ruff]
+line-length = 80
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "N", "S", "SIM", "ARG", "B", "C4"]
+ignore = ["E501", "S603"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+    "fastapi.Depends", "fastapi.Query", "fastapi.Path",
+    "fastapi.Body", "fastapi.Header",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/**" = ["S101", "S106", "SIM117", "ARG001", "E741"]
+
+[tool.ty]
 EOF
 }
 
@@ -237,8 +260,8 @@ create_standard_files() {
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.core.config import settings
 from app.api.routes import health
+from app.core.config import settings
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -264,10 +287,12 @@ async def root():
 EOF
 
     cat > "$PROJECT_DIR/app/core/config.py" << 'EOF'
+import json
 from typing import Any
+
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
-import json
+
 
 class Settings(BaseSettings):
     # Application
@@ -276,7 +301,8 @@ class Settings(BaseSettings):
     DEBUG: bool = False
 
     # Server
-    HOST: str = "0.0.0.0"
+    # 컨테이너 바인딩 의도 (컨테이너 밖이면 127.0.0.1로 바꿀 것)
+    HOST: str = "0.0.0.0"  # noqa: S104
     PORT: int = 8000
 
     # Security
@@ -362,7 +388,9 @@ EOF
     cat > "$PROJECT_DIR/tests/conftest.py" << 'EOF'
 import pytest
 from fastapi.testclient import TestClient
+
 from app.main import app
+
 
 @pytest.fixture
 def client():

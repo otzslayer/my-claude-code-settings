@@ -88,7 +88,7 @@ class Settings(BaseSettings):
     DEBUG: bool = False
 
     # Server Configuration
-    HOST: str = "0.0.0.0"
+    HOST: str = "0.0.0.0"  # noqa: S104 — 컨테이너 바인딩 의도
     PORT: int = 8000
 
     # Database Configuration (if needed)

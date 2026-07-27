@@ -4,13 +4,12 @@ FastAPI Application Entry Point
 Main application initialization with middleware, routers, and configuration.
 """
 
+from app.api.routes import health
+from app.core.config import settings
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-
-from app.core.config import settings
-from app.api.routes import health
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
 # Optional: MCP server integration
 # from app.mcp.server import mcp_server, run_mcp_server

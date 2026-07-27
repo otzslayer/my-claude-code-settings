@@ -4,10 +4,11 @@ Application Configuration
 Pydantic Settings-based configuration with environment variable support.
 """
 
-from typing import Any
-from pydantic import field_validator, AnyHttpUrl
-from pydantic_settings import BaseSettings, SettingsConfigDict
 import json
+from typing import Any
+
+from pydantic import field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -20,7 +21,9 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
 
     # Server
-    HOST: str = "0.0.0.0"
+    # 컨테이너에서 외부 트래픽을 받으려면 모든 인터페이스 바인딩이 필요하다.
+    # 컨테이너 밖에서 직접 띄운다면 127.0.0.1로 바꿀 것.
+    HOST: str = "0.0.0.0"  # noqa: S104
     PORT: int = 8000
 
     # Security

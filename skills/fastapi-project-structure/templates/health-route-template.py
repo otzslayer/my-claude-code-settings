@@ -4,9 +4,10 @@ Health Check Endpoints
 Provides health and readiness endpoints for monitoring and orchestration.
 """
 
+from datetime import datetime
+
 from fastapi import APIRouter, status
 from pydantic import BaseModel
-from datetime import datetime
 
 router = APIRouter()
 
