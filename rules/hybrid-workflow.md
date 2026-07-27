@@ -69,7 +69,7 @@ Settles routine routing calls on its own. For the reasoning behind it — the §
 - **sonnet-5 is suspended from routing** (effective agentic cost inverts above opus). Do not route to it — bands 0–5 use opus·low/medium.
 - **Reviewers (§5)** — pin every `ce-code-review` / `ce-doc-review` reviewer subagent to `model=opus`, and never switch the session model for review dispatch (cache reload cost). **Do NOT edit the plugin skills to achieve this** — `~/.claude/plugins/...` is machine state, overwritten on update; this document outranks their built-in tiering.
 - **Applying it (§4)** — the main agent cannot switch its own model mid-session: announce the scored result and guide the user's `/model`·`/effort`, never enforce. `Agent`-tool dispatch takes `model` only (effort inherits from the dispatching session); `Workflow` `agent()` takes both.
-- Global resting default (`~/.claude/settings.json`): `model: opus[1m]`, `effortLevel: high`. `xhigh` is per-task only, never a resting default.
+- Global resting default: `model` is Opus 5 (1M context) — set via `/model`, not a `settings.json` key — and `effortLevel: high` in `~/.claude/settings.json`. `xhigh` is per-task only, never a resting default.
 
 ---
 

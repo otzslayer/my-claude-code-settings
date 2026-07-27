@@ -164,10 +164,10 @@ Phase 3: Ship    verify → /ce-compound → commit+PR
 
 | 점수 | 밴드 | model | effort | 예시 |
 |---|---|---|---|---|
-| 0–2 | 사소·기계적 | opus-4.8 | low | "테스트 통과 확인만" |
-| 3–5 | 표준 | opus-4.8 | medium | "새 엔드포인트 하나 추가, 파일 3개" |
-| 6–7 | 조금 어려움 | opus-4.8 | high | "새 의존성 도입 + 데이터 스키마 변경" |
-| 8–10 | 복잡함 | opus-4.8 | xhigh | "새 아키텍처 결정 + API 스키마 변경 + 교차 관심사" |
+| 0–2 | 사소·기계적 | opus-5 | low | "테스트 통과 확인만" |
+| 3–5 | 표준 | opus-5 | medium | "새 엔드포인트 하나 추가, 파일 3개" |
+| 6–7 | 조금 어려움 | opus-5 | high | "새 의존성 도입 + 데이터 스키마 변경" |
+| 8–10 | 복잡함 | opus-5 | xhigh | "새 아키텍처 결정 + API 스키마 변경 + 교차 관심사" |
 
 예: "표준 구현(base 3) + 파일 3–5개(+2) + 동시성 얽힘(+2)" = 7점 → **opus·high**를 announce하고 현재 세션과 다르면 `/model`·`/effort` 전환을 안내한다(강제 아님).
 
@@ -181,7 +181,7 @@ Phase 3: Ship    verify → /ce-compound → commit+PR
 
 세션 resting 기본값(`settings.json`)은 `effortLevel: high`다 — `xhigh`는 8–10 밴드에서 과업별로만 도달하며 상시 기본값이 아니다.
 
-**Sonnet-5 제외 (비용 역전, 한시적)**: per-token 단가만 보면 Sonnet-5가 가장 싸지만, 이 파이프라인의 다단계 agentic 작업에서는 토큰·반복이 3~4배로 불어나 **실효 비용이 Opus 4.8 이상으로 뒤집히고 정확도는 낮다**. 근거 — BrowseComp에서 Opus·low($5/67.7%)가 Sonnet·high($7/64.8%)를 비용·정확도 모두에서 앞서고, Artificial Analysis 인덱스 전체 실행 비용은 Opus 4.8 max $3,753 < Sonnet 5 max $6,015이며, 실측 agentic 태스크에서 Opus 4.8 단독은 70회/$7.07인 반면 Sonnet 5 단독은 309회/$20.95였다(가장 싼 모델이 최종 비용은 가장 큼). 그래서 0–5 밴드와 §5 비적대 리뷰어까지 전부 Opus 4.8로 통일한다. **추후 Sonnet 비용이 정상화되면** — 재벤치마크에서 해당 밴드의 검증된-결과당(cost-per-verified-outcome) 비용이 다시 Opus 아래로 내려오면 — 저비용 밴드(0–5)와 비적대 리뷰어에 Sonnet을 언제든 재도입한다. haiku는 이 파이프라인에서 쓰지 않는다.
+**Sonnet-5 제외 (비용 역전, 한시적)**: per-token 단가만 보면 Sonnet-5가 가장 싸지만, 이 파이프라인의 다단계 agentic 작업에서는 토큰·반복이 3~4배로 불어나 **실효 비용이 Opus 4.8 이상으로 뒤집히고 정확도는 낮다**. 근거(**전부 Opus 4.8 기준 측정치다 — Opus 5로 재측정한 값이 아니므로 수치의 모델명을 바꾸지 말 것**) — BrowseComp에서 Opus·low($5/67.7%)가 Sonnet·high($7/64.8%)를 비용·정확도 모두에서 앞서고, Artificial Analysis 인덱스 전체 실행 비용은 Opus 4.8 max $3,753 < Sonnet 5 max $6,015이며, 실측 agentic 태스크에서 Opus 4.8 단독은 70회/$7.07인 반면 Sonnet 5 단독은 309회/$20.95였다(가장 싼 모델이 최종 비용은 가장 큼). 그래서 0–5 밴드와 비적대 리뷰어까지 전부 Opus로 통일한다(현재 Opus 5). **Opus 5 전환 이후 미검증**: 이 배제 판정은 위 4.8 시절 수치에만 근거한다. Opus 5의 비용·정확도 비는 이 파이프라인에서 Sonnet 5와 대조 측정된 바 없으므로, 역전은 *성립한다고 가정*할 뿐 검증된 것이 아니다. **추후 Sonnet 비용이 정상화되면** — 재벤치마크에서 해당 밴드의 검증된-결과당(cost-per-verified-outcome) 비용이 다시 Opus 아래로 내려오면 — 저비용 밴드(0–5)와 비적대 리뷰어에 Sonnet을 언제든 재도입한다. haiku는 이 파이프라인에서 쓰지 않는다.
 
 > 참고:
 > - <https://www.reddit.com/r/ClaudeAI/comments/1ujx3rw/sonnet_5_is_worse_than_opus_at_the_same_price_at/>
