@@ -1,0 +1,32 @@
+{
+  "skill_name": "fastapi-project-structure",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "FastAPI 프로젝트 새로 시작하려고 해. user, post, comment 세 도메인이 있고 PostgreSQL 사용하는 standard 구조로 만들어줘. uv로 패키지 관리하고 pydantic-settings로 설정 관리 원해.",
+      "expected_output": "standard 템플릿 기반 디렉토리 구조 생성, pyproject.toml, .env.example, settings.py, main.py 포함",
+      "files": [],
+      "expectations": [
+        "app/api, app/services, app/repositories, app/db 디렉토리 구조가 포함됨",
+        "pyproject.toml 파일이 생성되고 uv 패키지 관리 설정([tool.uv] 또는 dev-dependencies)이 있음",
+        "pydantic-settings 기반 Settings 클래스가 구현되고 env_file='.env' 설정이 있음",
+        "PostgreSQL/asyncpg 의존성이 포함되고 DATABASE_URL이 postgresql+asyncpg:// 형식임",
+        "user, post, comment 각 도메인의 라우터 파일에 APIRouter 인스턴스와 최소 1개 이상의 라우트 데코레이터가 있음",
+        "user, post, comment 각 도메인의 모델 파일에 SQLAlchemy mapped_column 또는 Pydantic Field 정의가 있음",
+        ".env.example 파일이 생성됨"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "마이크로서비스로 쓸 FastAPI 앱 구조 잡아줘. /health, /metrics 엔드포인트 필요하고 Docker + docker-compose 설정도 같이. 외부 API 호출하는 서비스라서 httpx도 포함해야 해.",
+      "expected_output": "microservice 템플릿 기반 구조, health check 엔드포인트, Dockerfile, docker-compose.yml 포함",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "MCP 서버 통합이 필요한 FastAPI 앱 만들어줘. Claude API랑 연동할 거고 mcp-server 템플릿 써서 구조 잡아줘. 의존성 주입이랑 설정 관리도 제대로 해야 해.",
+      "expected_output": "mcp-server 템플릿 구조, MCP 통합 설정, FastAPI DI 패턴 포함",
+      "files": []
+    }
+  ]
+}

@@ -40,6 +40,10 @@
 !/skills/
 /skills/*
 !/skills/hybrid-workflow-reference/
+!/skills/fastapi-project-structure/
+!/skills/python-architecture/
+# SKILL.md 백업본은 생성물 → 재무시 (디렉토리 opt-in 뒤에 와야 적용됨)
+/skills/fastapi-project-structure/SKILL.md.bak
 
 # doc 스킬 명령어: 디렉토리 opt-in → 전체 무시 → 3개 스킬만 재opt-in
 !/commands/
