@@ -126,7 +126,7 @@ Claude Code가 `settings.json`의 `enabledPlugins`와 `extraKnownMarketplaces`�
 - **플러그인 스킬** (compound-engineering, superpowers 등): Claude Code 재실행 시 자동 복원
 - **npm 스킬** (slides-grab, slides-grab-design, slides-grab-export, slides-grab-plan): `npm install -g slides-grab`
 - **CLI 스킬** (graphify): `uv tool install graphifyy`. CLI·`graphify-install-check.sh` 훅(CLAUDE.md의 graphify 섹션 자동 주입)·스킬이 한 세트로 움직인다
-- **추적하는 손-작성 스킬** (`hybrid-workflow-reference`): clone만으로 복원됨. `rules/hybrid-workflow.md`가 §3–§5·§6·§7·§9 자리에서 이 스킬의 `references/` 파일을 **파일명으로** 가리키므로 **둘은 같이 움직여야 한다** (파일을 옮기거나 이름을 바꾸면 상주 포인터도 같이 고칠 것)
+- **추적하는 손-작성 스킬** (`hybrid-workflow-reference`): clone만으로 복원됨. `rules/hybrid-workflow.md`가 §3·§4·§6·§7·§9 자리에서 이 스킬의 `references/` 파일을 **파일명으로** 가리키므로 **둘은 같이 움직여야 한다** (파일을 옮기거나 이름을 바꾸면 상주 포인터도 같이 고칠 것)
 - **순수 bespoke 스킬** (peon-ping-*, plannotator-annotate 등): 별도 보존 필요 (현재 미추적)
 
 ---
@@ -142,12 +142,13 @@ Claude Code가 `settings.json`의 `enabledPlugins`와 `extraKnownMarketplaces`�
 | 파일 | 내용 | 읽는 시점 |
 | --- | --- | --- |
 | `references/scoring.md` | §3 채점 근거 · §4 에스컬레이션 | effort 판정이 애매할 때 |
-| `references/reviewers.md` | §5 리뷰어 dispatch | 리뷰어 dispatch 시 |
 | `references/units.md` | §6 유닛 분량·직렬 실행 | ce-plan U-ID 묶을 때, ce-work 직렬/병렬 고를 때 |
 | `references/brainstorming.md` | §7 5렌즈 정의 | **제품성** 브레인스토밍일 때만 |
 | `references/tiers.md` | §9 메모리·문서 tier | 파일 배치 결정 시 |
 
-§3·§4는 서로를 계속 되참조해서(§3의 경계 반올림→§4, §4의 build 격상→§3 carve-out) 한 파일로 묶었다. 더 쪼개면 한쪽을 열자마자 다른 쪽이 필요해져 왕복만 늘어난다. §5는 리뷰어 dispatch라는 별개 시점이라 분리했다.
+§3·§4는 서로를 계속 되참조해서(§3의 경계 반올림→§4, §4의 build 격상→§3 carve-out) 한 파일로 묶었다. 더 쪼개면 한쪽을 열자마자 다른 쪽이 필요해져 왕복만 늘어난다.
+
+**§5(리뷰어 dispatch)에는 지연 로드할 게 남지 않았다.** 원래는 opus-vs-sonnet 분기표가 본문이었는데 그게 사라지면서, 남은 건 quick card가 이미 담고 있는 `model=opus` pin·플러그인 수정 금지·세션 모델 전환 금지뿐이다. "ce-doc-review는 ce-plan과 같은 세션에서 돌아 전환할 `/clear` 경계가 없다"는 사실만 quick card 리뷰어 불릿에 접어 넣고 `references/reviewers.md`는 삭제했다.
 
 §7의 opener 원문과 "한 번에 한 질문" 계약은 **어느 파일에도 없다** — `hooks/workflow-stage-inject.sh`가 brainstorming 호출 직후 그 자리에 주입한다(상주 비용 0). `references/brainstorming.md`에는 훅이 이름만 던지는 5렌즈의 정의만 있다.
 
