@@ -25,7 +25,7 @@ The `superpowers` SessionStart hook already injects the full `using-superpowers`
 | Plan execution | `ce-work <plan-path>` |
 | Bug or failing test | `superpowers:systematic-debugging` |
 | Implementation work | `superpowers:test-driven-development` (trivial-case exemption) |
-| Code review | `ce-code-review` (all reviewer subagents pinned to `model=opus`) |
+| Code review | `ce-code-review` (reviewer models per the plugin's own tiering) |
 | Before claiming task complete | `superpowers:verification-before-completion` |
 | Learning accumulation (after work completes) | `/ce-compound mode:headless` |
 | Commit · push · PR | `superpowers:finishing-a-development-branch` |
@@ -34,7 +34,7 @@ The `superpowers` SessionStart hook already injects the full `using-superpowers`
 
 Domain skills (FastAPI, LangChain, etc.) layer on top when relevant. Available skills are auto-listed in session context — invoke via `Skill(skill="...")`. Model·effort for every row above is computed by scoring the task's complexity, not fixed per skill — see the policy below.
 
-**Model · effort policy**: The agent cannot switch its own model mid-session, so at each task or `/clear` boundary, score the task's complexity against the **routing quick card** in `~/.claude/rules/hybrid-workflow.md` (§3–§5) and announce the result; if it differs from the current setting, guide the switch via `/model`·`/effort` — announce and confirm, never enforce. **Exception — ce-code-review / ce-doc-review**: no session switch (avoids a costly in-session cache reload); their reviewer subagents are pinned to `model=opus` with effort inherited from the dispatching session. When a routing call is non-obvious, `hybrid-workflow-reference/references/scoring.md` holds the full §3–§4 rationale.
+**Model · effort policy**: The agent cannot switch its own model mid-session, so at each task or `/clear` boundary, score the task's complexity against the **routing quick card** in `~/.claude/rules/hybrid-workflow.md` (§3–§5) and announce the result; if it differs from the current setting, guide the switch via `/model`·`/effort` — announce and confirm, never enforce. **Exception — ce-code-review / ce-doc-review**: no session switch (avoids a costly in-session cache reload); reviewer model selection belongs to the plugin skill's own tiering, with effort inherited from the dispatching session. When a routing call is non-obvious, `~/.claude/skills/hybrid-workflow-reference/references/scoring.md` holds the full §3–§4 rationale.
 
 ## Core Principles
 
@@ -76,15 +76,9 @@ Before complex tasks: Plan Mode → Analyze → Draft plan → Resolve ambiguiti
 - Modifies public API or data schema
 - User explicitly requests planning
 
-**Carve-out — ce-plan's own execution runs in non-plan-mode**: the general Plan Mode discipline above still governs *whether* to plan and covers Plan Mode itself. But ce-plan's core work — writing `docs/plans/<draft>.md` and ce-doc-review's autofix — runs in **non-plan-mode**, because Plan Mode blocks both `Write` and autofix. This does not weaken review: ce-doc-review still runs automatically on the canonical file (Phase 5.3.8, step 2 below). A human browser pass via `plannotator annotate docs/plans/<file>` is optional and manual (step 3 below) — not a mandatory gate. See `~/.claude/rules/hybrid-workflow.md` (Phase 2 note, §1) for the full mechanism rationale.
+**Carve-out — ce-plan's own execution runs in non-plan-mode**: the general Plan Mode discipline above still governs *whether* to plan. But ce-plan's core work (writing `docs/plans/<draft>.md`, ce-doc-review's autofix) runs in **non-plan-mode**, because Plan Mode blocks `Write`.
 
-**Plan Persistence (MANDATORY — Complex tasks)**:
-
-1. Author `docs/plans/<draft>.md` via `/ce-plan` in non-plan-mode (answer ce-plan's interactive questions; create the `docs/plans/` directory if it doesn't exist)
-2. ce-doc-review runs automatically as ce-plan's Phase 5.3.8 (headless, md-only; all reviewers `model=opus`)
-3. (Optional) For a human browser pass, run `plannotator annotate docs/plans/<file>` manually (terminal or Claude Code) on the canonical plan file. There is no Approve button — closing without feedback counts as approval; if you leave feedback, address it on the same `docs/plans/YYYY-MM-DD-<summary>.md` file (reuse it, keep the original date). Not a mandatory gate — `/clear` does not block on it.
-4. `/clear` → execute via `/ce-work <plan-path>` in a new session (build against a finalized plan is base 1 → `opus`·`medium`; guide the switch)
-5. NEVER implement inline in the same planning session — this wastes planning context tokens
+**Plan Persistence (MANDATORY — Complex tasks)**: the full sequence (`/ce-plan` → automatic ce-doc-review → optional plannotator pass → `/clear` → `/ce-work <plan-path>`) and its rationale live in `~/.claude/rules/hybrid-workflow.md` §1 Phase 2. **NEVER implement inline in the same planning session.**
 
 ### When Stuck (Max 3 Attempts)
 Document failure → Research alternatives → Question fundamentals → Try different approach

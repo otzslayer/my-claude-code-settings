@@ -1,7 +1,7 @@
 # 유닛 분량 · 실행 전략 (§6)
 
-`/ce-plan`에서 Implementation Unit(U-ID)을 묶을 때, `/ce-work`에서 직렬·병렬을
-고를 때만 필요하다.
+`/ce-plan`의 coarse unit 기본값이나 `/ce-work`의 serial 기본값에서 **벗어날 때만**
+필요하다. 두 기본값을 그대로 따른다면 상주 §6만으로 충분하다.
 
 ## Unit granularity & execution strategy (§6 — token discipline under 1-hour caching)
 

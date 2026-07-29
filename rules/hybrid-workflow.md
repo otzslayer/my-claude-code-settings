@@ -1,6 +1,6 @@
 # Compound + Superpowers Hybrid Workflow
 
-Operating rules binding Superpowers · Compound Engineering · CodeGraph · RTK · .remember into a single 7-stage pipeline. This document is the source of truth for the pipeline. §3·§4, §6, §7, and §9 are stage-scoped or rationale-heavy, so their detail lives in one-topic files under the `hybrid-workflow-reference` skill's `references/` rather than in context every turn; what stays here is a routing quick card plus a pointer naming the exact file to read.
+Operating rules binding Superpowers · Compound Engineering · CodeGraph · RTK · .remember into a single 7-stage pipeline. This document is the source of truth for the pipeline. §3·§4, §6, and §7 are stage-scoped or rationale-heavy, so their detail lives in one-topic files under the `hybrid-workflow-reference` skill's `references/` rather than in context every turn; what stays here is a routing quick card plus a pointer naming the exact file to read.
 
 ---
 
@@ -19,7 +19,7 @@ Phase 2: Plan  (when the Plan Mode trigger is met)
   1. non-plan-mode: /ce-plan  (parallel research + CodeGraph codegraph_explore/codegraph_callers/codegraph_impact
               + ce-learnings-researcher: query docs/solutions/ — only when 3+ files)
               → docs/plans/<draft>.md
-  2. ce-doc-review  (AUTOMATIC as ce-plan's Phase 5.3.8, headless, md-only; all reviewers model=opus)
+  2. ce-doc-review  (AUTOMATIC as ce-plan's Phase 5.3.8, headless, md-only; reviewer models per the plugin's own tiering)
   3. (optional, manual) plannotator annotate docs/plans/<file> — human browser pass if desired; no Approve button (close w/o feedback = approve; feedback = address on same file); not a mandatory gate, /clear does not block on it
   4. /clear  (do NOT implement inline in the planning session)
        │
@@ -27,7 +27,7 @@ Phase 2: Plan  (when the Plan Mode trigger is met)
 Phase 2': Build  (single session across Phase 2'–3)
   6. superpowers:test-driven-development  (RED → GREEN → REFACTOR, trivial-case exemption)
   7. /ce-work <plan-path>  (built-in worktree · parallel safety; assess blast radius with codegraph_impact before Edit)
-  8. /ce-code-review  (all reviewers model=opus, no session model switch)
+  8. /ce-code-review  (reviewer models per the plugin's own tiering, no session model switch)
        │
        ▼
 Phase 3: Verify · Learn · Ship
@@ -43,14 +43,14 @@ Phase 3: Verify · Learn · Ship
 - `superpowers:writing-plans` is **no longer** the full pipeline's plan stage — `/ce-plan` is. If the user asks for writing-plans while in Plan Mode, point them to `/ce-plan`.
 - Review still happens: ce-doc-review runs automatically on the canonical file (Phase 5.3.8). A human browser pass via `plannotator annotate docs/plans/<file>` is **optional and manual** — run it from the terminal or Claude Code if you want one. It has no Approve button: closing without feedback counts as approval, and any feedback you leave is addressed on the same file. It is not a mandatory gate and nothing blocks `/clear` on its result. The annotated artifact **is** the canonical `docs/plans/` file (no `~/.claude/plans/` copy), so ce-doc-review's autofixes are never overwritten by re-pasted plan text.
 - The general Plan Mode `ExitPlanMode` path (with its `PermissionRequest` plannotator gate and `~/.claude/plans/` promotion) still serves non-ce-plan work.
-- **Korean-prose enforcement** (`~/.claude/settings.json`): a `PreToolUse` `Write|Edit` hook on `docs/plans/*.md` injects the Korean-prose requirement at plan-write time (see §9).
+- **Korean-prose enforcement** (`~/.claude/settings.json`): a `PreToolUse` `Write|Edit` hook on `docs/plans/*.md` injects the Korean-prose requirement at plan-write time (the `docs/plans/` body is Korean prose; code, identifiers, file paths, and frontmatter keys/enum values stay English).
 - Narrow carve-out for ce-plan's own execution only. The general "Plan Mode before complex work" discipline (CLAUDE.md) governs elsewhere.
 
 ---
 
 ## Effort routing (§3–§5 quick card)
 
-The model is fixed at **Opus 5** — scoring sets `effort` only. This card settles routine calls on its own. When one is non-obvious, read `hybrid-workflow-reference/references/scoring.md` (§3 scoring rationale, §4 escalation/re-run gate).
+The model is fixed at **Opus 5** — scoring sets `effort` only. This card settles routine calls on its own. When one is non-obvious, read `~/.claude/skills/hybrid-workflow-reference/references/scoring.md` (§3 scoring rationale, §4 escalation/re-run gate).
 
 **Score (§3)** — at every `/clear` boundary, new task, and subagent dispatch. `base + additive signals`, capped at 10.
 
@@ -65,7 +65,7 @@ The model is fixed at **Opus 5** — scoring sets `effort` only. This card settl
 
 - **Round up one band (§4)** when the call is genuinely ambiguous between two bands, or the change has large blast radius / is hard to reverse. A pure base-5 task with no additive signals rounds to `high`. Re-run at a higher band only on a deterministic signal (test/typecheck/verification failure, or mid-task scope overrun) **and** a hard-to-reverse change.
 - **Build carve-out (§3)** — `/ce-work` against a finalized plan is **base 1** and planning-time signals are not re-counted → **`medium` regardless of file count**. Escalate only reactively, never on plan scope.
-- **Reviewers (§5)** — pin every `ce-code-review` / `ce-doc-review` reviewer subagent to `model=opus`, and never switch the session model for review dispatch (cache reload cost). **Do NOT edit the plugin skills to achieve this** — `~/.claude/plugins/...` is machine state, overwritten on update; this document outranks their built-in tiering. `ce-doc-review` in particular runs headless inside `/ce-plan`'s own session, so there is no `/clear` boundary to switch at anyway — the per-reviewer `model` pin is the only lever.
+- **Reviewers (§5)** — reviewer model selection belongs to the plugin skill (`ce-code-review`, `ce-doc-review`): follow its own tiering and do not override it per reviewer. **Do NOT edit the plugin skills either** — `~/.claude/plugins/...` is machine state, overwritten on update. What this document does own: never switch the session model for review dispatch (cache reload cost), and note that `ce-doc-review` runs headless inside `/ce-plan`'s own session, so there is no `/clear` boundary to switch at anyway. Effort is not settable per `Agent` dispatch — reviewers inherit the dispatching session's.
 - **Applying it (§4)** — the main agent cannot switch its own effort mid-session: announce the scored result and guide the user's `/effort`, never enforce. `Agent`-tool dispatch takes `model` only (effort inherits from the dispatching session); `Workflow` `agent()` takes both.
 - Global resting default: `model` is Opus 5 (1M context) — set via `/model`, not a `settings.json` key — and `effortLevel: high` in `~/.claude/settings.json`. `xhigh` is per-task only, never a resting default.
 
@@ -73,13 +73,13 @@ The model is fixed at **Opus 5** — scoring sets `effort` only. This card settl
 
 ## Unit granularity & execution strategy (§6 — token discipline under 1-hour caching)
 
-Two defaults: **coarse Implementation Units** in `/ce-plan`, **serial subagents** in `/ce-work` — spawn count, not per-token price, is the dominant reducible cost. Before grouping U-IDs or choosing serial vs parallel fan-out, read `hybrid-workflow-reference/references/units.md` for the full §6 rationale and the accepted trade-off.
+Two defaults: **coarse Implementation Units** in `/ce-plan`, **serial subagents** in `/ce-work` — spawn count, not per-token price, is the dominant reducible cost. Do not fragment a cohesive change (shared files, types, dependency chains) into fine-grained units just to make the plan look granular. When departing from either default, read `~/.claude/skills/hybrid-workflow-reference/references/units.md` for the full §6 rationale and the accepted trade-off.
 
 ---
 
 ## 95% confidence opener · rigor-probe lenses (§7 — Phase 1)
 
-The opener utterance and the operating contract (one question at a time, do not move to design below 95% confidence) are injected by `hooks/workflow-stage-inject.sh` the moment `superpowers:brainstorming` is invoked — nothing to load. For **product-facing** work only, read `hybrid-workflow-reference/references/brainstorming.md` for the 5 rigor-probe lenses' definitions; skip it for refactors, documentation, and tooling.
+The opener utterance and the operating contract (one question at a time, do not move to design below 95% confidence) are injected by `hooks/workflow-stage-inject.sh` the moment `superpowers:brainstorming` is invoked — nothing to load. For **product-facing** work only, read `~/.claude/skills/hybrid-workflow-reference/references/brainstorming.md` for the 5 rigor-probe lenses' definitions; skip it for refactors, documentation, and tooling.
 
 ---
 
@@ -111,11 +111,9 @@ These typically land in the 0–2 band (guide the switch if the session differs)
 
 ---
 
-## Memory · documentation tiers (§9)
+## Memory write boundaries (§9)
 
 **NEVER auto-propagate into Tier 0/1** — `~/.claude/CLAUDE.md`, `~/.claude/rules/`, and `~/.claude/projects/.../memory/` are user-manual-only; `/ce-compound` writes Tier 3 (`docs/solutions/`) exclusively, and the user manually promotes anything worth keeping. This prohibition stays resident; it is not deferred.
-
-For the full 5-tier location/responsibility table and the remaining policy (ce-learnings-researcher's 3+ file gate, Tier 2/3 Korean-prose rule), read `hybrid-workflow-reference/references/tiers.md` when deciding where a spec, plan, solution, or memory file belongs.
 
 ---
 
