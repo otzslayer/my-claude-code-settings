@@ -1,3 +1,8 @@
 # 텍스트 파일 자동 감지 + WSL2 CRLF 방지
 * text=auto
 *.sh text eol=lf
+
+# settings.json의 머신 로컬 훅 블록을 커밋 오브젝트에서만 제거한다.
+# 필터 본체는 scripts/git-filter-settings.sh, 등록은 scripts/install.sh가 한다.
+# 필터가 등록되지 않은 clone에서는 required=true 때문에 조용히 통과하지 않고 실패한다.
+/settings.json filter=claude-local

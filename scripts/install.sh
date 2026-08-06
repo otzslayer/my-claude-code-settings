@@ -4,7 +4,7 @@
 # 지원: macOS (brew) / WSL2 (apt/release binary)
 # TUI:  gum (없으면 plain read 폴백)
 # 순서: 플랫폼 감지 -> gum bootstrap -> 컴포넌트 선택 -> 전제 확인 ->
-#        툴 설치 -> RTK.md 생성 -> 메모리 seed -> skip-worktree ->
+#        툴 설치 -> RTK.md 생성 -> 메모리 seed -> settings.json 로컬 블록 필터 ->
 #        훅·의존성 점검 -> 요약
 
 set -euo pipefail
@@ -620,17 +620,49 @@ fi
 echo
 
 # ---------------------------------------------------
-# 7. skip-worktree (permissions 재유입 가드)
+# 7. settings.json 로컬 블록 clean/smudge 필터 등록
 # ---------------------------------------------------
-echo "=== skip-worktree 적용 ==="
+# git은 파일 내부 블록 단위 추적 제외를 지원하지 않는다. 그런데 grrr 알림 훅은
+# 이 머신에만 있는 CLI에 의존하면서도 모든 프로젝트에서 울려야 해서
+# ~/.claude/settings.json 안에 물리적으로 있어야 한다 -- Claude Code의
+# localSettings는 언제나 <프로젝트 루트>/.claude/settings.local.json 이고
+# user 스코프에는 local 오버레이가 아예 없기 때문이다.
+#
+# 그래서 파일을 나누는 대신 커밋 경로에서만 걷어낸다. 예전의 skip-worktree는
+# 파일 전체를 숨겨서 settings.json을 계속 커밋하는 지금 워크플로우와 충돌하므로
+# 해제하고 필터로 대체한다. 필터 설정은 .git/config에 살아 clone마다 사라지므로
+# 여기서 idempotent하게 다시 건다.
+echo "=== settings.json 로컬 블록 필터 등록 ==="
 cd "$REPO_ROOT"
-if git ls-files --error-unmatch settings.json &>/dev/null 2>&1; then
-    git update-index --skip-worktree settings.json
-    ok "settings.json skip-worktree 적용됨"
-    echo "  확인: git ls-files -v settings.json  (S 표시 = 정상)"
-    echo "  해제: git update-index --no-skip-worktree settings.json"
+_filter_script="scripts/git-filter-settings.sh"
+if [[ ! -x "$REPO_ROOT/$_filter_script" ]]; then
+    warn "$_filter_script 없음(또는 실행권한 없음) -- 필터 등록을 건너뜁니다."
+    FAILED_TOOLS+=("git filter: $_filter_script")
+elif ! command -v jq &>/dev/null; then
+    warn "jq 없음 -- clean/smudge 필터가 동작할 수 없으므로 등록하지 않습니다."
+    FAILED_TOOLS+=("git filter: jq 없음")
 else
-    warn "settings.json이 git 추적 대상이 아닙니다. skip-worktree 스킵."
+    if git ls-files -v settings.json 2>/dev/null | /usr/bin/grep -q '^S'; then
+        git update-index --no-skip-worktree settings.json
+        ok "이전 skip-worktree 해제됨 (필터 방식으로 대체)"
+    fi
+
+    # required=true: 등록은 됐는데 필터 스크립트가 깨진 경우(jq 없음, 파일 삭제)
+    # 조용히 원본을 통과시키지 않고 실패시킨다. 이 설정 자체가 .git/config에 살아
+    # clone을 따라가지 않으므로, 미등록 clone은 보호하지 못한다 -- 그쪽의 안전장치는
+    # 이 설치기를 다시 도는 것뿐이다.
+    git config filter.claude-local.clean  "$_filter_script clean"
+    git config filter.claude-local.smudge "$_filter_script smudge"
+    git config filter.claude-local.required true
+    ok "filter.claude-local 등록됨 (.gitattributes의 /settings.json 규칙이 물림)"
+
+    if [[ -f "$REPO_ROOT/local-hooks.json" ]]; then
+        ok "local-hooks.json 존재 (smudge 복원 원본)"
+    else
+        warn "local-hooks.json 없음 -- 이 머신에는 복원할 로컬 훅이 없습니다."
+        echo "  grrr 알림 훅을 쓰려면 아래 형태로 직접 만드세요 (.gitignore 대상):"
+        echo '    {"hooks":{"Stop":[...],"Notification":[...],"UserPromptSubmit":[...]}}'
+    fi
 fi
 echo
 
@@ -765,9 +797,11 @@ echo "  2. 나머지 MCP 서버 수동 설정"
 echo "     -> computer-use, sequential-thinking 등 (codegraph는 자동 등록됨)"
 echo "     -> 설정: ~/.claude.json  (mcpServers 키)"
 echo
-echo "  3. clone 후 매번: skip-worktree 재확인"
-echo "     -> git ls-files -v settings.json"
-echo "     -> 'S' 없으면: git update-index --skip-worktree settings.json"
+echo "  3. clone 후 매번: settings.json 로컬 블록 필터 재확인 (필수)"
+echo "     -> git config --get filter.claude-local.clean   (비어 있으면 이 설치기 재실행)"
+echo "     -> 미등록 상태에서는 git이 경고 없이 로컬 훅을 그대로 커밋합니다."
+echo "     -> local-hooks.json은 .gitignore 대상이라 clone에 따라오지 않습니다."
+echo "        이 머신의 grrr 알림 훅을 옮기려면 파일째 직접 복사하세요."
 echo
 
 if [[ ${#FAILED_TOOLS[@]} -gt 0 ]]; then

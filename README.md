@@ -29,12 +29,16 @@ bash ~/.claude/scripts/install.sh
 - slides-grab (npm 패키지)
 - plannotator (계획 파일 브라우저 리뷰 UI 바이너리 — plannotator 플러그인 prerequisite)
 - 메모리 seed 동기화 (`memory-templates/`)
-- `settings.json` skip-worktree 적용 (permissions 재유입 방지)
+- `settings.json` 로컬 블록 clean/smudge 필터 등록 (머신 로컬 훅 커밋 차단)
 - **훅·의존성 점검** — 설치 말미에 `settings.json`이 실제로 호출하는 훅·statusLine 커맨드를 **설정에서 추출해** PATH·존재·실행권한을 확인하고(커맨드 목록을 하드코딩하지 않으므로 저장소에 없는 머신 로컬 훅도 그대로 걸린다), 추적 스킬 4종과 `RTK.md`가 제자리에 있는지 본다. 미해결 항목은 마지막 요약에 모아 출력한다
 
 > **추적 스킬은 설치 단계가 없다**: 저장소 루트가 곧 `~/.claude`라 `skills/` 4종은 clone만으로 Claude Code가 읽는 위치에 놓이고, 실행 비트도 git이 보존한다. 위 점검 섹션은 설치가 아니라 **누락 감지**용이다.
 
-> **skip-worktree**: Claude 세션 중 grant가 `settings.json`에 재기입되어 `git status`가 dirty가 되는 현상을 방지한다. `install.sh`가 자동 실행하나, clone 후 재실행이 필요하다. 해제: `git update-index --no-skip-worktree settings.json`
+> **settings.json 로컬 블록 필터**: grrr 알림 훅(`Stop`·`Notification`·`UserPromptSubmit`)은 이 머신에만 설치된 CLI에 의존하지만, 모든 프로젝트에서 울리려면 `~/.claude/settings.json` 안에 있어야 한다 — Claude Code의 `localSettings`는 언제나 `<프로젝트 루트>/.claude/settings.local.json`이라 user 스코프에는 local 오버레이가 없다. git에는 파일 내부 블록 단위 추적 제외가 없으므로, `.gitattributes`의 `/settings.json filter=claude-local`과 `scripts/git-filter-settings.sh`로 **커밋 경로에서만** 걷어낸다. clean이 해당 훅 이벤트를 지우고, smudge가 `local-hooks.json`(`.gitignore` 대상)에서 되살린다. 복원 원본이므로 `local-hooks.json`을 지우면 checkout 후 훅이 사라진다.
+>
+> ⚠️ **필터 설정은 `.git/config`에 살아 clone을 따라가지 않는다.** `.gitattributes`는 커밋되지만 필터 드라이버가 정의되지 않은 clone에서 git은 **경고 없이 원본을 그대로 통과시킨다** — 실측 확인함. 즉 `required = true`는 *등록된* clone에서 필터 스크립트가 깨졌을 때(jq 없음, 스크립트 삭제) 조용한 통과 대신 실패시키는 보호이고, *미등록* clone에는 아무 보호도 주지 못한다. 실질 안전장치는 **clone 후 `install.sh` 재실행**뿐이다. 확인: `git config --get filter.claude-local.clean` (비어 있으면 미등록).
+>
+> 이전 버전이 쓰던 `git update-index --skip-worktree settings.json`은 파일 **전체**를 숨겨 `settings.json` 커밋 자체를 막으므로 더 이상 쓰지 않는다 — `install.sh`가 발견하면 해제한다. 다만 그 플래그가 겸하던 **`permissions.allow` 재유입 억제**는 이 필터가 대신하지 않는다. grant가 다시 `settings.json`을 더럽히기 시작하면 `scripts/git-filter-settings.sh`의 `LOCAL_KEYS`를 넓히는 쪽으로 대응한다 (skip-worktree 복귀는 커밋을 막으므로 답이 아니다).
 
 설치 후 **Claude Code를 재시작**하면 `settings.json`의 `enabledPlugins`가 읽혀 플러그인이 자동 설치된다.
 
@@ -88,10 +92,14 @@ git clone https://github.com/otzslayer/my-claude-code-settings.git ~/.claude
 cd ~/.claude
 ```
 
-#### 4단계: skip-worktree 적용
+#### 4단계: settings.json 로컬 블록 필터 등록
+
+`install.sh`를 돌렸다면 이미 끝난 단계다. 수동으로 걸려면:
 
 ```bash
-git update-index --skip-worktree settings.json
+git config filter.claude-local.clean  "scripts/git-filter-settings.sh clean"
+git config filter.claude-local.smudge "scripts/git-filter-settings.sh smudge"
+git config filter.claude-local.required true
 ```
 
 #### 5단계: Claude Code 첫 실행
@@ -288,4 +296,4 @@ bash scripts/sync-memory-templates.sh
 - `skillOverrides`로 미사용 스킬 30개를 `"off"` 처리 — 스킬 목록은 컨텍스트에 상주하므로 안 쓰는 항목은 매 세션 비용이다. 되살리려면 해당 키를 지운다
 - **사용 이력이 0이어도 살아 있는 스킬이 참조하면 켜 둔다** — 라우팅 대상이 꺼지면 매달린 포인터가 된다. 현재 해당: `fastapi-project-structure`(`python-architecture`가 FastAPI 프로젝트를 넘김), `slides-grab-card-news`(`slides-grab`·`slides-grab-export`가 card-news 덱을 넘김)
 
-> **주의**: `settings.json`은 skip-worktree가 걸려 있어 위 변경들이 `git status`·`git diff`에 뜨지 않는다. 커밋하려면 `git update-index --no-skip-worktree settings.json`으로 잠깐 풀고 커밋한 뒤 다시 건다.
+> **주의**: `settings.json`에는 `claude-local` clean/smudge 필터가 걸려 있다. 위 변경들은 정상적으로 `git status`·`git diff`에 뜨지만, 머신 로컬 훅 블록(`Stop`·`Notification`·`UserPromptSubmit`)만은 diff에서 제외된다. 그래서 diff의 줄 번호가 실제 파일과 어긋날 수 있다. 단 이 보호는 필터가 등록된 clone에서만 성립한다 (위 경고 참조).

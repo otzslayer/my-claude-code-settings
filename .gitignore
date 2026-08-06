@@ -22,10 +22,15 @@
 !/hooks/*.sh
 
 # 스크립트: sync-memory-templates.sh + install.sh(Plan B 예정, forward-compat)
+# + git-filter-settings.sh(settings.json 로컬 블록 clean/smudge 필터)
 !/scripts/
 /scripts/*
 !/scripts/sync-memory-templates.sh
 !/scripts/install.sh
+!/scripts/git-filter-settings.sh
+
+# local-hooks.json은 위 /* 로 이미 무시된다 -- smudge 필터의 복원 원본이므로
+# 이 머신에서만 존재하고, 삭제하면 checkout 후 grrr 훅이 사라진다.
 
 # 설계 스펙 + compound 학습: docs opt-in → specs·solutions(생성물 plans는 계속 무시)
 !/docs/
