@@ -41,9 +41,48 @@
             "command": "jq -c 'if (.tool_input.file_path // \"\") | test(\"docs/plans/.*\\\\.md$\") then {hookSpecificOutput:{hookEventName:\"PreToolUse\",additionalContext:\"docs/plans/ 계획 파일을 지금 쓰려 한다. 계획 본문 산문은 반드시 한국어로 작성하라(코드·식별자·파일경로·frontmatter 키·enum 값은 영문 유지). 병렬 리서치 서브에이전트 산출물이나 초안이 영어라면 이 파일 내용을 한국어로 다시 작성하라 — 전역 한국어 규칙은 파일 아티팩트에 도달하지 못하므로 이 write 시점에 명시 강제한다.\"}} else empty end'"
           }
         ]
+      },
+      {
+        "matcher": "Read|Grep",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "test -d \"${CLAUDE_PROJECT_DIR:-.}/.codegraph\" || exit 0; jq -c 'if (.tool_name==\"Grep\") or ((.tool_input.file_path // \"\") | test(\"\\\\.(ts|tsx|js|jsx|py|css)$\")) then {hookSpecificOutput:{hookEventName:\"PreToolUse\",additionalContext:\"CodeGraph: .codegraph/ 인덱스는 파일 감시로 실시간 갱신된다. 코드를 이해·탐색·수정하기 전에 mcp__codegraph__codegraph_explore 를 먼저 호출한다 — 한 번의 호출로 관련 심볼의 verbatim 소스 + 호출 경로 + 영향 범위를 함께 얻는다. 스키마가 deferred 상태면 ToolSearch \\\"select:mcp__codegraph__codegraph_explore\\\" 로 먼저 로드한다. 특정 라인 확인이나 Edit 직전 확인용 Read는 그대로 진행해도 된다.\"}} else empty end' 2>/dev/null || true",
+            "statusMessage": "CodeGraph 우선 사용 확인"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "test -d \"${CLAUDE_PROJECT_DIR:-.}/.codegraph\" || exit 0; jq -c 'if ((.tool_input.command // \"\") | test(\"(^|[^A-Za-z0-9_.-])(rtk +)?(grep|egrep|fgrep|zgrep|rg|ugrep|bfs)\\\\b\")) or ((.tool_input.command // \"\") | test(\"(^|[|&;(]|\\\\n) *(rtk +)?ug\\\\b\")) then {hookSpecificOutput:{hookEventName:\"PreToolUse\",additionalContext:\"CodeGraph 보완 안내(차단 아님, 검색은 그대로 진행해도 된다): 찾는 대상이 심볼의 정의·구현·호출관계·영향범위라면 grep 여러 번보다 mcp__codegraph__codegraph_explore 1회가 정확하고 왕복이 적다 — 동적 디스패치(콜백·리렌더·JSX children)는 grep이 구조적으로 놓친다. 반대로 문자열 리터럴·설정값·로그·주석·비코드 파일 검색은 grep이 맞는 도구다. 이미 graphify query로 오리엔테이션을 받았다면 중복 조회하지 말고 그대로 grep을 실행한다.\"}} else empty end' 2>/dev/null || true",
+            "statusMessage": "CodeGraph 보완 안내"
+          }
+        ]
       }
     ],
     "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(git commit*)",
+            "command": "test -d \"${CLAUDE_PROJECT_DIR:-.}/graphify-out\" || exit 0; cd \"${CLAUDE_PROJECT_DIR:-.}\" && $HOME/.local/bin/graphify update . >/dev/null 2>&1 || true",
+            "async": true,
+            "statusMessage": "graphify 인덱스 갱신"
+          },
+          {
+            "type": "command",
+            "if": "Bash(rtk git commit*)",
+            "command": "test -d \"${CLAUDE_PROJECT_DIR:-.}/graphify-out\" || exit 0; cd \"${CLAUDE_PROJECT_DIR:-.}\" && $HOME/.local/bin/graphify update . >/dev/null 2>&1 || true",
+            "async": true,
+            "statusMessage": "graphify 인덱스 갱신"
+          }
+        ]
+      },
       {
         "matcher": "ExitPlanMode",
         "hooks": [
@@ -71,6 +110,10 @@
             "type": "command",
             "command": "bash $HOME/.claude/hooks/graphify-install-check.sh",
             "statusMessage": "graphify 설정 확인"
+          },
+          {
+            "type": "command",
+            "command": "test -d \"${CLAUDE_PROJECT_DIR:-.}/.codegraph\" && echo \"{\\\"hookSpecificOutput\\\":{\\\"hookEventName\\\":\\\"SessionStart\\\",\\\"additionalContext\\\":\\\"CodeGraph MCP 사용 준비: 이 저장소에는 .codegraph/ 인덱스가 있고 데몬이 파일 변경을 실시간 반영한다. 코드 탐색·이해·수정 작업을 시작할 때 첫 조회는 mcp__codegraph__codegraph_explore 로 한다. 이 도구가 deferred 목록에 있으면 먼저 ToolSearch \\\\\\\"select:mcp__codegraph__codegraph_explore\\\\\\\" 로 스키마를 로드해 둔다.\\\"}}\" || true"
           }
         ]
       }
