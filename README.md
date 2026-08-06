@@ -21,6 +21,7 @@ bash ~/.claude/scripts/install.sh
 
 **설치기가 처리하는 항목**:
 - **jq** — 컴포넌트 선택과 무관하게 항상 확인·설치한다. `rtk-rewrite.sh` · `workflow-stage-inject.sh` · `settings.json` 인라인 `PreToolUse` 훅 2종(`.py` 편집 시 python-coding-style 주입, `docs/plans/*.md` 한국어 강제)이 전부 jq 하드 의존이라, 없으면 이들이 **조용히** 죽는다
+- **ugrep · bfs** — 컴포넌트 선택과 무관하게 항상 확인·설치한다. `rules/boundaries.md`의 검색 가이드가 아카이브 검색(`-z`)·퍼지 매칭·빠른 breadth-first find를 전제한다. jq와 달리 **소프트 의존**이라 없으면 `grep`·`find`로 폴백되므로, 실패해도 경고만 남기고 점검 미해결 항목에는 넣지 않는다
 - **node/npm 전제 확인** — statusLine(claude-dashboard)이 `node`로 직접 실행되므로 slides-grab을 고르지 않아도 확인한다 (없으면 경고)
 - rtk (token optimizer) + `rtk init -g` (RTK.md 생성 — 순서 보장)
 - codegraph (symbol-level code intelligence) — `~/.claude.json`에 MCP 자동 등록 (idempotent)
@@ -52,6 +53,10 @@ brew install reachingforthejack/rtk/rtk   # 또는 릴리즈 바이너리 직접
 # jq — 훅 전체의 하드 의존 (rtk-rewrite · workflow-stage-inject ·
 #      settings.json 인라인 훅 2종이 모두 조용히 비활성화됨). rtk를 안 써도 필요하다.
 brew install jq   # Linux/WSL2: sudo apt-get install -y jq
+
+# ugrep · bfs — boundaries.md 검색 가이드의 전제(아카이브 -z · 퍼지 · 빠른 find).
+#               소프트 의존이라 없으면 grep·find로 폴백된다.
+brew install ugrep bfs   # Linux/WSL2: sudo apt-get install -y ugrep bfs
 
 # RTK.md 글로벌 초기화 — 이 단계 없이는 CLAUDE.md @RTK.md import가 깨짐
 rtk init -g
