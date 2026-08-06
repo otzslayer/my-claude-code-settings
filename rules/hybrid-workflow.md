@@ -16,7 +16,7 @@ Phase 1: Spec  (model·effort via complexity scoring — §3)
        │
        ▼  /clear
 Phase 2: Plan  (when the Plan Mode trigger is met)
-  1. non-plan-mode: /ce-plan  (parallel research + CodeGraph codegraph_explore/codegraph_callers/codegraph_impact
+  1. non-plan-mode: /ce-plan  (parallel research + CodeGraph codegraph_explore — one call, source + call paths + blast radius
               + ce-learnings-researcher: query docs/solutions/ — only when 3+ files)
               → docs/plans/<draft>.md
   2. ce-doc-review  (AUTOMATIC as ce-plan's Phase 5.3.8, headless, md-only; reviewer models per the plugin's own tiering)
@@ -26,7 +26,7 @@ Phase 2: Plan  (when the Plan Mode trigger is met)
        ▼  fresh context, plan file as input
 Phase 2': Build  (single session across Phase 2'–3)
   6. superpowers:test-driven-development  (RED → GREEN → REFACTOR, trivial-case exemption)
-  7. /ce-work <plan-path>  (built-in worktree · parallel safety; assess blast radius with codegraph_impact before Edit)
+  7. /ce-work <plan-path>  (built-in worktree · parallel safety; assess blast radius with codegraph_explore before Edit)
   8. /ce-code-review  (reviewer models per the plugin's own tiering, no session model switch)
        │
        ▼

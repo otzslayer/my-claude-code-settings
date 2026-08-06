@@ -23,7 +23,7 @@ bash ~/.claude/scripts/install.sh
 - **jq** — 컴포넌트 선택과 무관하게 항상 확인·설치한다. `rtk-rewrite.sh` · `workflow-stage-inject.sh` · `settings.json` 인라인 `PreToolUse` 훅 2종(`.py` 편집 시 python-coding-style 주입, `docs/plans/*.md` 한국어 강제)이 전부 jq 하드 의존이라, 없으면 이들이 **조용히** 죽는다
 - **ugrep · bfs** — 컴포넌트 선택과 무관하게 항상 확인·설치한다. `rules/boundaries.md`의 검색 가이드가 아카이브 검색(`-z`)·퍼지 매칭·빠른 breadth-first find를 전제한다. jq와 달리 **소프트 의존**이라 없으면 `grep`·`find`로 폴백되므로, 실패해도 경고만 남기고 점검 미해결 항목에는 넣지 않는다
 - **node/npm 전제 확인** — statusLine(claude-dashboard)이 `node`로 직접 실행되므로 slides-grab을 고르지 않아도 확인한다 (없으면 경고)
-- rtk (token optimizer) + `rtk init -g` (RTK.md 생성 — 순서 보장)
+- rtk (token optimizer) + `rtk init -g` (RTK.md 생성 — 순서 보장) + `rtk config`의 `[hooks] exclude_commands`에 `grep`·`find` 추가 — 네이티브 빌드는 셸 스냅샷에서 `grep`·`find`를 임베디드 ugrep·bfs로 shadow하는데, rtk가 `rtk grep`으로 재작성하면 별도 프로세스의 BSD grep이 돌아 gitignore 인식(`--ignore-files`)을 잃는다 (`rtk rg`는 ripgrep을 그대로 실행하므로 제외하지 않음)
 - codegraph (symbol-level code intelligence) — `~/.claude.json`에 MCP 자동 등록 (idempotent)
 - graphify (knowledge graph CLI)
 - slides-grab (npm 패키지)

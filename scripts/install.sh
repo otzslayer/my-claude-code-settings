@@ -433,6 +433,53 @@ if [[ "$INSTALL_RTK" == "true" ]]; then
             FAILED_TOOLS+=("rtk init -g")
         fi
     fi
+
+    # rtk config: grep·find를 재작성 대상에서 제외한다.
+    # 2.1.117 네이티브 빌드는 셸 스냅샷에서 grep·find를 임베디드 ugrep·bfs로 shadow하는데,
+    # rtk가 이를 `rtk grep`으로 바꾸면 별도 프로세스에서 BSD grep이 돌아
+    # --ignore-files(gitignore 인식)를 잃는다. 포맷이 아니라 결과가 달라지는 문제다.
+    # (`rtk rg`는 ripgrep을 그대로 실행해 gitignore를 유지하므로 제외하지 않는다.)
+    if command -v rtk &>/dev/null; then
+        _rtk_cfg="$(rtk config 2>/dev/null | LC_ALL=C /usr/bin/grep -m1 '^Config:' | cut -d' ' -f2-)"
+        [[ -n "${_rtk_cfg:-}" && ! -f "$_rtk_cfg" ]] && rtk config --create &>/dev/null || true
+
+        if [[ -z "${_rtk_cfg:-}" || ! -f "$_rtk_cfg" ]]; then
+            warn "rtk config 파일을 찾을 수 없어 grep·find 제외를 건너뜁니다. 수동: rtk config 로 경로 확인 후 [hooks] exclude_commands 편집"
+        elif ! command -v python3 &>/dev/null; then
+            warn "python3 없음 -- rtk exclude_commands 자동 설정 불가."
+            echo "  수동: $_rtk_cfg 의 [hooks] 아래를 exclude_commands = [\"grep\", \"find\"] 로 편집"
+        else
+            _rtk_res="$(python3 - "$_rtk_cfg" <<'PY' 2>/dev/null || true
+import re, sys
+
+path = sys.argv[1]
+src = open(path, encoding="utf-8").read()
+hit = re.search(r"^[ \t]*exclude_commands[ \t]*=[ \t]*\[(.*?)\]", src, re.M | re.S)
+if hit is None:
+    print("MISSING")
+    sys.exit(0)
+
+have = set(re.findall(r"""["']([^"']+)["']""", hit.group(1)))
+want = have | {"grep", "find"}
+if want == have:
+    print("SKIP")
+    sys.exit(0)
+
+items = ", ".join('"%s"' % name for name in sorted(want))
+open(path, "w", encoding="utf-8").write(
+    src[: hit.start()] + "exclude_commands = [%s]" % items + src[hit.end() :]
+)
+print("OK")
+PY
+)"
+            case "${_rtk_res:-}" in
+                OK)      ok "rtk config: grep·find를 재작성 제외에 추가 ($_rtk_cfg)" ;;
+                SKIP)    skip "rtk config: grep·find 이미 제외됨" ;;
+                MISSING) warn "rtk config에 [hooks] exclude_commands 항목이 없습니다. 수동 추가 필요: $_rtk_cfg" ;;
+                *)       warn "rtk config 편집 실패. 수동: $_rtk_cfg 의 exclude_commands = [\"grep\", \"find\"]" ;;
+            esac
+        fi
+    fi
 fi
 
 # ---- codegraph ----
