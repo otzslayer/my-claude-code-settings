@@ -329,6 +329,44 @@ else
     fi
 fi
 
+# ugrep(ug) / bfs: rules/boundaries.md의 "Search / lookup"이 전제하는 검색 보조 도구.
+# jq와 달리 소프트 의존이다 -- 없어도 훅은 그대로 돌고, grep/find로 폴백되며,
+# settings.json의 codegraph 보완 안내 훅 정규식이 매칭되지 않을 뿐이다.
+# 그래서 실패해도 DOCTOR_ISSUES에 넣지 않고 안내만 남긴다.
+_missing_search_tools=()
+command -v ugrep &>/dev/null || _missing_search_tools+=("ugrep")
+command -v bfs   &>/dev/null || _missing_search_tools+=("bfs")
+
+if [[ ${#_missing_search_tools[@]} -eq 0 ]]; then
+    ok "ugrep $(ugrep --version 2>/dev/null | head -1 | awk '{print $2}'), bfs $(bfs --version 2>/dev/null | head -1 | awk '{print $2}')"
+else
+    echo "검색 보조 도구가 없습니다 (${_missing_search_tools[*]}). 설치를 시도합니다..."
+    _search_installed=false
+    if [[ "$PLATFORM" == "macOS" ]]; then
+        if command -v brew &>/dev/null \
+            && spin "ugrep·bfs 설치 중 (brew)..." brew install "${_missing_search_tools[@]}"; then
+            _search_installed=true
+        fi
+    else
+        if command -v apt-get &>/dev/null \
+            && spin "ugrep·bfs 설치 중 (apt)..." \
+                bash -c "sudo apt-get install -y ${_missing_search_tools[*]}"; then
+            _search_installed=true
+        fi
+    fi
+
+    if [[ "$_search_installed" == "true" ]]; then
+        ok "ugrep·bfs 설치 완료"
+    else
+        warn "ugrep·bfs 설치 실패 -- 아카이브 검색(-z)·퍼지 매칭·빠른 breadth-first find를 쓸 수 없습니다 (grep/find로 폴백되므로 치명적이지는 않습니다)."
+        if [[ "$PLATFORM" == "macOS" ]]; then
+            echo "  수동: brew install ugrep bfs"
+        else
+            echo "  수동: sudo apt-get install -y ugrep bfs  또는  https://github.com/Genivia/ugrep · https://github.com/tavianator/bfs"
+        fi
+    fi
+fi
+
 echo
 
 # ---------------------------------------------------
