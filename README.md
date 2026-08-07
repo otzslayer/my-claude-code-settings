@@ -2,9 +2,9 @@
 
 `~/.claude`를 git으로 추적하는 개인 설정 저장소. 개인 멀티머신 백업과 공개를 동시에 지원하도록 설계됐다.
 
-**메인 하네스**: Compound + Superpowers 하이브리드 워크플로우 (`rules/hybrid-workflow.md`)
+**메인 하네스**: Superpowers 단독 워크플로우 (`CLAUDE.md`의 스킬 표가 정본)
 
-**발표자료**: [`PRESENTATION.pdf`](PRESENTATION.pdf) — 이 저장소가 추구하는 하이브리드 워크플로우 설명 자료
+**발표자료**: [`PRESENTATION.pdf`](PRESENTATION.pdf) — 이전 하이브리드 워크플로우 발표 자료(아카이브)
 
 ---
 
@@ -20,7 +20,7 @@ bash ~/.claude/scripts/install.sh
 `scripts/install.sh`는 gum TUI 기반 인터랙티브 설치기다. macOS와 WSL2를 지원하며, gum이 없으면 plain read 폴백으로 동작한다.
 
 **설치기가 처리하는 항목**:
-- **jq** — 컴포넌트 선택과 무관하게 항상 확인·설치한다. `rtk-rewrite.sh` · `workflow-stage-inject.sh` · `settings.json` 인라인 `PreToolUse` 훅 2종(`.py` 편집 시 python-coding-style 주입, `docs/plans/*.md` 한국어 강제)이 전부 jq 하드 의존이라, 없으면 이들이 **조용히** 죽는다
+- **jq** — 컴포넌트 선택과 무관하게 항상 확인·설치한다. `rtk-rewrite.sh` · `workflow-stage-inject.sh` · `settings.json` 인라인 `PreToolUse` 훅 2종(`.py` 편집 시 python-coding-style 주입, `docs/plans/*.md`·`docs/superpowers/specs/*.md` 한국어 강제)이 전부 jq 하드 의존이라, 없으면 이들이 **조용히** 죽는다
 - **ugrep · bfs** — 컴포넌트 선택과 무관하게 항상 확인·설치한다. `rules/boundaries.md`의 검색 가이드가 아카이브 검색(`-z`)·퍼지 매칭·빠른 breadth-first find를 전제한다. jq와 달리 **소프트 의존**이라 없으면 `grep`·`find`로 폴백되므로, 실패해도 경고만 남기고 점검 미해결 항목에는 넣지 않는다
 - **node/npm 전제 확인** — statusLine(claude-dashboard)이 `node`로 직접 실행되므로 slides-grab을 고르지 않아도 확인한다 (없으면 경고)
 - rtk (token optimizer) + `rtk init -g` (RTK.md 생성 — 순서 보장) + `rtk config`의 `[hooks] exclude_commands`에 `grep`·`find` 추가 — 네이티브 빌드는 셸 스냅샷에서 `grep`·`find`를 임베디드 ugrep·bfs로 shadow하는데, rtk가 `rtk grep`으로 재작성하면 별도 프로세스의 BSD grep이 돌아 gitignore 인식(`--ignore-files`)을 잃는다 (`rtk rg`는 ripgrep을 그대로 실행하므로 제외하지 않음)
@@ -110,7 +110,7 @@ claude
 
 Claude Code가 `settings.json`의 `enabledPlugins`와 `extraKnownMarketplaces`를 읽어 플러그인을 자동 설치한다. 플러그인 캐시(`plugins/cache/`)가 생성된 뒤 statusLine이 점등된다.
 
-> **참고**: `skills/`는 원칙적으로 추적하지 않는다(손-작성 스킬 4종 — `hybrid-workflow-reference` · `fastapi-project-structure` · `python-architecture` · `python-coding-style` — 만 예외). 플러그인 스킬은 Claude Code가 자동 설치하고, npm/CLI 스킬(slides-grab*, graphify)은 위 2단계에서 직접 설치해야 한다.
+> **참고**: `skills/`는 원칙적으로 추적하지 않는다(손-작성 스킬 3종 — `fastapi-project-structure` · `python-architecture` · `python-coding-style` — 만 예외). 플러그인 스킬은 Claude Code가 자동 설치하고, npm/CLI 스킬(slides-grab*, graphify)은 위 2단계에서 직접 설치해야 한다.
 
 ---
 
@@ -124,8 +124,7 @@ Claude Code가 `settings.json`의 `enabledPlugins`와 `extraKnownMarketplaces`�
 |------|------|
 | `CLAUDE.md` | 메인 개발 가이드라인 |
 | `settings.json` | 포터블화된 플러그인·훅 설정 |
-| `rules/` | 행동 규칙 파일 5종 (boundaries · git-workflow · hybrid-workflow · karpathy-principles · security) |
-| `skills/hybrid-workflow-reference/` | hybrid-workflow 지연 로드 스킬 — `SKILL.md`는 인덱스뿐이고 본문은 `references/` 5개 파일에 주제별로 나뉘어 있다. `rules/`에서 분리한 손-콘텐츠 |
+| `rules/` | 행동 규칙 파일 4종 (boundaries · git-workflow · karpathy-principles · security) |
 | `skills/fastapi-project-structure/` | FastAPI 스캐폴딩 스킬 (템플릿·스크립트·예제·evals). CLAUDE.md 스킬 표에서 직접 호출하는 손-작성 스킬 — 재설치 경로가 없다. `SKILL.md.bak`은 백업 생성물이라 제외 |
 | `skills/python-architecture/` | Python 레이어드 아키텍처 스킬 (`SKILL.md` 단일 파일). 위와 같은 이유로 추적 |
 | `skills/python-coding-style/` | Python 스타일 규칙 (`SKILL.md` 단일 파일). **ruff 설정의 원본** — `fastapi-project-structure`의 `pyproject-template.toml`이 이걸 인스턴스화하므로 둘은 같이 움직여야 한다 |
@@ -133,105 +132,58 @@ Claude Code가 `settings.json`의 `enabledPlugins`와 `extraKnownMarketplaces`�
 | `hooks/*.sh` | rtk-rewrite, workflow-stage-inject, graphify-install-check |
 | `scripts/sync-memory-templates.sh` | 메모리 템플릿 동기화 |
 | `.gitignore`, `.gitattributes`, `README.md` | 저장소 메타 |
-| `PRESENTATION.pdf` | 하이브리드 워크플로우 발표자료 |
+| `PRESENTATION.pdf` | 이전 하이브리드 워크플로우 발표자료 (아카이브) |
 
 ### 추적하지 않는 것 (기본 무시)
 
 - `plugins/` — Claude Code가 자동 관리, 버전 핀 불필요
-- `skills/` — 플러그인·npm이 재설치 가능. 커스텀 수정은 업스트림 회귀 또는 별도 보존. **예외**: `hybrid-workflow-reference/` · `fastapi-project-structure/` · `python-architecture/` · `python-coding-style/`는 `.gitignore`에서 명시 opt-in (아래 "스킬 복원 안내")
+- `skills/` — 플러그인·npm이 재설치 가능. 커스텀 수정은 업스트림 회귀 또는 별도 보존. **예외**: `fastapi-project-structure/` · `python-architecture/` · `python-coding-style/`는 `.gitignore`에서 명시 opt-in (아래 "스킬 복원 안내")
+- `docs/plans/` — **이 저장소만의 예외**. 계획 파일은 삭제 금지 원칙상 프로젝트 저장소에서는 git 추적 대상이지만(`git clean`·머신 이동에서 살아남아야 한다), 여기는 공개 저장소라 무시를 유지한다. 삭제 금지 규칙 자체는 그대로 적용되며 워킹트리에만 존재한다
 - `memory/` — 머신별 세션 메모리, 민감 정보 포함 가능
 - `node_modules/`, `security/`, `daemon/`, `sessions/` 등 런타임 산출물
 - `settings.local.json` — 머신 로컬 override
 
 ### 스킬 복원 안내
 
-- **플러그인 스킬** (compound-engineering, superpowers 등): Claude Code 재실행 시 자동 복원
+- **플러그인 스킬** (superpowers 단독 — compound-engineering은 `enabledPlugins`에서 비활성): Claude Code 재실행 시 자동 복원
 - **npm 스킬** (slides-grab, slides-grab-design, slides-grab-export, slides-grab-plan): `npm install -g slides-grab`
 - **CLI 스킬** (graphify): `uv tool install graphifyy`. CLI·`graphify-install-check.sh` 훅(CLAUDE.md의 graphify 섹션 자동 주입)·스킬이 한 세트로 움직인다
-- **추적하는 손-작성 스킬** (`hybrid-workflow-reference`, `fastapi-project-structure`, `python-architecture`, `python-coding-style`): clone만으로 복원됨. `hybrid-workflow-reference`는 `rules/hybrid-workflow.md`가 §3·§4·§6·§7·§9 자리에서 이 스킬의 `references/` 파일을 **파일명으로** 가리키므로 **둘은 같이 움직여야 한다** (파일을 옮기거나 이름을 바꾸면 상주 포인터도 같이 고칠 것). 나머지 셋은 CLAUDE.md 스킬 표(Python 작성 / 새 Python·FastAPI 프로젝트 레이아웃)에서 호출하는 손-콘텐츠라 재설치 경로가 없다. **`python-coding-style`이 ruff 설정의 원본이고 `fastapi-project-structure/templates/pyproject-template.toml`이 그 인스턴스**이므로, 한쪽을 고치면 다른 쪽도 같이 고친다
+- **추적하는 손-작성 스킬** (`fastapi-project-structure`, `python-architecture`, `python-coding-style`): clone만으로 복원됨. CLAUDE.md 스킬 표(Python 작성 / 새 Python·FastAPI 프로젝트 레이아웃)에서 호출하는 손-콘텐츠라 재설치 경로가 없다. **`python-coding-style`이 ruff 설정의 원본이고 `fastapi-project-structure/templates/pyproject-template.toml`이 그 인스턴스**이므로, 한쪽을 고치면 다른 쪽도 같이 고친다
 - **순수 bespoke 스킬** (peon-ping-*, plannotator-annotate 등): 별도 보존 필요 (현재 미추적)
 
 ---
 
-## 메인 하네스: Hybrid Workflow
+## 메인 하네스: Superpowers 파이프라인
 
-`rules/hybrid-workflow.md`가 정식 운영 가이드다. 이 파일은 매 세션 컨텍스트에 상주하므로, 특정 시점에만 참조하는 **§3–§5(채점 근거·에스컬레이션·리뷰어 dispatch) · §6(유닛 분량·직렬 실행) · §7(95% confidence opener) · §9(메모리·문서 tier)** 는 본문을 `skills/hybrid-workflow-reference/`로 빼고 자리에 포인터만 남겼다.
-
-§3–§5만은 예외적으로 **routing quick card**(채점 기저점·가산 신호·밴드표·build carve-out·리뷰어 opus 고정)를 상주 자리에 남긴다 — 라우팅 판정은 `/clear` 경계마다 필요해 매번 파일을 로드하면 오히려 손해이기 때문이다. 지연 로드 쪽에는 그 판정의 *근거*만 남는다.
-
-**스킬 내부도 주제별로 쪼개져 있다.** 스킬 본문은 한 번 로드되면 세션 끝까지 컨텍스트에 남고, 이 파이프라인은 단계마다 `/clear`를 강제한다 — 380토큰이 필요해 3.7k를 통째로 불러오면 그 세션 내내 나머지를 짊어진다. 그래서 `SKILL.md`는 1k 미만 인덱스만 두고 본문을 나눴다:
-
-| 파일 | 내용 | 읽는 시점 |
-| --- | --- | --- |
-| `references/scoring.md` | §3 채점 근거 · §4 에스컬레이션 | effort 판정이 애매할 때 |
-| `references/units.md` | §6 유닛 분량·직렬 실행 | ce-plan U-ID 묶을 때, ce-work 직렬/병렬 고를 때 |
-| `references/brainstorming.md` | §7 5렌즈 정의 | **제품성** 브레인스토밍일 때만 |
-| `references/tiers.md` | §9 메모리·문서 tier | 파일 배치 결정 시 |
-
-§3·§4는 서로를 계속 되참조해서(§3의 경계 반올림→§4, §4의 build 격상→§3 carve-out) 한 파일로 묶었다. 더 쪼개면 한쪽을 열자마자 다른 쪽이 필요해져 왕복만 늘어난다.
-
-**§5(리뷰어 dispatch)에는 지연 로드할 게 남지 않았다.** 원래는 opus-vs-sonnet 분기표가 본문이었는데 그게 사라지면서, 남은 건 quick card가 이미 담고 있는 `model=opus` pin·플러그인 수정 금지·세션 모델 전환 금지뿐이다. "ce-doc-review는 ce-plan과 같은 세션에서 돌아 전환할 `/clear` 경계가 없다"는 사실만 quick card 리뷰어 불릿에 접어 넣고 `references/reviewers.md`는 삭제했다.
-
-§7의 opener 원문과 "한 번에 한 질문" 계약은 **어느 파일에도 없다** — `hooks/workflow-stage-inject.sh`가 brainstorming 호출 직후 그 자리에 주입한다(상주 비용 0). `references/brainstorming.md`에는 훅이 이름만 던지는 5렌즈의 정의만 있다.
-
-§1·§8·§10과 "Tier 0/1 자동 변경 금지" 금지 규칙은 전문 그대로 상주한다(금지 규칙은 지연 로드로 내리지 않는다).
-
-**§2(모델 재보정표)는 없앴다.** 모델을 Opus 5 하나로 고정했으므로 모델 간 비교표·비용 근거는 어디에도 두지 않는다 — 채점이 정하는 건 `effort`뿐이다.
-
-요약:
+워크플로우는 Superpowers 스킬만으로 구성한다. Compound Engineering 플러그인은 `enabledPlugins`에서 **비활성**이다 — `skillOverrides`가 플러그인 스킬을 커버하지 못해, `/ce-compound` 하나를 살리려면 쓰지 않는 CE 스킬 23개의 리스팅 비용(약 2,400 토큰/세션)을 함께 지불해야 했기 때문이다. 정본은 `CLAUDE.md`의 **High-Priority Workflow Skills 표**와 **Planning Trigger** 섹션이고, 단계별 just-in-time 지침은 `hooks/workflow-stage-inject.sh`가 스킬 호출 직후에 주입한다(상주 비용 0).
 
 ```
-Phase 1: Spec    superpowers:brainstorming → docs/superpowers/specs/
-Phase 2: Plan    non-plan-mode: /ce-plan → docs/plans/  (자동 ce-doc-review, 사람 리뷰는 선택)
-Phase 2': Build  /ce-work <plan-path>
-Phase 3: Ship    verify → /ce-compound → commit+PR
+Phase 1  brainstorming        → docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md
+         /clear
+Phase 2  writing-plans        → docs/plans/YYYY-MM-DD-<feature>.md
+         /clear   ← 강제. 계획 세션에서 인라인 구현 금지
+Phase 3  subagent-driven-development
+           ├ 태스크마다: 구현 서브에이전트 → 태스크 리뷰(spec 준수 + 코드 품질)
+           └ 마지막: 전체 브랜치 리뷰
+         verification-before-completion
+         finishing-a-development-branch
 ```
 
-각 단계의 effort는 더 이상 단계별 고정값이 아니라, **과업 복잡도를 채점**해 정해진다(`rules/hybrid-workflow.md`의 routing quick card가 정본, 근거는 `hybrid-workflow-reference` 스킬). 모델은 **Opus 5 고정**이다.
+**학습 누적 단계는 비어 있다.** 초판 계획은 여기에 `/ce-compound`를 뒀지만, 플러그인 비활성화와 함께 제거했다. 대체할 커스텀 회고 스킬은 별건으로 설계·구현한다 — 존재하지 않는 스킬을 가리키는 포인터를 남기지 않기 위해, 그 스킬이 생기기 전까지 파이프라인에 자리만 잡아 두지 않는다.
 
-### effort는 어떻게 정해지나 (복잡도 채점)
+**실행 스킬은 `subagent-driven-development`(SDD)다.** `executing-plans`는 SKILL.md 자체가 서브에이전트 없는 하네스용 폴백으로 자신을 규정하고, 쓸 수 있으면 SDD를 쓰라고 명시한다 — Claude Code는 그 목록에 들어 있다. 토큰 측면에서도 같은 결론이다: 단일 세션 실행은 매 턴 그때까지 쌓인 컨텍스트를 다시 읽어 턴 수에 대해 O(N²)로 늘지만, SDD는 spawn마다 컨텍스트가 리셋되므로 O(N)이다. 3태스크 이하의 작은 계획에서는 단일 세션이 조금 싸지만(교차점은 대략 5~7태스크), SDD가 붙이는 태스크별 리뷰와 전체 브랜치 리뷰의 값으로 그 차이를 지불한다.
 
-과업마다 **기저점**(인지 성격)에 **가산 신호**(범위)를 더해 0–10점을 매기고, 점수 구간(밴드)이 effort를 정한다.
+**SDD의 종료 단계는 훅이 가로챈다.** SDD는 전체 브랜치 리뷰가 깨끗해지면 스스로 `finishing-a-development-branch`를 호출하며 끝나는데, 그대로 두면 `verification-before-completion`이 건너뛰어진다. `hooks/workflow-stage-inject.sh`의 `*subagent-driven-development` case가 이 지점에서 순서를 바로잡는다. 또 SDD가 최종 리뷰에 `requesting-code-review`의 리뷰어를 내부적으로 dispatch하므로, `requesting-code-review`는 파이프라인의 별도 단계가 아니라 **계획 실행과 무관한 단독 리뷰 요청용**으로만 남는다.
 
-| 기저점 | 예 | 점수 |
-|---|---|---|
-| 기계적 실행 | 빌드·검증·리네임·포맷 | 1 |
-| 표준 구현 | 잘 정의된 기능·바운드된 버그 | 3 |
-| 개방형 추론 | 설계·브레인스토밍·근본원인 디버깅 | 5 |
+**`/clear` 경계는 강제다.** 계획 과정에서 쌓인 탐색 컨텍스트(버려진 선택지, 중간 검색 결과, 폐기된 가설)를 구현 세션으로 끌고 가지 않기 위해서다. 구현 세션이 계획 파일만을 단일 입력으로 삼게 되므로 계획의 품질 결함도 드러난다. SDD의 description에 있는 "in the current session"은 SDD **코디네이터**가 별도 세션을 요구하지 않는다는 뜻이고, 여기서 말하는 경계는 **계획 세션과 구현 세션 사이**라 서로 충돌하지 않는다.
 
-여기에 파일 수(+1~+3), 새 모듈/아키텍처 결정(+2), 새 의존성(+1), API·스키마 변경(+2), 동시성/보안/마이그레이션 같은 교차 관심사(+2), 실질적 모호성(+2)이 해당할 때마다 더해진다(상한 10).
+**계획 파일은 영구 보존물이다.** 경로는 `docs/plans/`이고(`writing-plans` 기본값인 `docs/superpowers/plans/`를 override한다 — `docs/superpowers/`에는 스펙만 산다), **작업이 끝나도 삭제하지 않는다.** `/clear` 경계를 넘어 살아남는 유일한 산출물이자 변경의 근거 기록이기 때문이다. 프로젝트 저장소에서는 `docs/plans/`를 git 추적 대상으로 둬 `git clean`과 머신 이동에서 보호한다. **이 저장소는 공개용이라 유일한 예외**로 무시를 유지하며, 삭제 금지 규칙만 그대로 적용된다. 이 규칙은 `CLAUDE.md`(Plan Persistence) · `rules/boundaries.md`(Never) · 훅의 `*writing-plans`·`*finishing-a-development-branch` case 세 곳에 심어져 있다.
 
-| 점수 | 밴드 | effort | 예시 |
-|---|---|---|---|
-| 0–2 | 사소·기계적 | low | "테스트 통과 확인만" |
-| 3–5 | 표준 | medium | "새 엔드포인트 하나 추가, 파일 3개" |
-| 6–7 | 조금 어려움 | high | "새 의존성 도입 + 데이터 스키마 변경" |
-| 8–10 | 복잡함 | xhigh | "새 아키텍처 결정 + API 스키마 변경 + 교차 관심사" |
+### 모델 · effort
 
-예: "표준 구현(base 3) + 파일 3–5개(+2) + 동시성 얽힘(+2)" = 7점 → **high**를 announce하고 현재 세션과 다르면 `/effort` 전환을 안내한다(강제 아님).
+**사용자가 `/model`·`/effort`로 직접 설정한다.** 에이전트는 과업 복잡도를 채점하지 않고 전환을 제안하지도 않는다. 세션 resting 기본값은 `settings.json`의 `effortLevel: high`이고, 모델은 Opus 5다.
 
-**단, Build 단계(ce-work)는 예외다**: 완성된 계획을 실행하는 build 작업은 계획이 이미 판단을 front-load했으므로 base 1(기계적 실행)로 채점하고, 계획-시점 가산 신호(파일 수·새 모듈·API/스키마 변경)를 **다시 세지 않는다** — 그래서 파일이 아무리 많아도 기본값은 **medium**이다. 이 예외는 계획이 아무리 커도 build를 high/xhigh로 올리지 못하도록 **effort에 상한을 씌우는** 장치이며, 파일 수는 effort가 아니라 유닛 분량으로 처리한다. build가 올라가는 건 오직 **반응적**일 때뿐이다: 실행이 계획이 예견 못 한 것을 드러낼 때 — RED→GREEN 정체가 개방형 근본원인 디버깅으로 전환되거나(그 서브태스크는 base-5 디버깅으로 재채점), 되돌리기 어려운 변경에서 테스트/타입체크가 실패할 때(§4 re-run 게이트). 계획-시점 범위로는 선불 승격하지 않는다.
-
-**메커니즘 제약**: 메인 에이전트는 세션 도중 자기 effort를 못 바꾼다 — `/effort`로 announce & 전환 안내만 가능하다. 모델은 Opus 5 고정이라 `/model`은 세션이 Opus 5가 아닐 때만 언급하면 된다. 서브에이전트 디스패치는 두 갈래다: `Agent` 툴은 `model`만 지정 가능(effort는 디스패치 세션에서 상속), `Workflow`의 `agent()`는 `model`+`effort` 둘 다 개별 지정 가능(완전 동적).
-
-**리뷰어**: 코드/문서 리뷰는 본질적으로 개방형 적대적 추론(base 5)이라 리뷰어는 전원 `model=opus`로 dispatch한다. 이 pin은 "어차피 Opus만 쓰니까 불필요"가 아니다 — 플러그인 스킬(`~/.claude/plugins/...`)이 자체 모델 티어링을 갖고 있고 업데이트마다 되살아나므로, 상주 규칙 파일이 그걸 덮어쓰는 강제 지점이다. 플러그인 스킬 자체를 고쳐서 해결하지 않는다(머신 상태라 덮어써진다).
-
-세션 resting 기본값(`settings.json`)은 `effortLevel: high`다 — `xhigh`는 8–10 밴드에서 과업별로만 도달하며 상시 기본값이 아니다.
-
-### Plan 단계 흐름 (Plan Mode ↔ Plannotator 디커플링)
-
-`/ce-plan`의 본작업(계획 파일 작성, ce-doc-review의 자동 수정)은 Plan Mode 밖(non-plan-mode)에서 실행된다 — Plan Mode가 파일 쓰기와 자동 수정을 막기 때문이다. 리뷰가 사라지는 건 아니다: **ce-doc-review가 ce-plan의 Phase 5.3.8로 정본 파일에 자동 실행**된다.
-
-사람이 직접 보고 싶으면 `plannotator annotate docs/plans/<file>`을 **수동으로** 돌린다 — **강제 게이트가 아니다**. Approve 버튼이 없어 피드백 없이 닫으면 승인으로 간주하고, 피드백을 남겼다면 같은 `docs/plans/YYYY-MM-DD-<summary>.md` 파일에 반영한다(파일 재사용, 원래 날짜 유지). `/clear`는 이 결과를 기다리지 않는다.
-
-`ExitPlanMode` 브라켓도 `~/.claude/plans/` 복사본도 없어, ce-doc-review 자동 수정이 재-붙여넣기 텍스트에 덮이지 않는다(정본이 곧 리뷰 대상). 일반 Plan Mode의 `ExitPlanMode` 경로(그 `PermissionRequest` Plannotator 게이트 + `~/.claude/plans/` 승격)는 ce-plan 외 작업에 그대로 남는다.
-
-```
-non-plan-mode → /ce-plan (계획 작성) → 자동 ce-doc-review(전 리뷰어 opus)
-  → (선택) plannotator annotate docs/plans/<file> → /clear
-```
-
-일반적인 "복잡한 작업 전에는 Plan Mode로 먼저 분석한다"는 규율(CLAUDE.md)은 그대로 유지된다 — 위 흐름은 `/ce-plan` 자체의 실행 방식에 대한 예외(carve-out)일 뿐이다.
+서브에이전트 디스패치는 두 갈래다: `Agent` 툴은 `model`만 지정 가능하고 `effort`는 디스패치 세션에서 상속된다. `Workflow`의 `agent()`는 `model`·`effort` 둘 다 개별 지정 가능하다.
 
 ### 의존 플러그인
 
@@ -239,7 +191,6 @@ non-plan-mode → /ce-plan (계획 작성) → 자동 ce-doc-review(전 리뷰�
 
 | 플러그인 | 역할 |
 |---------|------|
-| `compound-engineering@compound-engineering-plugin` | ce-plan, ce-work, ce-code-review 등 메인 workflow |
 | `superpowers@claude-plugins-official` | brainstorming, TDD, debugging 등 process skills |
 | `security-guidance@claude-plugins-official` | 보안 가이드 (보안 리뷰 규칙·security-reviewer) |
 | `plannotator@plannotator` | 계획 파일 브라우저 리뷰 (선택 — 강제 게이트 아님) |
@@ -250,10 +201,11 @@ non-plan-mode → /ce-plan (계획 작성) → 자동 ce-doc-review(전 리뷰�
 
 | 플러그인 | 내린 이유 |
 |---------|------|
+| `compound-engineering@compound-engineering-plugin` | 파이프라인이 Superpowers 단독으로 바뀌었다. `skillOverrides`가 플러그인 스킬을 커버하지 못해(짧은 키·접두사 키 두 형식 모두 실패) `/ce-compound` 하나를 살리려면 쓰지 않는 CE 스킬 23개의 리스팅 비용까지 매 세션 지불해야 했다 — 약 2,400 토큰. 학습 누적은 커스텀 회고 스킬로 대체할 예정 |
 | `context7@claude-plugins-official` | 라이브러리 문서 조회 — MCP 호출 기록 0건 |
 | `claude-md-management@claude-plugins-official` | CLAUDE.md 감사 — 스킬 1회 사용에 그침 |
 | `code-simplifier@claude-plugins-official` | 코드 단순화 — 에이전트 정의만 제공, 호출 0건 |
-| `commit-commands@claude-plugins-official` | 커밋·PR — `superpowers:finishing-a-development-branch`·`ce-commit`과 3중복 |
+| `commit-commands@claude-plugins-official` | 커밋·PR — `superpowers:finishing-a-development-branch`와 중복 |
 
 ### 의존 MCP 서버
 
@@ -282,7 +234,7 @@ MCP 서버 등록은 `~/.claude.json`에 있고 git으로 추적하지 않는다
 bash scripts/sync-memory-templates.sh
 ```
 
-> **현재 본문 seed 없음** (`MEMORY-index.md` 스캐폴드만). 이전의 `feedback_hybrid_workflow.md` seed는 내용이 체크인된 `rules/hybrid-workflow.md` §1·§9·§10과 중복이라 제거했다 — 메모리는 규칙 파일이 못 담는 것만 담는다.
+> **현재 본문 seed 없음** (`MEMORY-index.md` 스캐폴드만). 이전의 `feedback_hybrid_workflow.md` seed는 체크인된 규칙 파일과 중복이라 제거했다 — 메모리는 규칙 파일이 못 담는 것만 담는다.
 
 ---
 
