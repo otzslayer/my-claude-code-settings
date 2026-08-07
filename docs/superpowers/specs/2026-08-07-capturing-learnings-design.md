@@ -153,7 +153,9 @@ last_updated: YYYY-MM-DD      # 갱신 시에만
 | knowledge | `workflow_issue` | `workflow-issues/` |
 | knowledge | `convention` | `conventions/` |
 
-기존 3개 문서가 이 enum 안에 전부 들어간다(`runtime_error`, `design_pattern`, `workflow_issue`).
+기존 3개 문서가 이 enum 안에 전부 들어간다(`runtime_error`, `design_pattern`, `workflow_issue`). 나머지 셋
+(`build-errors/`·`test-failures/`·`conventions/`)은 디렉터리가 아직 없으므로 **처음 쓸 때 만든다**. 디렉터리
+부재를 이유로 다른 카테고리로 우회하면 매핑이 무너진다.
 
 **YAML 안전 규칙**: 스칼라 값에 ` #`(공백+해시, 주석으로 잘림)이나 `: `(콜론+공백, 중첩 매핑으로 오독)이
 들어가면 값 전체를 따옴표로 감싼다. 배열 항목도 같다.

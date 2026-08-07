@@ -104,6 +104,9 @@ description: Record one durable learning from completed work into docs/solutions
 
 **bug 트랙**은 무언가가 고장 났고 고쳤을 때. **knowledge 트랙**은 고장 없이 얻은 판단·패턴·합의일 때.
 
+위 여섯 중 실제로 존재하는 디렉터리는 `runtime-errors/`·`design-patterns/`·`workflow-issues/` 셋뿐이다.
+나머지는 처음 쓸 때 만든다. 디렉터리가 없다고 다른 카테고리로 우회하지 않는다.
+
 트랙이나 카테고리가 애매하면 **추측하지 말고** `AskUserQuestion`으로 확인한다.
 
 ---
