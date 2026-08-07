@@ -28,7 +28,7 @@ specific to this setup. Hard prohibitions live in the Never tier below.
 - **Edit**: `Edit`/`Write` are the main path (CodeGraph is read-only); run `codegraph_explore` on the target symbols BEFORE editing, not during. Index auto-refreshes ~1s.
 - **Read tool**: non-code files (`.md`/`.json`/`.toml`/`.yaml`) or areas `codegraph_explore` misses. In `~/.claude` itself that is nearly everything — the index holds ~6 files (this repo is markdown and shell), so here `grep` is the tool and CodeGraph has nothing to say.
 - **Never** `cat`/`head`/`tail`/`sed`/`awk`.
-- **Subagent dispatch**: the model is fixed at opus; score the subtask's complexity against the routing quick card in `~/.claude/rules/hybrid-workflow.md` to set effort. `Agent` tool: `model` only, no `effort` param — effort inherits from the dispatching session. `Workflow` `agent()`: `model` + `effort` both settable per-agent.
+- **Subagent dispatch**: the model is fixed at opus. `Agent` tool: `model` only, no `effort` param — effort inherits from the dispatching session. `Workflow` `agent()`: `model` + `effort` both settable per-agent.
 
 ## ⚠️ Ask First (Require Approval)
 
@@ -88,6 +88,12 @@ specific to this setup. Hard prohibitions live in the Never tier below.
 - Never refactor things that aren't broken
 - Never delete pre-existing dead code unless asked
 - Never fix unrelated bugs without reporting first
+
+### Memory
+
+- Never auto-write into Tier 0/1 — `~/.claude/CLAUDE.md`, `~/.claude/rules/`, `~/.claude/projects/.../memory/`. These are user-manual-only.
+- Learnings and retrospectives belong in `docs/solutions/` (Tier 3); promoting anything from there into Tier 0/1 is the user's manual call.
+- Never delete a plan file under `docs/plans/`, including after the work ships. It is a permanent record, not a build artifact.
 
 ## Boundary Violation Response
 
