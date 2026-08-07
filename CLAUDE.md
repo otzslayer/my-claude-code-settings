@@ -14,27 +14,29 @@ Resolve conflicts in this order:
 When a relevant skill exists, call the `Skill` tool **before proceeding**.
 
 ### Session Start — `using-superpowers` is auto-injected (do NOT re-invoke)
-The `superpowers` SessionStart hook already injects the full `using-superpowers` skill into context on every startup / `/clear` / `/compact`, and it stays present for the whole session. Do **not** call `Skill(skill="superpowers:using-superpowers")` explicitly — a manual call only re-inserts identical content and needlessly fires the `workflow-stage-inject.sh` PostToolUse hook. Subagents (Task tool) must ignore it entirely (per the skill's own `<SUBAGENT-STOP>`). The skill-check discipline still applies to every **other** skill: when a relevant skill exists, invoke it before proceeding (see the table below).
+The `superpowers` SessionStart hook already injects `using-superpowers` on every startup / `/clear` / `/compact`, so **never** call `Skill(skill="superpowers:using-superpowers")` explicitly. The skill-check discipline still applies to every **other** skill (see the table below).
 
 ### High-Priority Workflow Skills
 
 | Trigger | Skill |
 |---------|-------|
-| New feature / component / behavior change | `superpowers:brainstorming` — 95% confidence opener. The resulting spec always continues into the plan stage via `/ce-plan` (this pipeline takes priority even if the entry skill offers its own plan tool) |
-| Multi-step implementation task | `ce-plan` (core work runs in non-plan-mode — see Plan Persistence below) |
-| Plan execution | `ce-work <plan-path>` |
+| New feature / component / behavior change | `superpowers:brainstorming` → `docs/superpowers/specs/` |
+| Multi-step implementation task | `superpowers:writing-plans` → `docs/plans/`, then `/clear` |
+| Plan execution | `superpowers:subagent-driven-development` |
 | Bug or failing test | `superpowers:systematic-debugging` |
 | Implementation work | `superpowers:test-driven-development` (trivial-case exemption) |
-| Code review | `ce-code-review` (reviewer models per the plugin's own tiering) |
+| Code review (standalone request, outside plan execution) | `superpowers:requesting-code-review` |
 | Before claiming task complete | `superpowers:verification-before-completion` |
 | Learning accumulation (after work completes) | `/ce-compound mode:headless` |
 | Commit · push · PR | `superpowers:finishing-a-development-branch` |
 | Writing/editing Python (`.py`) | `python-coding-style` |
 | New Python project / directory layout | `python-architecture` |
 
-Domain skills (FastAPI, LangChain, etc.) layer on top when relevant. Available skills are auto-listed in session context — invoke via `Skill(skill="...")`. Model·effort for every row above is computed by scoring the task's complexity, not fixed per skill — see the policy below.
+Domain skills (FastAPI, LangChain, etc.) layer on top when relevant. Available skills are auto-listed in session context — invoke via `Skill(skill="...")`.
 
-**Model · effort policy**: The agent cannot switch its own model mid-session, so at each task or `/clear` boundary, score the task's complexity against the **routing quick card** in `~/.claude/rules/hybrid-workflow.md` (§3–§5) and announce the result; if it differs from the current setting, guide the switch via `/model`·`/effort` — announce and confirm, never enforce. **Exception — ce-code-review / ce-doc-review**: no session switch (avoids a costly in-session cache reload); reviewer model selection belongs to the plugin skill's own tiering, with effort inherited from the dispatching session. When a routing call is non-obvious, `~/.claude/skills/hybrid-workflow-reference/references/scoring.md` holds the full §3–§4 rationale.
+`superpowers:subagent-driven-development` already dispatches the code reviewer internally for each task and for the final branch review — do **not** also run `requesting-code-review` as a separate pipeline stage. That row is for standalone review requests only.
+
+**Model · effort**: the user sets both directly via `/model` and `/effort`. The agent does not score task complexity and does not propose switching.
 
 ## Core Principles
 
@@ -66,19 +68,34 @@ When given a task, **always confirm scope with questions before starting work** 
 
 If new ambiguity surfaces mid-task, stop immediately and ask. Do not "proceed for now and confirm later."
 
-### Plan Mode (Shift+Tab)
-Before complex tasks: Plan Mode → Analyze → Draft plan → Resolve ambiguities → Implement after approval
+### Planning Trigger
 
-**Complex task = any of:**
+Run the plan stage (`superpowers:writing-plans`) before starting when **any** of these holds:
+
 - Spans 3+ files
-- Requires architectural decision (new module/pattern)
-- Introduces new dependency
-- Modifies public API or data schema
+- Requires an architectural decision (new module/pattern)
+- Introduces a new dependency
+- Modifies a public API or data schema
 - User explicitly requests planning
 
-**Carve-out — ce-plan's own execution runs in non-plan-mode**: the general Plan Mode discipline above still governs *whether* to plan. But ce-plan's core work (writing `docs/plans/<draft>.md`, ce-doc-review's autofix) runs in **non-plan-mode**, because Plan Mode blocks `Write`.
+**Exempt** — skip the spec and plan stages, go straight to implementation (TDD is also exempt):
 
-**Plan Persistence (MANDATORY — Complex tasks)**: the full sequence (`/ce-plan` → automatic ce-doc-review → optional plannotator pass → `/clear` → `/ce-work <plan-path>`) and its rationale live in `~/.claude/rules/hybrid-workflow.md` §1 Phase 2. **NEVER implement inline in the same planning session.**
+- Adding type annotations only
+- ruff auto-fixes
+- Single-file rename with no behavior change
+- Comment/docstring cleanup
+- Dependency version bumps only
+- Obvious refactors of one to a few dozen lines where existing tests pass as-is
+
+Run the test suite once after the change even under the exemption. If the exemption call is ambiguous, confirm via `AskUserQuestion`.
+
+**Plan Persistence (MANDATORY)**: `superpowers:writing-plans` → `docs/plans/YYYY-MM-DD-<feature>.md` → `/clear` → fresh session, `superpowers:subagent-driven-development` with the plan file as the only input. **NEVER implement inline in the same planning session.**
+
+**The plan file is permanent — NEVER delete it, not even after the work ships.** It is the record of why the change looks the way it does, and the only artifact that survives the `/clear` between planning and building. In a project repo, keep `docs/plans/` **git-tracked** so it survives `git clean` and machine moves. **`~/.claude` is the single exception**: it is a public repo, so `.gitignore` keeps `docs/plans/` untracked there — the no-delete rule still holds, the file just lives in the working tree only.
+
+`superpowers:writing-plans` defaults to `docs/superpowers/plans/`; **override it to `docs/plans/`**. Only specs from `superpowers:brainstorming` live under `docs/superpowers/`.
+
+Plan Mode (Shift+Tab) is still available for read-only analysis, but it is not a stage of this pipeline — `writing-plans` writes the plan file with `Write`, which Plan Mode blocks.
 
 ### When Stuck (Max 3 Attempts)
 Document failure → Research alternatives → Question fundamentals → Try different approach
