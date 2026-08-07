@@ -32,26 +32,45 @@ Phase 1  brainstorming        → docs/superpowers/specs/YYYY-MM-DD-<topic>-desi
          /clear
 Phase 2  writing-plans        → docs/superpowers/plans/YYYY-MM-DD-<feature>.md
          /clear   ← 강제. 계획 세션에서 인라인 구현 금지
-Phase 3  executing-plans      (TDD: RED → GREEN → REFACTOR)
-         requesting-code-review
+Phase 3  subagent-driven-development
+           ├ 태스크마다: 구현 서브에이전트 → 태스크 리뷰(spec 준수 + 코드 품질)
+           └ 마지막: 전체 브랜치 리뷰 (requesting-code-review의 code-reviewer.md를 내부 dispatch)
          verification-before-completion
          /ce-compound mode:headless   → docs/solutions/
          finishing-a-development-branch
 ```
 
-### 2.1 실행 스킬로 `executing-plans`를 고른 이유
+### 2.1 실행 스킬로 `subagent-driven-development`를 고른 이유
 
-Superpowers `executing-plans` SKILL.md는 "서브에이전트를 쓸 수 있는 하네스라면 `subagent-driven-development`를 대신 쓰라"고 명시한다. 이 설계는 그 권고를 **의도적으로 따르지 않는다**. 근거는 토큰이다.
+`executing-plans` SKILL.md는 자신을 서브에이전트가 없는 하네스용 폴백으로 규정하고, 서브에이전트를 쓸 수 있으면 `subagent-driven-development`(이하 SDD)를 쓰라고 명시한다. Claude Code는 그 "쓸 수 있는" 목록에 들어 있다. 이 설계는 업스트림 권고를 따른다.
 
-- 이 저장소의 세션 baseline은 약 39.6k 토큰이다(system prompt + tools + memory files + skills).
-- 서브에이전트는 spawn마다 이 baseline을 캐시 미스로 다시 지불한다. 태스크 10개면 baseline만 400k다.
-- `executing-plans`는 단일 세션이므로 baseline을 1회 지불하고, 이후는 1시간 프롬프트 캐시에 얹혀 delta만 지불한다. 컨텍스트가 300k까지 커져도 cache read 단가는 write의 약 10%다.
+토큰 비교를 실제로 해 보면 권고와 결론이 일치한다. 단가를 base input 대비 **cache read 0.1x · cache write 1.25x**, 세션 baseline 39.6k, 10태스크 = 총 50턴, 턴당 컨텍스트 증가 4k로 두면:
 
-업스트림 권고의 근거는 토큰이 아니라 **컨텍스트 오염 방지(품질)** 이다. 즉 이 선택은 품질을 토큰과 맞바꾼 것이며, 그 트레이드오프를 인지한 상태의 결정이다.
+| | executing-plans (단일 세션) | SDD |
+|---|---|---|
+| baseline | 1회 write 50k | 1회 write + 19회 read ≈ 110k |
+| 누적 prefix 재읽기 | 0.1 × 6,880k = **688k** | spawn마다 리셋 |
+| 구현 | delta write 250k | 10 spawn × 5턴 ≈ 430k |
+| 리뷰 | (없음) | 10 spawn × 3턴 ≈ 320k |
+| **합계** | **≈ 988k** | **≈ 860k** |
+
+핵심은 단일 세션의 지배항이 **688k의 누적 prefix 재읽기**라는 점이다. 매 턴이 그때까지 쌓인 컨텍스트 전체를 다시 읽으므로 턴 수에 대해 O(N²)로 늘어난다. SDD는 spawn마다 컨텍스트가 리셋되므로 O(N)이다. 서브에이전트 baseline이 spawn마다 통째로 청구된다는 통념은 사실이 아니다 — Claude Code는 툴 스펙을 캐시에 로드하고 서브에이전트 시스템 프롬프트를 안정적인 prefix baseline으로 priming하므로, spawn 2~N은 baseline을 cache read로 낸다.
+
+두 곡선이 O(N²) 대 O(N)이므로 교차점이 존재한다. 같은 가정에서 3태스크(15턴)면 executing-plans ≈ 226k 대 SDD ≈ 286k로 단일 세션이 싸고, 교차점은 대략 **5~7태스크** 부근이다. 그럼에도 SDD를 단일 기본값으로 삼는 이유는 두 가지다. 첫째, 비용이 실제로 문제가 되는 구간은 큰 계획 쪽이고 거기서 SDD가 이긴다. 둘째, SDD는 태스크마다 spec 준수·코드 품질 리뷰를 붙이고 마지막에 전체 브랜치 리뷰를 돌리는데, `executing-plans`(64줄, "계획 읽고 → 실행 → 보고"가 전부)에는 그런 장치가 없다. 작은 계획에서 잃는 60k는 이 품질 장치의 값으로 지불할 만하다.
+
+위 숫자의 턴당 4k 증가·태스크당 5턴·리뷰어 diff 15k는 가정이다. 다만 결론을 만드는 것은 절대값이 아니라 O(N²) 대 O(N)이라는 형태이고, 그 형태는 가정에 흔들리지 않는다.
+
+### 2.1.1 SDD의 종료 단계를 가로채야 한다
+
+SDD는 전체 브랜치 리뷰가 깨끗해지면 **스스로 `finishing-a-development-branch`를 호출하며 끝난다.** 그대로 두면 이 설계의 `verification-before-completion`과 `/ce-compound`가 건너뛰어진다. `hooks/workflow-stage-inject.sh`의 `*subagent-driven-development` case가 이 지점을 가로채 순서를 바로잡는다(§3.5).
+
+또한 SDD가 최종 리뷰에 `requesting-code-review`의 `code-reviewer.md`를 내부적으로 dispatch하므로, `requesting-code-review`를 파이프라인의 **별도 단계로 두지 않는다.** CLAUDE.md 스킬 표에는 계획 실행과 무관한 단독 코드 리뷰 요청용으로만 남긴다.
 
 ### 2.2 `/clear` 강제 경계를 유지하는 이유
 
 `writing-plans`가 계획 파일을 쓰면 그 세션을 종료한다. 계획 과정에서 쌓인 탐색 컨텍스트(버려진 선택지, 중간 검색 결과, 폐기된 가설)를 구현 세션으로 끌고 가지 않기 위해서다. 토큰 측면에서도 유리하고, 구현 세션이 계획 파일만을 단일 입력으로 삼게 만들어 계획의 품질 결함이 드러나게 한다.
+
+SDD의 description은 "in the current session"이라 이 경계와 충돌해 보이지만 그렇지 않다. 그 문구는 SDD의 **코디네이터**가 별도 세션을 요구하지 않는다는 뜻이고, 여기서 말하는 경계는 **계획 세션과 구현 세션 사이**다. `/clear` 후 새 세션에서 SDD를 코디네이터로 띄우면 둘 다 성립한다.
 
 ---
 
@@ -92,10 +111,10 @@ Superpowers `executing-plans` SKILL.md는 "서브에이전트를 쓸 수 있는 
    |---|---|
    | 새 기능 / 컴포넌트 / 동작 변경 | `superpowers:brainstorming` → spec |
    | 다단계 구현 과업 | `superpowers:writing-plans` → plan, 이후 `/clear` |
-   | 계획 실행 | `superpowers:executing-plans` |
+   | 계획 실행 | `superpowers:subagent-driven-development` |
    | 버그 · 실패하는 테스트 | `superpowers:systematic-debugging` |
    | 구현 작업 | `superpowers:test-driven-development` (트리비얼 면제) |
-   | 코드 리뷰 | `superpowers:requesting-code-review` |
+   | 코드 리뷰 (계획 실행과 무관한 단독 요청) | `superpowers:requesting-code-review` |
    | 완료 선언 직전 | `superpowers:verification-before-completion` |
    | 학습 누적 (작업 완료 후) | `/ce-compound mode:headless` |
    | 커밋 · 푸시 · PR | `superpowers:finishing-a-development-branch` |
@@ -110,7 +129,7 @@ Superpowers `executing-plans` SKILL.md는 "서브에이전트를 쓸 수 있는 
    - 트리거 목록(3+ 파일, 아키텍처 결정, 새 의존성, 공개 API·스키마 변경, 사용자 명시 요청)은 유지한다. 여기에 §8의 면제 목록(타입 어노테이션만, ruff 자동수정, 동작 변경 없는 단일 파일 리네임, 주석·독스트링 정리, 의존성 버전 범프, 기존 테스트가 그대로 통과하는 수십 줄 규모의 명백한 리팩터)을 병합한다.
    - §10의 생존 1행("면제 판단이 애매하면 `AskUserQuestion`으로 확인")을 여기에 넣는다.
    - `ce-plan` carve-out 문단(L79)은 삭제한다. `ce-plan`이 사라지므로 근거 자체가 없다.
-   - Plan Persistence(L81)는 `writing-plans` 기준으로 재작성한다: `writing-plans` → `docs/superpowers/plans/` → `/clear` → `executing-plans`. "같은 세션에서 인라인 구현 금지"는 유지한다.
+   - Plan Persistence(L81)는 `writing-plans` 기준으로 재작성한다: `writing-plans` → `docs/superpowers/plans/` → `/clear` → `subagent-driven-development`. "같은 세션에서 인라인 구현 금지"는 유지한다.
    - Plan Mode(Shift+Tab) 자체는 "써도 되지만 파이프라인 단계는 아니다" 한 줄로 격하한다.
 
 **유지 (변경 없음)**
@@ -133,8 +152,8 @@ CodeGraph와 graphify 섹션은 각 도구 설치 시 자동 생성되는 블록
 
 | case | 주입 내용 |
 |---|---|
-| `*writing-plans` | 계획 본문 산문은 한국어. 계획 파일 Write 후 인라인 구현 금지 — 중단하고 `/clear`, 새 세션에서 `executing-plans` |
-| `*executing-plans` | 계획 파일이 단일 입력. 완료 후 `requesting-code-review`로 진행 |
+| `*writing-plans` | 계획 본문 산문은 한국어. 계획 파일 Write 후 인라인 구현 금지 — 중단하고 `/clear`, 새 세션에서 `subagent-driven-development` |
+| `*subagent-driven-development` | **종료 단계 가로채기**: 전체 브랜치 리뷰가 깨끗해져도 `finishing-a-development-branch`로 바로 가지 말 것. `verification-before-completion` → `/ce-compound mode:headless` → `finishing-a-development-branch` 순서를 지킬 것 |
 | `*test-driven-development` | RED → GREEN → REFACTOR, 트리비얼 면제 |
 | `*requesting-code-review` | 리뷰·수정 완료 후 `verification-before-completion`으로 진행 |
 | `*verification-before-completion` | `uv run ty check` · `ruff check --fix` · `ruff format` · `pytest -v`를 실제 실행하고 그 출력으로 확인한 뒤에만 완료 선언. 통과 후 `ce-compound mode:headless` |
