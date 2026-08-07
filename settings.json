@@ -22,6 +22,7 @@
   "skillOverrides": {
     "async-python-patterns": "off",
     "async-sqlalchemy-patterns": "off",
+    "ce-plan": "off",
     "changelog-generator": "off",
     "deep-agents-core": "off",
     "deep-agents-memory": "off",
@@ -71,7 +72,7 @@
           },
           {
             "type": "command",
-            "command": "jq -c 'if (.tool_input.file_path // \"\") | test(\"docs/plans/.*\\\\.md$\") then {hookSpecificOutput:{hookEventName:\"PreToolUse\",additionalContext:\"docs/plans/ 계획 파일을 지금 쓰려 한다. 계획 본문 산문은 반드시 한국어로 작성하라(코드·식별자·파일경로·frontmatter 키·enum 값은 영문 유지). 병렬 리서치 서브에이전트 산출물이나 초안이 영어라면 이 파일 내용을 한국어로 다시 작성하라 — 전역 한국어 규칙은 파일 아티팩트에 도달하지 못하므로 이 write 시점에 명시 강제한다.\"}} else empty end'"
+            "command": "jq -c 'if (.tool_input.file_path // \"\") | test(\"(docs/plans|docs/superpowers/specs)/.*\\\\.md$\") then {hookSpecificOutput:{hookEventName:\"PreToolUse\",additionalContext:\"docs/plans/ 계획 파일 또는 docs/superpowers/specs/ 스펙 파일을 지금 쓰려 한다. 본문 산문은 반드시 한국어로 작성하라(코드·식별자·파일경로·frontmatter 키·enum 값은 영문 유지). 서브에이전트 중간 산출물이나 초안이 영어라면 이 파일 내용을 한국어로 다시 작성하라 — 전역 한국어 규칙은 파일 아티팩트에 도달하지 못하므로 이 write 시점에 명시 강제한다.\"}} else empty end'"
           }
         ]
       },
@@ -113,16 +114,6 @@
             "command": "test -d \"${CLAUDE_PROJECT_DIR:-.}/graphify-out\" || exit 0; cd \"${CLAUDE_PROJECT_DIR:-.}\" && $HOME/.local/bin/graphify update . >/dev/null 2>&1 || true",
             "async": true,
             "statusMessage": "graphify 인덱스 갱신"
-          }
-        ]
-      },
-      {
-        "matcher": "ExitPlanMode",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"PLAN APPROVED via Plannotator. This PostToolUse:ExitPlanMode hook fires only on Approve (annotation/edit requests deny the tool and never reach here, so reaching this point means the plan was approved). MANDATORY -- do NOT implement inline in this planning session: (1) Promote the approved plan into docs/plans/ of the CURRENT project (cwd). Plannotator saved the approved plan under ~/.claude/plans/ as the most recently modified .md file; identify it by matching its content to the plan you just submitted, then copy that file (preserving its frontmatter) into docs/plans/ using its frontmatter intended_final_path as the destination, otherwise the convention docs/plans/YYYY-MM-DD-short-slug.md. Create docs/plans/ if missing, and update intended_final_path so it matches the actual saved path. (2) If this project has no docs/plans/ convention, or you cannot confidently identify the approved plan file, do NOT guess -- skip the copy and just report where the plan was saved. (3) Then tell the user to run /clear and, in a fresh session, run /ce-work <docs/plans path> to execute (Build phase -- score the build task per hybrid-workflow.md section 3 and switch /model and /effort accordingly; build against a finalized plan defaults to /model opus and /effort medium -- sonnet is suspended from routing). Inline implementation in this planning session is forbidden. NOTE: the hybrid ce-plan pipeline no longer has a mandatory plannotator gate (plannotator there is optional/manual); this ExitPlanMode hook path serves general Plan Mode approvals, where promoting the approved plan from ~/.claude/plans/ still applies.\"}}'",
-            "statusMessage": "Context clear reminder"
           }
         ]
       },
