@@ -16,7 +16,40 @@
       "mcp__codegraph__codegraph_impact",
       "mcp__codegraph__codegraph_files",
       "mcp__codegraph__codegraph_status"
-    ]
+    ],
+    "defaultMode": "auto"
+  },
+  "skillOverrides": {
+    "async-python-patterns": "off",
+    "async-sqlalchemy-patterns": "off",
+    "changelog-generator": "off",
+    "deep-agents-core": "off",
+    "deep-agents-memory": "off",
+    "deep-agents-orchestration": "off",
+    "deep-research": "off",
+    "fastapi-api-patterns": "off",
+    "fastapi-auth-patterns": "off",
+    "framework-selection": "off",
+    "langchain-dependencies": "off",
+    "langchain-fundamentals": "off",
+    "langchain-middleware": "off",
+    "langchain-rag": "off",
+    "langgraph-fundamentals": "off",
+    "langgraph-human-in-the-loop": "off",
+    "langgraph-persistence": "off",
+    "peon-ping-config": "off",
+    "peon-ping-log": "off",
+    "peon-ping-toggle": "off",
+    "peon-ping-use": "off",
+    "project-planner": "off",
+    "pydantic-ai-agents": "off",
+    "pydantic-evals": "off",
+    "python-core": "off",
+    "python-testing-patterns": "off",
+    "senior-architect": "off",
+    "senior-backend": "off",
+    "technical-writer": "off",
+    "uv-package-manager": "off"
   },
   "hooks": {
     "PreToolUse": [
