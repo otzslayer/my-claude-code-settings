@@ -7,7 +7,7 @@
 #
 # subagent-driven-development case만 예외적으로 스킬 자체의 종료 동선을 가로챈다: SDD는 전체 브랜치
 # 리뷰가 깨끗해지면 스스로 finishing-a-development-branch를 호출하며 끝나므로, 그대로 두면
-# verification-before-completion과 ce-compound가 건너뛰어진다.
+# verification-before-completion이 건너뛰어진다.
 #
 # 계획 파일 규칙(writing-plans / finishing-a-development-branch 두 case에 중복 배치): 경로는
 # docs/plans이고, 작업 완료 후에도 삭제하지 않는다. 생성 시점과 완료 시점 양쪽에서 말해야
@@ -39,15 +39,13 @@ case "$skill" in
   *writing-plans)
     emit "PLAN 단계: 계획 파일은 docs/plans/YYYY-MM-DD-<feature>.md에 Write하라(docs/superpowers/plans가 아니다 — 거기에는 스펙만 산다). 본문 산문은 반드시 한국어로 작성한다(코드·식별자·파일경로·frontmatter 키·enum 값은 영문 유지). 계획 파일은 영구 보존물이다 — 작업이 끝나도 절대 삭제하지 말 것. 계획 파일 Write 후 이 세션에서 인라인 구현 금지 — 중단하고 /clear, 새 세션에서 subagent-driven-development로 실행하라." ;;
   *subagent-driven-development)
-    emit "BUILD 단계(SDD): 태스크마다 구현 서브에이전트 → 태스크 리뷰(spec 준수 + 코드 품질), 마지막에 전체 브랜치 리뷰. 종료 단계 가로채기 — 전체 브랜치 리뷰가 깨끗해져도 finishing-a-development-branch로 바로 가지 말 것. 반드시 verification-before-completion → ce-compound(mode:headless) → finishing-a-development-branch 순서를 지켜라." ;;
+    emit "BUILD 단계(SDD): 태스크마다 구현 서브에이전트 → 태스크 리뷰(spec 준수 + 코드 품질), 마지막에 전체 브랜치 리뷰. 종료 단계 가로채기 — 전체 브랜치 리뷰가 깨끗해져도 finishing-a-development-branch로 바로 가지 말 것. 반드시 verification-before-completion을 먼저 거친 뒤 finishing-a-development-branch로 가라." ;;
   *test-driven-development)
     emit "BUILD(TDD): RED→GREEN→REFACTOR, 트리비얼 면제." ;;
   *requesting-code-review)
     emit "CODE REVIEW: 리뷰·수정 완료 후 다음 단계 verification-before-completion으로 진행. 계획 실행 중이라면 SDD가 이미 내부에서 같은 리뷰어를 dispatch하므로 별도 단계로 중복 호출하지 말 것." ;;
   *verification-before-completion)
-    emit "VERIFY: uv run ty check·ruff check --fix·ruff format·pytest -v를 실제 실행하고 그 출력으로 확인한 뒤에만 완료를 선언하라(증거 우선). 통과 후 다음 단계 ce-compound(mode:headless)로 진행." ;;
-  *ce-compound)
-    emit "LEARN: mode:headless, docs/solutions/만 생성(콘텐츠 한국어, frontmatter 키·enum 영문). Tier 0/1 자동 반영 금지. 학습 누적 후 다음 단계 finishing-a-development-branch(커밋·푸시·PR)로 진행." ;;
+    emit "VERIFY: uv run ty check·ruff check --fix·ruff format·pytest -v를 실제 실행하고 그 출력으로 확인한 뒤에만 완료를 선언하라(증거 우선). 통과 후 다음 단계 finishing-a-development-branch(커밋·푸시·PR)로 진행." ;;
   *finishing-a-development-branch)
     emit "SHIP: 커밋 메시지는 한국어 포맷(type 콜론 한국어 설명, WHY·주요 변경 불릿). docs/plans/의 계획 파일은 작업이 끝나도 삭제하지 말 것 — 영구 보존물이며, 정리 대상으로 오해하지 말 것." ;;
   *systematic-debugging)
