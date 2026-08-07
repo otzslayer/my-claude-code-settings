@@ -64,7 +64,7 @@ Superpowers `executing-plans` SKILL.md는 "서브에이전트를 쓸 수 있는 
 | `rules/hybrid-workflow.md` | 전체가 CE 파이프라인 + effort 채점. 생존 규칙은 §3.3·§3.4로 이전 |
 | `skills/hybrid-workflow-reference/` | `scoring.md`·`units.md`는 effort 수동화로 사망, `brainstorming.md`(5렌즈)는 Superpowers 자체 질문 루프와 중복 |
 
-`.gitignore` 47행의 `!/skills/hybrid-workflow-reference/` opt-in 항목도 함께 제거한다.
+`.gitignore`의 `!/skills/hybrid-workflow-reference/` opt-in 줄도 함께 제거한다(줄 번호가 아니라 내용으로 찾을 것).
 
 `docs/superpowers/plans/`는 `.gitignore`상 이미 무시 대상이다(`/docs/superpowers/*` 이후 `specs/`만 opt-in). 계획 파일은 생성물이므로 이 상태가 맞고, `.gitignore` 추가 변경은 필요 없다.
 
@@ -156,7 +156,17 @@ CodeGraph와 graphify 섹션은 각 도구 설치 시 자동 생성되는 블록
 
    `ce-babysit-pr` · `ce-brainstorm` · `ce-code-review` · `ce-commit` · `ce-commit-push-pr` · `ce-compound-refresh` · `ce-debug` · `ce-doc-review` · `ce-explain` · `ce-handoff` · `ce-ideate` · `ce-optimize` · `ce-plan` · `ce-pov` · `ce-proof` · `ce-resolve-pr-feedback` · `ce-riffrec-feedback-analysis` · `ce-simplify-code` · `ce-strategy` · `ce-test-browser` · `ce-work` · `ce-worktree` · `lfg` (총 23개)
 
-   **미검증 리스크**: 현재 `skillOverrides` 항목은 전부 사용자 스킬(`"python-core": "off"`)이라, 플러그인 스킬을 끌 때 키가 `"ce-plan"`인지 `"compound-engineering:ce-plan"`인지 확인된 바가 없다. 구현 시 **한 개로 먼저 검증**하고(설정 후 `/context` 또는 스킬 목록에서 사라지는지 확인) 나머지를 일괄 적용한다. 두 형식 모두 동작하지 않으면 사용자에게 다시 확인한다 — 대안은 플러그인 자체를 끄고 `ce-compound`를 포기하거나 손으로 복사하는 것인데, 어느 쪽도 임의로 정할 사안이 아니다.
+   **미검증 리스크 — 이 작업 전체의 유일한 차단 요소다.** 현재 `skillOverrides` 항목은 전부 사용자 스킬(`~/.claude/skills/` 디렉터리명, 예: `"python-core": "off"`)이다. 플러그인 스킬은 다른 네임스페이스이므로, 키 형식 이전에 **`skillOverrides`가 플러그인 스킬을 대상으로 삼기는 하는지**가 먼저 미확인 상태다.
+
+   검증 절차 (§4의 1단계에서 **가장 먼저** 수행):
+
+   1. `"ce-plan": "off"` 하나만 넣는다.
+   2. 새 세션을 열어 `/context`의 Skills → Plugin (compound-engineering) 목록을 본다.
+   3. 사라졌으면 이 형식으로 나머지 22개를 적용한다.
+   4. 남아 있으면 `"compound-engineering:ce-plan"` 형식으로 바꿔 2–3을 반복한다.
+   5. 두 형식 모두 실패하면 `skillOverrides`가 플러그인 스킬을 커버하지 않는 것이다.
+
+   5번일 때의 **기본 대안: 플러그인을 그대로 켜 둔 채 CLAUDE.md 스킬 표만으로 라우팅한다.** 현상 유지에서 표의 CE 행만 빠진 상태이므로 위험이 0이고, 비용은 스킬 리스팅 약 2.4k 토큰뿐이다. 플러그인 자체를 끄는 선택지(= `ce-compound` 포기 또는 수동 복사)는 이 대안보다 나쁘므로 채택하지 않는다. 5번에 도달하면 이 대안을 적용한 사실을 사용자에게 보고한다.
 
 `enabledPlugins`의 `compound-engineering@compound-engineering-plugin`은 **유지한다**. `ce-compound`를 쓰려면 플러그인이 설치되어 있어야 한다.
 
@@ -182,7 +192,7 @@ CodeGraph와 graphify 섹션은 각 도구 설치 시 자동 생성되는 블록
 
 의존 관계상 아래 순서를 따른다. 문서(README)는 코드·설정 변경이 확정된 뒤에 맞춰야 어긋나지 않는다.
 
-1. `settings.json` — `skillOverrides` 키 형식 검증 → CE 스킬 off, 한국어 훅 경로 수정, `ExitPlanMode` 훅 삭제
+1. `settings.json` — **§3.6의 `skillOverrides` 검증 절차를 가장 먼저 수행한다**(새 세션 `/context` 확인이 필요하므로 이 단계에서 한 번 끊긴다) → 결과에 따라 CE 스킬 23개 off 또는 기본 대안 적용, 이어서 한국어 훅 경로 수정, `ExitPlanMode` 훅 삭제
 2. `hooks/workflow-stage-inject.sh` 재작성
 3. `CLAUDE.md` 재작성
 4. `rules/boundaries.md` 수정
