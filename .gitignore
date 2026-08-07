@@ -32,7 +32,8 @@
 # local-hooks.json은 위 /* 로 이미 무시된다 -- smudge 필터의 복원 원본이므로
 # 이 머신에서만 존재하고, 삭제하면 checkout 후 grrr 훅이 사라진다.
 
-# 설계 스펙 + compound 학습: docs opt-in → specs·solutions(생성물 plans는 계속 무시)
+# 설계 스펙 + 학습 기록: docs opt-in → specs·solutions
+# (plans는 공개 저장소라 무시 -- 삭제 금지 규칙은 그대로 적용되며 워킹트리에만 존재한다)
 !/docs/
 /docs/*
 !/docs/superpowers/
@@ -44,7 +45,7 @@
 # (나머지 skills/*는 설치·생성물이라 계속 무시)
 !/skills/
 /skills/*
-!/skills/hybrid-workflow-reference/
+!/skills/capturing-learnings/
 !/skills/fastapi-project-structure/
 !/skills/python-architecture/
 !/skills/python-coding-style/

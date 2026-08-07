@@ -1,11 +1,9 @@
 ---
 title: Build-stage complexity scoring double-counted planning-time scope signals
 date: 2026-07-04
-category: docs/solutions/workflow-issues
+category: workflow-issues
 module: rules/hybrid-workflow.md
 problem_type: workflow_issue
-component: development_workflow
-severity: medium
 applies_when:
   - "scoring model/effort for the build (ce-work) stage of the hybrid pipeline"
   - "the full pipeline was triggered by file-count, new-module/pattern, or API/schema-change signals at planning time"

@@ -16,7 +16,40 @@
       "mcp__codegraph__codegraph_impact",
       "mcp__codegraph__codegraph_files",
       "mcp__codegraph__codegraph_status"
-    ]
+    ],
+    "defaultMode": "auto"
+  },
+  "skillOverrides": {
+    "async-python-patterns": "off",
+    "async-sqlalchemy-patterns": "off",
+    "changelog-generator": "off",
+    "deep-agents-core": "off",
+    "deep-agents-memory": "off",
+    "deep-agents-orchestration": "off",
+    "deep-research": "off",
+    "fastapi-api-patterns": "off",
+    "fastapi-auth-patterns": "off",
+    "framework-selection": "off",
+    "langchain-dependencies": "off",
+    "langchain-fundamentals": "off",
+    "langchain-middleware": "off",
+    "langchain-rag": "off",
+    "langgraph-fundamentals": "off",
+    "langgraph-human-in-the-loop": "off",
+    "langgraph-persistence": "off",
+    "peon-ping-config": "off",
+    "peon-ping-log": "off",
+    "peon-ping-toggle": "off",
+    "peon-ping-use": "off",
+    "project-planner": "off",
+    "pydantic-ai-agents": "off",
+    "pydantic-evals": "off",
+    "python-core": "off",
+    "python-testing-patterns": "off",
+    "senior-architect": "off",
+    "senior-backend": "off",
+    "technical-writer": "off",
+    "uv-package-manager": "off"
   },
   "hooks": {
     "PreToolUse": [
@@ -38,7 +71,7 @@
           },
           {
             "type": "command",
-            "command": "jq -c 'if (.tool_input.file_path // \"\") | test(\"docs/plans/.*\\\\.md$\") then {hookSpecificOutput:{hookEventName:\"PreToolUse\",additionalContext:\"docs/plans/ 계획 파일을 지금 쓰려 한다. 계획 본문 산문은 반드시 한국어로 작성하라(코드·식별자·파일경로·frontmatter 키·enum 값은 영문 유지). 병렬 리서치 서브에이전트 산출물이나 초안이 영어라면 이 파일 내용을 한국어로 다시 작성하라 — 전역 한국어 규칙은 파일 아티팩트에 도달하지 못하므로 이 write 시점에 명시 강제한다.\"}} else empty end'"
+            "command": "jq -c 'if (.tool_input.file_path // \"\") | test(\"(docs/plans|docs/superpowers/specs|docs/solutions)/.*\\\\.md$\") then {hookSpecificOutput:{hookEventName:\"PreToolUse\",additionalContext:\"docs/plans/ 계획 파일, docs/superpowers/specs/ 스펙 파일, docs/solutions/ 학습 기록 중 하나를 지금 쓰려 한다. 본문 산문은 반드시 한국어로 작성하라(코드·식별자·파일경로·frontmatter 키·enum 값은 영문 유지). 서브에이전트 중간 산출물이나 초안이 영어라면 이 파일 내용을 한국어로 다시 작성하라. 전역 한국어 규칙은 파일 아티팩트에 도달하지 못하므로 이 write 시점에 명시 강제한다. 문체는 ~/.claude/rules/korean-style.md 를 따른다: 줄표(—)·붙임표(–) 금지(끊을 때는 마침표, 나열은 가운뎃점 ·), 번역투 금지(~를 통해, ~에 대해, ~에 있어서, ~에 의해, ~되어진다, ~을 가지고 있다, ~하는 것, ~할 필요가 있다, ~라는 점, 결론적으로, 시사하는 바가 크다, ~할 수 있을 것으로 보인다), 연결어미 뒤 쉼표 금지, 문두 접속사 연발과 과도한 볼드·이모지 금지. 코드·경로·플래그의 하이픈과 기술 용어·수치·모델명은 그대로 둔다.\"}} else empty end'"
           }
         ]
       },
@@ -84,16 +117,6 @@
         ]
       },
       {
-        "matcher": "ExitPlanMode",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"PLAN APPROVED via Plannotator. This PostToolUse:ExitPlanMode hook fires only on Approve (annotation/edit requests deny the tool and never reach here, so reaching this point means the plan was approved). MANDATORY -- do NOT implement inline in this planning session: (1) Promote the approved plan into docs/plans/ of the CURRENT project (cwd). Plannotator saved the approved plan under ~/.claude/plans/ as the most recently modified .md file; identify it by matching its content to the plan you just submitted, then copy that file (preserving its frontmatter) into docs/plans/ using its frontmatter intended_final_path as the destination, otherwise the convention docs/plans/YYYY-MM-DD-short-slug.md. Create docs/plans/ if missing, and update intended_final_path so it matches the actual saved path. (2) If this project has no docs/plans/ convention, or you cannot confidently identify the approved plan file, do NOT guess -- skip the copy and just report where the plan was saved. (3) Then tell the user to run /clear and, in a fresh session, run /ce-work <docs/plans path> to execute (Build phase -- score the build task per hybrid-workflow.md section 3 and switch /model and /effort accordingly; build against a finalized plan defaults to /model opus and /effort medium -- sonnet is suspended from routing). Inline implementation in this planning session is forbidden. NOTE: the hybrid ce-plan pipeline no longer has a mandatory plannotator gate (plannotator there is optional/manual); this ExitPlanMode hook path serves general Plan Mode approvals, where promoting the approved plan from ~/.claude/plans/ still applies.\"}}'",
-            "statusMessage": "Context clear reminder"
-          }
-        ]
-      },
-      {
         "matcher": "Skill",
         "hooks": [
           {
@@ -133,7 +156,7 @@
     "plannotator@plannotator": true,
     "code-simplifier@claude-plugins-official": true,
     "commit-commands@claude-plugins-official": true,
-    "compound-engineering@compound-engineering-plugin": true,
+    "compound-engineering@compound-engineering-plugin": false,
     "claude-dashboard@claude-dashboard": true
   },
   "extraKnownMarketplaces": {

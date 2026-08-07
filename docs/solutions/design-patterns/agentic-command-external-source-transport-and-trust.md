@@ -4,8 +4,6 @@ date: 2026-07-06
 category: design-patterns
 module: commands/banner-doc
 problem_type: design_pattern
-component: tooling
-severity: medium
 last_updated: 2026-07-15
 applies_when:
   - "글로벌 슬래시 커맨드가 외부 웹 API·이미지를 조회하는 에이전트형일 때"

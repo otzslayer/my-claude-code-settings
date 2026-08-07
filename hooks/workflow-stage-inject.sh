@@ -1,56 +1,69 @@
 #!/usr/bin/env bash
-# hybrid-workflow.md 7단계 파이프라인 진입 시, Skill 호출 직후 단계별 지침을 주입한다.
+# Superpowers 파이프라인 진입 시, Skill 호출 직후 단계별 지침을 주입한다.
 # matcher:"Skill"로 모든 스킬 호출에 발동하지만, case에 없는 스킬은 clean no-op(출력 없음, exit 0).
-# 모델·effort 전환은 메인 에이전트가 세션 중 스스로 못 하므로,
-# 주입 내용은 "announce + 사용자에게 전환 안내"이며 강제가 아니라 강한 넛지다.
 #
-# 중복 금지 원칙: "복잡도를 채점해 model·effort를 announce하라"는 지시는 CLAUDE.md와
-# hybrid-workflow.md의 §3-§5 quick card가 이미 담고 있으므로 각 case에서 반복하지 않는다.
-# 각 case는 그 단계에서만 성립하는 정보(기본 밴드가 일반값과 다른 경우, 단계 고유 산출물·다음 단계)만 담는다.
-# brainstorming opener는 just-in-time 전달 지점이라 full 문단으로 유지한다.
-# 리뷰어 모델: 선택권은 플러그인 스킬에 있다. ce-doc-review·ce-code-review는 각자의 티어링을
-# 따르게 두고(per-reviewer override 금지), 이 파일은 effort 취급(리뷰어=세션 상속, build=medium)과
-# 세션 모델·effort 전환 금지만 일관되게 강제한다.
-# plannotator: 게이트가 아니다. ce-plan 경로에서는 사용자가 원할 때만 수동 실행하는 선택적 패스이며,
-# 훅은 approved/annotated/dismissed 반환값 시맨틱을 주입하지 않는다(rules/hybrid-workflow.md §1·§10과 정합).
+# 중복 금지 원칙: 각 case는 그 단계에서만 성립하는 정보(단계 고유 산출물·다음 단계·강제 경계)만 담는다.
+# 모델·effort는 사용자가 /model·/effort로 직접 설정하므로 이 파일은 라우팅을 일절 언급하지 않는다.
+#
+# subagent-driven-development case만 예외적으로 스킬 자체의 종료 동선을 가로챈다: SDD는 전체 브랜치
+# 리뷰가 깨끗해지면 스스로 finishing-a-development-branch를 호출하며 끝나므로, 그대로 두면
+# verification-before-completion이 건너뛰어진다. 이 지시는 finishing-a-development-branch case에도
+# 중복 배치한다 -- SDD 시작 시점의 주입은 태스크 N개를 도는 동안 컨텍스트 밖으로 밀려나고, 순서가
+# 실제로 걸리는 것은 ship을 호출하는 순간이기 때문이다(아래 계획 파일 규칙과 같은 이유).
+#
+# 계획 파일 규칙(writing-plans / finishing-a-development-branch 두 case에 중복 배치): 경로는
+# docs/plans이고, 작업 완료 후에도 삭제하지 않는다. 생성 시점과 완료 시점 양쪽에서 말해야
+# 실제로 지켜진다 -- 삭제 유혹은 완료 시점에 생기고, 그때는 writing-plans 주입이 이미 컨텍스트
+# 밖으로 밀려나 있다.
+#
+# capturing-learnings 안내를 finishing-a-development-branch case에 얹은 이유: 회고는 수동 호출
+# 스킬이고 훅이 그것을 실행시킬 수는 없다(이 훅은 Skill 호출 이후에 발동하므로, 부르지 않은 스킬에는
+# 아무 영향도 주지 못한다). 그런데 학습을 남길 마지막 기회가 ship 직후다 -- 그 다음 행동이 보통
+# /clear이고, /clear 뒤에는 무엇이 안 통했는지의 증거가 대화 컨텍스트와 함께 사라진다. 그래서 그
+# 자리에 안내 한 줄만 붙인다. 자동 실행이 아니라 안내인 것은 의도적이다: 매 브랜치마다 문서를 뱉는
+# 회고는 코퍼스를 노이즈로 채운다.
+#
+# brainstorming case는 두지 않는다 -- 옛 case의 payload는 둘이었고 지금은 둘 다 여기 있을 이유가 없다.
+# (1) 95% confidence opener: 폐기됐다. Superpowers brainstorming은 자체 인터뷰 루프(한 번에 한 질문,
+# 체크리스트, 승인 게이트)를 갖고 있어 주입할 고유 정보가 없다. (2) plan 도구 override와 /clear 경계:
+# 전자는 파이프라인이 실제로 writing-plans를 쓰게 되면서 무의미해졌고, 후자는 강제 규칙 자체를
+# 폐기했다 -- /clear 여부는 이제 writing-plans case에서 작업 특성을 보고 사용자에게 제안한다.
+# Superpowers 스킬 트리에는 /clear 언급이 0회이고, brainstorming SKILL.md는 terminal state가
+# writing-plans 호출이라고 못박는다. 그 자리에 세션 단절을 강제하면 스킬 지시와 정면 충돌한다.
 
 input=$(cat)
 # jq json parse (not grep -P / sed regex, not python3): settings.json fires this via a
 # non-interactive `bash script.sh` subshell, where grep resolves to BSD grep (no -P support)
-# and python3 may resolve to a pyenv shim that only exists on an interactive-shell PATH —
+# and python3 may resolve to a pyenv shim that only exists on an interactive-shell PATH --
 # both fail the same way (silent no-op) in that subshell. A regex extraction (grep -P or
 # sed's greedy .*"skill") is also unsafe here: tool_response can itself contain a nested
-# "skill" key (e.g. ce-plan's own tool_response), and a greedy/leftmost-unaware pattern can
-# grab that instead of the real tool_input.skill. jq is a documented hard dependency of this
-# repo (see README.md, and rtk-rewrite.sh's identical `.tool_input.*` pattern) and resolves
-# via the default system PATH with no shell-rc dependency.
+# "skill" key, and a greedy/leftmost-unaware pattern can grab that instead of the real
+# tool_input.skill. jq is a documented hard dependency of this repo (see README.md, and
+# rtk-rewrite.sh's identical `.tool_input.*` pattern) and resolves via the default system
+# PATH with no shell-rc dependency.
 skill=$(printf '%s' "$input" | jq -r '.tool_input.skill // empty' 2>/dev/null)
 
 emit() {
-  # $1: additionalContext 텍스트. 내부에 큰따옴표(") 사용 금지 — JSON이 깨진다.
+  # $1: additionalContext 텍스트. 내부에 큰따옴표(")와 백슬래시(\) 사용 금지 -- JSON이 깨진다.
   printf '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"%s"}}' "$1"
 }
 
 case "$skill" in
-  *brainstorming)
-    emit "BRAINSTORMING STARTED — MANDATORY FIRST TURN: rules/hybrid-workflow.md의 95퍼센트 confidence opener 규칙에 따라, 일반적인 무엇을 만들까요 식 질문 대신 반드시 다음 opener로 첫 turn을 시작하라 → 지금 만들려는 것에 대해 1-2문장으로 설명해 주세요. 저는 95퍼센트 확신이 생길 때까지 질문을 던지겠습니다, 표면적으로 원하는 것이 아니라 진짜로 필요한 것을 짚기 위해서입니다. 가정과 엣지 케이스를 도전하겠습니다. 이후 한 번에 한 질문 원칙으로 95퍼센트 확신까지 반복하고, 그 미만에서 설계 단계로 넘어가지 말 것. 제품성 작업(새 기능·엔드포인트·동작 변경)이면 skills/hybrid-workflow-reference/references/brainstorming.md를 읽고 그 5렌즈(evidence·specificity·counterfactual·attachment·durability)의 정의대로 질문을 도출하라 — 이름만으로 짐작하지 말 것. 비제품 작업(리팩터·문서·툴링)이면 그 파일을 열지 말고 넘어가라. 브레인스토밍 종료 시 superpowers가 writing-plans 호출을 안내해도 따르지 말고 /clear 후 /ce-plan으로 진행하라(이 파이프라인은 writing-plans 미사용). ce-plan 본작업은 non-plan-mode에서 호출하라(Plan Mode 진입 불필요 — Plan Mode는 ce-plan의 Write·autofix를 차단한다)." ;;
-  *ce-plan)
-    emit "Phase 2 PLAN: non-plan-mode에서 실행하라(Plan Mode가 ce-plan의 계획 파일 Write와 ce-doc-review autofix를 차단한다). 계획 수립은 개방형 추론(base 5) 이상이라 통상 opus·high 이상 밴드다. 병렬 리서치+CodeGraph 패턴 수집, docs/solutions/ 3개 이상이면 ce-learnings-researcher 조회. 계획 본문 산문은 반드시 한국어로 Write하라(코드·식별자·파일경로·frontmatter 키·enum 값은 영문 유지) — 서브에이전트 중간 산출물이 영어여도 최종 docs/plans/ 파일은 한국어여야 한다. 초안 Write → 자동 ce-doc-review(리뷰어 model은 해당 스킬의 자체 티어링) → 인라인 구현 금지·중단 후 /clear → 새 세션 /ce-work(opus·medium). plannotator는 게이트가 아니다 — 호출하지 말고, 사용자가 원하면 직접 plannotator annotate docs/plans/<파일>을 수동 실행한다." ;;
-  *ce-doc-review)
-    emit "DOC REVIEW(ce-plan 내부 5.3.8): 리뷰어 model은 ce-doc-review SKILL.md의 자체 티어링을 그대로 따르고 per-reviewer override를 걸지 말 것. effort는 dispatch로 지정 불가하므로 세션에서 상속되며, 세션 모델·effort는 전환 금지(캐시 재로딩 비용). 리뷰·autofix 완료 후 인라인 구현 금지 — /clear → 새 세션 /ce-work(opus·medium). plannotator는 게이트가 아니므로 승인을 기다리지 말 것." ;;
+  *writing-plans)
+    emit "PLAN 단계: 계획 파일은 docs/plans/YYYY-MM-DD-<feature>.md에 Write하라(docs/superpowers/plans가 아니다 — 거기에는 스펙만 산다). 본문 산문은 반드시 한국어로 작성한다(코드·식별자·파일경로·frontmatter 키·enum 값은 영문 유지). 계획 파일은 영구 보존물이다 — 작업이 끝나도 절대 삭제하지 말 것. 계획 파일 Write 후 이 세션에서 직접 코드를 쓰지 말 것 — 구현은 subagent-driven-development가 신선한 서브에이전트로 한다. 실행을 이 세션에서 바로 시작할지 /clear 후 새 세션에서 시작할지는 작업 특성을 보고 한쪽을 권하고 근거를 한 줄로 밝힌 뒤 사용자 결정을 받아라. /clear를 권하는 쪽: 태스크가 많거나(대략 5개 이상) 계획 과정에서 폐기된 선택지·중간 검색 결과가 많이 쌓인 경우 — SDD 코디네이터가 그것을 전부 물려받는다. 이어가길 권하는 쪽: 계획이 작고 컨텍스트가 얇은 경우." ;;
+  *subagent-driven-development)
+    emit "BUILD 단계(SDD): 태스크마다 구현 서브에이전트 → 태스크 리뷰(spec 준수 + 코드 품질), 마지막에 전체 브랜치 리뷰. 종료 단계 가로채기 — 전체 브랜치 리뷰가 깨끗해져도 finishing-a-development-branch로 바로 가지 말 것. 반드시 verification-before-completion을 먼저 거친 뒤 finishing-a-development-branch로 가라." ;;
   *test-driven-development)
-    emit "Phase 2-prime BUILD(TDD): RED→GREEN→REFACTOR, 트리비얼 면제." ;;
-  *ce-work)
-    emit "Phase 2-prime BUILD(ce-work): 확정 plan 실행은 base 1이라 기본 opus·medium(build carve-out) — 파일 수로 격상하지 말 것. CodeGraph 심볼 편집 우선. 완료(구현+테스트) 후 인라인 종료 금지 — 반드시 다음 단계 /ce-code-review를 사용자에게 안내하라(ce-work 내부 Tier1 review와 별개로 항상 수행)." ;;
-  *ce-code-review)
-    emit "Phase 2-prime REVIEW: 리뷰어 model은 ce-code-review 스킬의 자체 티어링을 그대로 따르고 per-reviewer override를 걸지 말 것. effort는 dispatch로 지정 불가하므로 세션에서 상속되며, 세션 모델·effort는 전환 금지(캐시 재로딩 비용). 리뷰·수정 완료 후 다음 단계 verification-before-completion으로 진행." ;;
+    emit "BUILD(TDD): RED→GREEN→REFACTOR, 트리비얼 면제." ;;
+  *requesting-code-review)
+    emit "CODE REVIEW: 리뷰·수정 완료 후 다음 단계 verification-before-completion으로 진행. 계획 실행 중이라면 SDD가 이미 내부에서 같은 리뷰어를 dispatch하므로 별도 단계로 중복 호출하지 말 것." ;;
   *verification-before-completion)
-    emit "Phase 3 VERIFY: uv run ty check·ruff check --fix·ruff format·pytest -v를 실제 실행하고 그 출력으로 확인한 뒤에만 완료를 선언하라(증거 우선). 통과 후 다음 단계 ce-compound(mode:headless)로 진행." ;;
-  *ce-compound)
-    emit "Phase 3 LEARN: mode:headless, docs/solutions/만 생성(콘텐츠 한국어, frontmatter 키·enum 영문). Tier 0/1 자동 반영 금지. 학습 누적 후 다음 단계 finishing-a-development-branch(커밋·푸시·PR)로 진행." ;;
+    emit "VERIFY: uv run ty check·ruff check --fix·ruff format·pytest -v를 실제 실행하고 그 출력으로 확인한 뒤에만 완료를 선언하라(증거 우선). 통과 후 다음 단계 finishing-a-development-branch(커밋·푸시·PR)로 진행." ;;
   *finishing-a-development-branch)
-    emit "Phase 3 SHIP: 커밋 메시지는 한국어 포맷(type 콜론 한국어 설명, WHY·주요 변경 불릿)." ;;
+    emit "SHIP: verification-before-completion을 아직 거치지 않았다면 먼저 수행하라 — 여기가 그것을 건너뛰기 가장 쉬운 지점이다. 커밋 메시지는 한국어 포맷(type 콜론 한국어 설명, WHY·주요 변경 불릿). docs/plans/의 계획 파일은 작업이 끝나도 삭제하지 말 것 — 영구 보존물이며, 정리 대상으로 오해하지 말 것. ship을 마친 뒤, 남길 만한 학습이 있으면 capturing-learnings를 이 세션에서 돌릴 것을 사용자에게 한 줄로 안내하라(자동 실행 금지) — /clear 뒤에는 무엇이 안 통했는지의 증거가 사라진다." ;;
+  *capturing-learnings)
+    emit "학습 기록: 게이트 두 개를 순서대로 통과해야 파일을 쓴다. (1) 근거 확보 — 세션 맥락이 있으면 세션 모드, 없지만 사용자가 주제나 범위를 지정했으면 브랜치 증거 모드, 둘 다 아니면 파일을 쓰지 말고 중단·안내. (2) 학습 판정 — 비자명·재발·트리 밖 지식 셋을 모두 만족해야 한다. 탈락은 정상 종료이며 학습 없음과 그 근거 한 줄만 출력한다. 산출물은 docs/solutions/<카테고리>/<슬러그>.md 하나이고 본문 산문은 한국어다. 코드 동작을 주장할 때는 트리에서 정의를 읽고 file:line을 인용하라. 이 스킬은 파이프라인의 끝이므로 다른 스킬을 호출하지 않는다." ;;
   *systematic-debugging)
-    emit "DEBUG: 근본원인 디버깅은 개방형 추론(base 5)이라 통상 opus·high 이상 밴드다. 수정 전 재현 테스트 먼저 작성, 근본 원인 추적. 같은 접근 3회 실패 시 중단·대안." ;;
+    emit "DEBUG: 수정 전 재현 테스트 먼저 작성, 근본 원인 추적. 같은 접근 3회 실패 시 중단·대안." ;;
 esac
 exit 0
