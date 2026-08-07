@@ -791,7 +791,7 @@ fi
 echo "수동으로 완료해야 하는 단계:"
 echo
 echo "  1. Claude Code 재시작"
-echo "     -> 플러그인 자동 설치 (compound-engineering, superpowers 등)"
+echo "     -> 플러그인 자동 설치 (superpowers, security-guidance 등)"
 echo
 echo "  2. 나머지 MCP 서버 수동 설정"
 echo "     -> computer-use, sequential-thinking 등 (codegraph는 자동 등록됨)"

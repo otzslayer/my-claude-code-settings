@@ -21,7 +21,7 @@ The `superpowers` SessionStart hook already injects `using-superpowers` on every
 | Trigger | Skill |
 |---------|-------|
 | New feature / component / behavior change | `superpowers:brainstorming` → `docs/superpowers/specs/` |
-| Multi-step implementation task | `superpowers:writing-plans` → `docs/plans/`, then `/clear` |
+| Multi-step implementation task | `superpowers:writing-plans` → `docs/plans/` |
 | Plan execution | `superpowers:subagent-driven-development` |
 | Bug or failing test | `superpowers:systematic-debugging` |
 | Implementation work | `superpowers:test-driven-development` (trivial-case exemption) |
@@ -88,9 +88,11 @@ Run the plan stage (`superpowers:writing-plans`) before starting when **any** of
 
 Run the test suite once after the change even under the exemption. If the exemption call is ambiguous, confirm via `AskUserQuestion`.
 
-**Plan Persistence (MANDATORY)**: `superpowers:writing-plans` → `docs/plans/YYYY-MM-DD-<feature>.md` → `/clear` → fresh session, `superpowers:subagent-driven-development` with the plan file as the only input. **NEVER implement inline in the same planning session.**
+**Plan Persistence (MANDATORY)**: `superpowers:writing-plans` → `docs/plans/YYYY-MM-DD-<feature>.md` → `superpowers:subagent-driven-development` with the plan file as the only input. **NEVER write implementation code inline in the planning session** — SDD is what implements, and it does so through fresh subagents.
 
-**The plan file is permanent — NEVER delete it, not even after the work ships.** It is the record of why the change looks the way it does, and the only artifact that survives the `/clear` between planning and building. In a project repo, keep `docs/plans/` **git-tracked** so it survives `git clean` and machine moves. **`~/.claude` is the single exception**: it is a public repo, so `.gitignore` keeps `docs/plans/` untracked there — the no-delete rule still holds, the file just lives in the working tree only.
+**Whether to `/clear` between planning and building is a judgment call you propose, not a fixed rule.** Superpowers never mandates `/clear` anywhere — its context isolation comes from subagents, not from clearing sessions. After writing the plan, recommend one side and give the reason in a line: `/clear` first when the plan has many tasks (roughly 5+) or the planning session accumulated a lot of discarded options and intermediate search results, since the SDD coordinator inherits all of it; stay in the same session when the plan is small and the context is thin. The user decides.
+
+**The plan file is permanent — NEVER delete it, not even after the work ships.** It is the record of why the change looks the way it does, and the only artifact that survives the handoff from planning to building. In a project repo, keep `docs/plans/` **git-tracked** so it survives `git clean` and machine moves. **`~/.claude` is the single exception**: it is a public repo, so `.gitignore` keeps `docs/plans/` untracked there — the no-delete rule still holds, the file just lives in the working tree only.
 
 `superpowers:writing-plans` defaults to `docs/superpowers/plans/`; **override it to `docs/plans/`**. Only specs from `superpowers:brainstorming` live under `docs/superpowers/`.
 

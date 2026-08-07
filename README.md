@@ -159,9 +159,8 @@ Claude Code가 `settings.json`의 `enabledPlugins`와 `extraKnownMarketplaces`�
 
 ```
 Phase 1  brainstorming        → docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md
-         /clear
 Phase 2  writing-plans        → docs/plans/YYYY-MM-DD-<feature>.md
-         /clear   ← 강제. 계획 세션에서 인라인 구현 금지
+           └ /clear 여부는 여기서 에이전트가 제안하고 사용자가 결정한다 (아래 참고)
 Phase 3  subagent-driven-development
            ├ 태스크마다: 구현 서브에이전트 → 태스크 리뷰(spec 준수 + 코드 품질)
            └ 마지막: 전체 브랜치 리뷰
@@ -175,9 +174,11 @@ Phase 3  subagent-driven-development
 
 **SDD의 종료 단계는 훅이 가로챈다.** SDD는 전체 브랜치 리뷰가 깨끗해지면 스스로 `finishing-a-development-branch`를 호출하며 끝나는데, 그대로 두면 `verification-before-completion`이 건너뛰어진다. `hooks/workflow-stage-inject.sh`의 `*subagent-driven-development` case가 이 지점에서 순서를 바로잡는다. 또 SDD가 최종 리뷰에 `requesting-code-review`의 리뷰어를 내부적으로 dispatch하므로, `requesting-code-review`는 파이프라인의 별도 단계가 아니라 **계획 실행과 무관한 단독 리뷰 요청용**으로만 남는다.
 
-**`/clear` 경계는 강제다.** 계획 과정에서 쌓인 탐색 컨텍스트(버려진 선택지, 중간 검색 결과, 폐기된 가설)를 구현 세션으로 끌고 가지 않기 위해서다. 구현 세션이 계획 파일만을 단일 입력으로 삼게 되므로 계획의 품질 결함도 드러난다. SDD의 description에 있는 "in the current session"은 SDD **코디네이터**가 별도 세션을 요구하지 않는다는 뜻이고, 여기서 말하는 경계는 **계획 세션과 구현 세션 사이**라 서로 충돌하지 않는다.
+**`/clear` 경계는 강제가 아니라 제안이다.** Superpowers 스킬 트리 전체에 `/clear` 언급이 **0회**다 — 이 플러그인의 컨텍스트 격리 수단은 세션 비우기가 아니라 서브에이전트다. `brainstorming/SKILL.md`는 terminal state가 `writing-plans` 호출이라고 못박고("다른 스킬은 호출하지 마라"), `writing-plans/SKILL.md`의 Execution Handoff는 계획 저장 **직후 같은 세션에서** SDD를 제안한다. 그래서 이전에 두 곳(Phase 1 뒤·Phase 2 뒤)에 걸어 뒀던 강제 `/clear`를 걷어냈다.
 
-**계획 파일은 영구 보존물이다.** 경로는 `docs/plans/`이고(`writing-plans` 기본값인 `docs/superpowers/plans/`를 override한다 — `docs/superpowers/`에는 스펙만 산다), **작업이 끝나도 삭제하지 않는다.** `/clear` 경계를 넘어 살아남는 유일한 산출물이자 변경의 근거 기록이기 때문이다. 프로젝트 저장소에서는 `docs/plans/`를 git 추적 대상으로 둬 `git clean`과 머신 이동에서 보호한다. **이 저장소는 공개용이라 유일한 예외**로 무시를 유지하며, 삭제 금지 규칙만 그대로 적용된다. 이 규칙은 `CLAUDE.md`(Plan Persistence) · `rules/boundaries.md`(Never) · 훅의 `*writing-plans`·`*finishing-a-development-branch` case 세 곳에 심어져 있다.
+대신 **계획 작성이 끝난 시점에 에이전트가 작업 특성을 보고 한쪽을 권하고 근거를 한 줄로 밝힌다**(훅의 `*writing-plans` case가 그 지시를 주입한다). `/clear`를 권하는 쪽: 태스크가 많거나(대략 5개 이상) 계획 과정에서 폐기된 선택지·중간 검색 결과가 많이 쌓인 경우 — SDD 코디네이터가 그것을 전부 물려받기 때문이다. 이어가길 권하는 쪽: 계획이 작고 컨텍스트가 얇은 경우. 결정은 사용자가 한다. 어느 쪽이든 **계획 세션에서 직접 코드를 쓰는 것은 금지**다 — 구현은 SDD가 신선한 서브에이전트로 한다.
+
+**계획 파일은 영구 보존물이다.** 경로는 `docs/plans/`이고(`writing-plans` 기본값인 `docs/superpowers/plans/`를 override한다 — `docs/superpowers/`에는 스펙만 산다), **작업이 끝나도 삭제하지 않는다.** 계획 세션과 구현 세션 사이를 건너 살아남는 유일한 산출물이자 변경의 근거 기록이기 때문이다. 프로젝트 저장소에서는 `docs/plans/`를 git 추적 대상으로 둬 `git clean`과 머신 이동에서 보호한다. **이 저장소는 공개용이라 유일한 예외**로 무시를 유지하며, 삭제 금지 규칙만 그대로 적용된다. 이 규칙은 `CLAUDE.md`(Plan Persistence) · `rules/boundaries.md`(Never) · 훅의 `*writing-plans`·`*finishing-a-development-branch` case 세 곳에 심어져 있다.
 
 ### 모델 · effort
 
