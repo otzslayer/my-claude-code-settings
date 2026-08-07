@@ -22,7 +22,6 @@
   "skillOverrides": {
     "async-python-patterns": "off",
     "async-sqlalchemy-patterns": "off",
-    "ce-plan": "off",
     "changelog-generator": "off",
     "deep-agents-core": "off",
     "deep-agents-memory": "off",
