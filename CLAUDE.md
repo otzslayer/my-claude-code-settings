@@ -28,6 +28,7 @@ The `superpowers` SessionStart hook already injects `using-superpowers` on every
 | Code review (standalone request, outside plan execution) | `superpowers:requesting-code-review` |
 | Before claiming task complete | `superpowers:verification-before-completion` |
 | Commit · push · PR | `superpowers:finishing-a-development-branch` |
+| Recording a learning after work ships | `capturing-learnings` → `docs/solutions/` |
 | Writing/editing Python (`.py`) | `python-coding-style` |
 | New Python project / directory layout | `python-architecture` |
 

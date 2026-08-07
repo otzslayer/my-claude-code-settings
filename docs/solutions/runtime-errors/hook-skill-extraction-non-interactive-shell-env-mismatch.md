@@ -1,22 +1,15 @@
 ---
 title: 훅 스크립트의 skill 추출 로직이 비대화형 서브셸 환경 불일치로 세 번 연쇄 실패한 사례
 date: 2026-07-04
-category: docs/solutions/runtime-errors
+category: runtime-errors
 module: hooks/workflow-stage-inject.sh
 problem_type: runtime_error
-component: development_workflow
 symptoms:
   - "훅이 정상 종료(exit 0)되지만 어떤 skill 호출에도 additionalContext를 주입하지 않음 — 매 실행마다 조용히 no-op됨"
   - "skill 변수가 항상 빈 문자열이라 case문의 모든 분기가 매칭되지 않음"
   - "stdin JSON의 tool_response 필드가 중첩된 skill 키를 포함할 때(예를 들어 ce-plan의 tool_response) 엉뚱한 skill의 guidance가 주입됨"
   - "인터랙티브 셸에서 which <tool>로 정상 동작을 확인한 도구(예: python3)가 실제 훅의 비대화형 서브셸에서는 resolve되지 않거나 다른 바이너리로 resolve될 수 있음"
   - "모든 실패 단계에서 에러나 stderr 출력이 전혀 없어 다음 조사 전까지 발견되지 않음"
-root_cause: config_error
-resolution_type: code_fix
-severity: high
-related_components:
-  - settings.json
-  - hooks/rtk-rewrite.sh
 tags: [non-interactive-shell, subshell-path-resolution, pyenv-shim, bsd-vs-gnu-grep, json-parsing-safety, jq, claude-code-hooks, environment-verification]
 ---
 

@@ -110,7 +110,7 @@ claude
 
 Claude Code가 `settings.json`의 `enabledPlugins`와 `extraKnownMarketplaces`를 읽어 플러그인을 자동 설치한다. 플러그인 캐시(`plugins/cache/`)가 생성된 뒤 statusLine이 점등된다.
 
-> **참고**: `skills/`는 원칙적으로 추적하지 않는다(손-작성 스킬 3종 — `fastapi-project-structure` · `python-architecture` · `python-coding-style` — 만 예외). 플러그인 스킬은 Claude Code가 자동 설치하고, npm/CLI 스킬(slides-grab*, graphify)은 위 2단계에서 직접 설치해야 한다.
+> **참고**: `skills/`는 원칙적으로 추적하지 않는다(손-작성 스킬 4종 — `capturing-learnings` · `fastapi-project-structure` · `python-architecture` · `python-coding-style` — 만 예외). 플러그인 스킬은 Claude Code가 자동 설치하고, npm/CLI 스킬(slides-grab*, graphify)은 위 2단계에서 직접 설치해야 한다.
 
 ---
 
@@ -125,6 +125,7 @@ Claude Code가 `settings.json`의 `enabledPlugins`와 `extraKnownMarketplaces`�
 | `CLAUDE.md` | 메인 개발 가이드라인 |
 | `settings.json` | 포터블화된 플러그인·훅 설정 |
 | `rules/` | 행동 규칙 파일 4종 (boundaries · git-workflow · karpathy-principles · security) |
+| `skills/capturing-learnings/` | 회고 스킬 (`SKILL.md` 단일 파일). ce-compound 비활성화로 비어 있던 학습 누적 단계를 대체한다. `docs/solutions/`에 학습 하나를 쓰거나, 판정에서 탈락하면 아무것도 쓰지 않는다 |
 | `skills/fastapi-project-structure/` | FastAPI 스캐폴딩 스킬 (템플릿·스크립트·예제·evals). CLAUDE.md 스킬 표에서 직접 호출하는 손-작성 스킬 — 재설치 경로가 없다. `SKILL.md.bak`은 백업 생성물이라 제외 |
 | `skills/python-architecture/` | Python 레이어드 아키텍처 스킬 (`SKILL.md` 단일 파일). 위와 같은 이유로 추적 |
 | `skills/python-coding-style/` | Python 스타일 규칙 (`SKILL.md` 단일 파일). **ruff 설정의 원본** — `fastapi-project-structure`의 `pyproject-template.toml`이 이걸 인스턴스화하므로 둘은 같이 움직여야 한다 |
@@ -137,7 +138,7 @@ Claude Code가 `settings.json`의 `enabledPlugins`와 `extraKnownMarketplaces`�
 ### 추적하지 않는 것 (기본 무시)
 
 - `plugins/` — Claude Code가 자동 관리, 버전 핀 불필요
-- `skills/` — 플러그인·npm이 재설치 가능. 커스텀 수정은 업스트림 회귀 또는 별도 보존. **예외**: `fastapi-project-structure/` · `python-architecture/` · `python-coding-style/`는 `.gitignore`에서 명시 opt-in (아래 "스킬 복원 안내")
+- `skills/` — 플러그인·npm이 재설치 가능. 커스텀 수정은 업스트림 회귀 또는 별도 보존. **예외**: `capturing-learnings/` · `fastapi-project-structure/` · `python-architecture/` · `python-coding-style/`는 `.gitignore`에서 명시 opt-in (아래 "스킬 복원 안내")
 - `docs/plans/` — **이 저장소만의 예외**. 계획 파일은 삭제 금지 원칙상 프로젝트 저장소에서는 git 추적 대상이지만(`git clean`·머신 이동에서 살아남아야 한다), 여기는 공개 저장소라 무시를 유지한다. 삭제 금지 규칙 자체는 그대로 적용되며 워킹트리에만 존재한다
 - `memory/` — 머신별 세션 메모리, 민감 정보 포함 가능
 - `node_modules/`, `security/`, `daemon/`, `sessions/` 등 런타임 산출물
@@ -148,7 +149,7 @@ Claude Code가 `settings.json`의 `enabledPlugins`와 `extraKnownMarketplaces`�
 - **플러그인 스킬** (superpowers 단독 — compound-engineering은 `enabledPlugins`에서 비활성): Claude Code 재실행 시 자동 복원
 - **npm 스킬** (slides-grab, slides-grab-design, slides-grab-export, slides-grab-plan): `npm install -g slides-grab`
 - **CLI 스킬** (graphify): `uv tool install graphifyy`. CLI·`graphify-install-check.sh` 훅(CLAUDE.md의 graphify 섹션 자동 주입)·스킬이 한 세트로 움직인다
-- **추적하는 손-작성 스킬** (`fastapi-project-structure`, `python-architecture`, `python-coding-style`): clone만으로 복원됨. CLAUDE.md 스킬 표(Python 작성 / 새 Python·FastAPI 프로젝트 레이아웃)에서 호출하는 손-콘텐츠라 재설치 경로가 없다. **`python-coding-style`이 ruff 설정의 원본이고 `fastapi-project-structure/templates/pyproject-template.toml`이 그 인스턴스**이므로, 한쪽을 고치면 다른 쪽도 같이 고친다
+- **추적하는 손-작성 스킬** (`capturing-learnings`, `fastapi-project-structure`, `python-architecture`, `python-coding-style`): clone만으로 복원됨. CLAUDE.md 스킬 표(작업 완료 후 학습 기록 / Python 작성 / 새 Python·FastAPI 프로젝트 레이아웃)에서 호출하는 손-콘텐츠라 재설치 경로가 없다. **`python-coding-style`이 ruff 설정의 원본이고 `fastapi-project-structure/templates/pyproject-template.toml`이 그 인스턴스**이므로, 한쪽을 고치면 다른 쪽도 같이 고친다
 - **순수 bespoke 스킬** (peon-ping-*, plannotator-annotate 등): 별도 보존 필요 (현재 미추적)
 
 ---

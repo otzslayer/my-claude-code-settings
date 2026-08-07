@@ -16,6 +16,13 @@
 # 실제로 지켜진다 -- 삭제 유혹은 완료 시점에 생기고, 그때는 writing-plans 주입이 이미 컨텍스트
 # 밖으로 밀려나 있다.
 #
+# capturing-learnings 안내를 finishing-a-development-branch case에 얹은 이유: 회고는 수동 호출
+# 스킬이고 훅이 그것을 실행시킬 수는 없다(이 훅은 Skill 호출 이후에 발동하므로, 부르지 않은 스킬에는
+# 아무 영향도 주지 못한다). 그런데 학습을 남길 마지막 기회가 ship 직후다 -- 그 다음 행동이 보통
+# /clear이고, /clear 뒤에는 무엇이 안 통했는지의 증거가 대화 컨텍스트와 함께 사라진다. 그래서 그
+# 자리에 안내 한 줄만 붙인다. 자동 실행이 아니라 안내인 것은 의도적이다: 매 브랜치마다 문서를 뱉는
+# 회고는 코퍼스를 노이즈로 채운다.
+#
 # brainstorming case는 두지 않는다 -- 옛 case의 payload는 둘이었고 지금은 둘 다 여기 있을 이유가 없다.
 # (1) 95% confidence opener: 폐기됐다. Superpowers brainstorming은 자체 인터뷰 루프(한 번에 한 질문,
 # 체크리스트, 승인 게이트)를 갖고 있어 주입할 고유 정보가 없다. (2) plan 도구 override와 /clear 경계:
@@ -53,7 +60,9 @@ case "$skill" in
   *verification-before-completion)
     emit "VERIFY: uv run ty check·ruff check --fix·ruff format·pytest -v를 실제 실행하고 그 출력으로 확인한 뒤에만 완료를 선언하라(증거 우선). 통과 후 다음 단계 finishing-a-development-branch(커밋·푸시·PR)로 진행." ;;
   *finishing-a-development-branch)
-    emit "SHIP: verification-before-completion을 아직 거치지 않았다면 먼저 수행하라 — 여기가 그것을 건너뛰기 가장 쉬운 지점이다. 커밋 메시지는 한국어 포맷(type 콜론 한국어 설명, WHY·주요 변경 불릿). docs/plans/의 계획 파일은 작업이 끝나도 삭제하지 말 것 — 영구 보존물이며, 정리 대상으로 오해하지 말 것." ;;
+    emit "SHIP: verification-before-completion을 아직 거치지 않았다면 먼저 수행하라 — 여기가 그것을 건너뛰기 가장 쉬운 지점이다. 커밋 메시지는 한국어 포맷(type 콜론 한국어 설명, WHY·주요 변경 불릿). docs/plans/의 계획 파일은 작업이 끝나도 삭제하지 말 것 — 영구 보존물이며, 정리 대상으로 오해하지 말 것. ship을 마친 뒤, 남길 만한 학습이 있으면 capturing-learnings를 이 세션에서 돌릴 것을 사용자에게 한 줄로 안내하라(자동 실행 금지) — /clear 뒤에는 무엇이 안 통했는지의 증거가 사라진다." ;;
+  *capturing-learnings)
+    emit "학습 기록: 게이트 두 개를 순서대로 통과해야 파일을 쓴다. (1) 근거 확보 — 세션 맥락이 있으면 세션 모드, 없지만 사용자가 주제나 범위를 지정했으면 브랜치 증거 모드, 둘 다 아니면 파일을 쓰지 말고 중단·안내. (2) 학습 판정 — 비자명·재발·트리 밖 지식 셋을 모두 만족해야 한다. 탈락은 정상 종료이며 학습 없음과 그 근거 한 줄만 출력한다. 산출물은 docs/solutions/<카테고리>/<슬러그>.md 하나이고 본문 산문은 한국어다. 코드 동작을 주장할 때는 트리에서 정의를 읽고 file:line을 인용하라. 이 스킬은 파이프라인의 끝이므로 다른 스킬을 호출하지 않는다." ;;
   *systematic-debugging)
     emit "DEBUG: 수정 전 재현 테스트 먼저 작성, 근본 원인 추적. 같은 접근 3회 실패 시 중단·대안." ;;
 esac
