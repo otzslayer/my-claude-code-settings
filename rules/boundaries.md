@@ -8,6 +8,7 @@ specific to this setup. Hard prohibitions live in the Never tier below.
 ### Toolchain
 
 - Type check with `uv run ty check`. Fall back to `mypy` only when the project pins `[tool.mypy]` in `pyproject.toml` and has no `[tool.ty]`.
+- Lint and format with `ruff check` and `ruff format` before declaring Python work done.
 - Use `logging`, never `print`.
 
 ### Surgical Changes
@@ -17,16 +18,15 @@ specific to this setup. Hard prohibitions live in the Never tier below.
 
 ### Tool Usage (token-optimized)
 
-- **Read code · relationships · architecture**: CodeGraph MCP `codegraph_explore` — the single tool on the MCP surface, and the first call for any of these. ONE call returns the verbatim line-numbered source grouped by file (Read-equivalent — do NOT re-Read what it showed), the call paths among those symbols, and an always-on **blast radius** section. Query takes an NL question or a bag of symbol/file names. The other tools (`node`·`search`·`callers`·`callees`·`impact`·`files`) are unlisted by default because `explore` already folds their answers in; reach for their CLI form (`codegraph node/query/callers/impact/...`) only when you need one in isolation. `codegraph status` (CLI) is the exception — index health is the one thing `explore` does not report.
-- **Before refactoring**: `codegraph_explore` on the symbols you are about to change. Its blast-radius section is always on, so the primary call already tells you who depends on them and which lack covering tests. No separate impact call needed.
+- **CodeGraph**: usage is in the MCP server's own `initialize` instructions — don't restate it here. Two things it omits: `codegraph status` (CLI) is the only way to see index health, and the unlisted sub-tools (`node`·`search`·`callers`·`callees`·`impact`·`files`) are reachable in CLI form when you need one in isolation.
 - **Search / lookup**: there is **no `Grep`/`Glob` tool** on native macOS/Linux builds — Claude Code 2.1.117 replaced both with embedded `bfs`/`ugrep` reachable through the Bash tool (Windows and npm-installed builds still have them). Search from Bash, for text/regex (CodeGraph doesn't do strings) and for non-code files or paths CodeGraph doesn't index:
   - `grep` and `find` are the default and need no prefix — the shell snapshot shadows them onto **embedded ugrep / bfs**, gitignore-aware (`--ignore-files`) with VCS dirs excluded. RTK is configured NOT to rewrite them (`exclude_commands` in rtk's `config.toml`), because `rtk grep` runs BSD `grep` in a subprocess and would lose that gitignore awareness — a results change, not just a formatting one.
   - `rg` for wide sweeps where output volume is the concern: RTK still rewrites it to `rtk rg`, which compresses while staying gitignore-aware. **Don't type the `rtk` prefix yourself.**
   - Explicit `ugrep` (alias `ug`) / `bfs` only for what the shadow can't do: the shadowed `grep` falls back to plain `grep` on `-z`/`-Z`, and the brew build adds lzma·lz4 codecs the embedded one lacks. So `ugrep -z` for archive search, plus fuzzy and boolean patterns.
   - Output too large either way: pipe through `ugrep ... | rtk pipe -f grep` or `bfs ... | rtk pipe -f find`. Caps at ~10 lines per file with a visible `+N` marker — lossy but not silent.
   - **Always quote glob arguments.** The Bash tool runs zsh, which expands an unquoted `*` before the command ever sees it, and the failure mode differs by whether the pattern happens to match in the cwd: `grep --include=*.ts` dies outright with `no matches found`, while `find . -name *.md` run where `*.md` DOES match silently searches for the wrong names and returns nothing. Write `--include='*.ts'` / `-name '*.md'`, or use ugrep's own file-type flag (`grep -O ts <pattern> .`).
-- **Edit**: `Edit`/`Write` are the main path (CodeGraph is read-only); run `codegraph_explore` on the target symbols BEFORE editing, not during. Index auto-refreshes ~1s.
-- **Read tool**: non-code files (`.md`/`.json`/`.toml`/`.yaml`) or areas `codegraph_explore` misses. In `~/.claude` itself that is nearly everything — the index holds ~6 files (this repo is markdown and shell), so here `grep` is the tool and CodeGraph has nothing to say.
+- **Edit**: `Edit`/`Write` are the main path — CodeGraph is read-only.
+- **Read tool**: non-code files (`.md`/`.json`/`.toml`/`.yaml`) or areas `codegraph_explore` misses.
 - **Never** `cat`/`head`/`tail`/`sed`/`awk`.
 - **Subagent dispatch**: the model is fixed at opus. `Agent` tool: `model` only, no `effort` param — effort inherits from the dispatching session. `Workflow` `agent()`: `model` + `effort` both settable per-agent.
 
