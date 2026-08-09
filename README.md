@@ -148,7 +148,7 @@ Claude Code가 `settings.json`의 `enabledPlugins`와 `extraKnownMarketplaces`�
 
 - **플러그인 스킬** (superpowers 단독 — compound-engineering은 `enabledPlugins`에서 비활성): Claude Code 재실행 시 자동 복원
 - **npm 스킬** (slides-grab, slides-grab-design, slides-grab-export, slides-grab-plan): `npm install -g slides-grab`
-- **CLI 스킬** (graphify): `uv tool install graphifyy`. CLI·`graphify-install-check.sh` 훅(CLAUDE.md의 graphify 섹션 자동 주입)·스킬이 한 세트로 움직인다
+- **CLI 스킬** (graphify): `uv tool install graphifyy` 뒤에 `graphify install --platform claude`로 스킬을 배치한다. CLI·`graphify-install-check.sh` 훅(프로젝트에 graphify 훅이 없으면 설치 여부를 묻는다)·스킬이 한 세트로 움직인다. 프로젝트별 설정은 아래 "프로젝트별 설정: CodeGraph · graphify" 참조
 - **추적하는 손-작성 스킬** (`capturing-learnings`, `fastapi-project-structure`, `python-architecture`, `python-coding-style`): clone만으로 복원됨. CLAUDE.md 스킬 표(작업 완료 후 학습 기록 / Python 작성 / 새 Python·FastAPI 프로젝트 레이아웃)에서 호출하는 손-콘텐츠라 재설치 경로가 없다. **`python-coding-style`이 ruff 설정의 원본이고 `fastapi-project-structure/templates/pyproject-template.toml`이 그 인스턴스**이므로, 한쪽을 고치면 다른 쪽도 같이 고친다
 - **순수 bespoke 스킬** (peon-ping-*, plannotator-annotate 등): 별도 보존 필요 (현재 미추적)
 
@@ -213,7 +213,7 @@ Phase 3  subagent-driven-development
 
 MCP 서버 등록은 `~/.claude.json`에 있고 git으로 추적하지 않는다(머신 로컬). 활성:
 
-- `codegraph` — symbol-level code intelligence (`.codegraph/` 인덱스). `install.sh`가 `~/.claude.json`에 자동 등록
+- `codegraph` — symbol-level code intelligence (`.codegraph/` 인덱스). `install.sh`가 `~/.claude.json`에 전역 자동 등록. 인덱스는 프로젝트마다 `codegraph init`이 따로 필요하다 (아래 "프로젝트별 설정: CodeGraph · graphify")
 - `arxiv` — 논문 검색·다운로드 (수동 등록, `read-arxiv-paper` 스킬이 사용)
 
 **비활성** — `disabledMcpServers`로 내렸다. **이 설정은 프로젝트별**이라 다른 프로젝트에서도 끄려면 거기서 `/mcp disable`을 다시 실행해야 한다.
@@ -222,6 +222,53 @@ MCP 서버 등록은 `~/.claude.json`에 있고 git으로 추적하지 않는다
 - `context7` — 호출 기록 0건. 같은 기능의 `context7@claude-plugins-official` 플러그인도 함께 내렸으므로, 라이브러리 문서 조회를 되살리려면 **둘 중 하나만** 켜면 된다(둘 다 켜면 중복 등록)
 
 > `computer-use`·`claude-in-chrome` 등은 Claude Code 내장/커넥터라 `~/.claude.json`의 `mcpServers`에 없다.
+
+---
+
+## 프로젝트별 설정: CodeGraph · graphify
+
+두 도구의 사용 지침은 **전역 `CLAUDE.md`에 두지 않는다.** 대부분의 저장소에는 인덱스가 없어서 전역 서술이 죽은 무게이거나 아예 거짓이 된다(걷어낸 graphify 섹션은 "This project has a knowledge graph at graphify-out/"라고 단정하고 있었다). 실제로 쓰는 프로젝트에서 그 프로젝트의 `CLAUDE.md`가 갖는다.
+
+전역에 남은 것은 도구를 쓸 상황인지 판정하는 장치뿐이다.
+
+- `settings.json`의 SessionStart·PreToolUse 훅 3종이 `.codegraph/` 존재를 검사해 CodeGraph 안내를 조건부로 주입한다
+- `hooks/graphify-install-check.sh`가 프로젝트에 graphify 훅이 없으면 설치 여부를 묻고, 거절하면 `.claude/.graphify-skip`을 남겨 같은 프로젝트에서 다시 묻지 않는다
+- `rules/boundaries.md`는 MCP `initialize` 지침에 없는 두 가지(`codegraph status`, CLI 단독 서브도구)만 언급한다
+
+### CodeGraph
+
+```bash
+cd <프로젝트 루트>
+codegraph init              # .codegraph/ 인덱스 생성 (데몬이 파일 변경을 실시간 반영)
+codegraph install -l local  # ./.mcp.json + ./.claude/settings.json 에 프로젝트 스코프 등록
+```
+
+`install.sh`는 `~/.claude.json`에 MCP 서버를 **전역** 등록한다. 전역 등록만 있으면 도구는 붙지만 인덱스가 없어 답을 못 하므로 프로젝트마다 `codegraph init`이 따로 필요하다. `-l local`은 그 프로젝트에서만 MCP를 붙이고 싶을 때 쓴다. 인덱스 상태는 `codegraph status`로 본다.
+
+**사용법을 프로젝트 `CLAUDE.md`에 옮겨 적을 필요는 없다.** MCP 서버가 `initialize`로 직접 보낸다. codegraph도 issue #529 이후 `CLAUDE.md` 블록을 쓰지 않는다(`installer/config-writer.js` 주석에 명시). 이전 전역 `CLAUDE.md`의 `<!-- CODEGRAPH_START -->` 블록은 구버전 잔재였다.
+
+### graphify
+
+```bash
+cd <프로젝트 루트>
+graphify install --project --platform claude
+graphify update .           # 초기 그래프 생성 (AST 전용, API 비용 없음)
+```
+
+`--project`가 프로젝트 `.claude/settings.json`에 PreToolUse 훅을 등록한다. 훅 커맨드에 `graphify-out` 경로가 들어가고, `graphify-install-check.sh`는 그 문자열 존재로 설치 여부를 판정한다(권한 항목의 단순 `graphify` 언급 오탐을 피하려는 설계). `--strict`를 더하면 세션당 첫 원본 파일 읽기를 `graphify query` 한 번이 돌기 전까지 막는다.
+
+graphify는 MCP가 아니라 CLI라서 지침이 자동으로 도착하지 않는다. 트리거는 전역 설치된 `graphify` 스킬과 위 프로젝트 훅이 담당하지만, `graphify-out/` 산출물별 사용 규칙은 프로젝트 `CLAUDE.md`에 직접 적는다. 붙여 쓸 최소 형태:
+
+```markdown
+## graphify
+
+이 프로젝트에는 `graphify-out/`에 지식 그래프가 있다.
+
+- 코드베이스 질문은 `graphify query "<질문>"`을 먼저 실행한다. 관계는 `graphify path "<A>" "<B>"`, 개별 개념은 `graphify explain "<개념>"`. 셋 다 스코프가 좁혀진 서브그래프를 돌려주므로 `GRAPH_REPORT.md`나 raw grep보다 작다
+- `graphify-out/wiki/index.md`가 있으면 원본 탐색 대신 이걸로 훑는다
+- `graphify-out/GRAPH_REPORT.md`는 전체 아키텍처 검토나 위 세 명령이 부족할 때만 읽는다
+- 코드를 고친 뒤 `graphify update .`로 그래프를 갱신한다
+```
 
 ---
 
