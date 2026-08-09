@@ -131,11 +131,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash $HOME/.claude/hooks/graphify-install-check.sh",
-            "statusMessage": "graphify 설정 확인"
-          },
-          {
-            "type": "command",
             "command": "test -d \"${CLAUDE_PROJECT_DIR:-.}/.codegraph\" && echo \"{\\\"hookSpecificOutput\\\":{\\\"hookEventName\\\":\\\"SessionStart\\\",\\\"additionalContext\\\":\\\"CodeGraph MCP 사용 준비: 이 저장소에는 .codegraph/ 인덱스가 있고 데몬이 파일 변경을 실시간 반영한다. 코드 탐색·이해·수정 작업을 시작할 때 첫 조회는 mcp__codegraph__codegraph_explore 로 한다. 이 도구가 deferred 목록에 있으면 먼저 ToolSearch \\\\\\\"select:mcp__codegraph__codegraph_explore\\\\\\\" 로 스키마를 로드해 둔다.\\\"}}\" || true"
           }
         ]
