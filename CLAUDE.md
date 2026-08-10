@@ -10,6 +10,12 @@ When a relevant skill exists, call the `Skill` tool **before proceeding**. Avail
 YAGNI. Touch only what's needed. Tests pass = Done. Priority: **Testability → Readability → Consistency → Simplicity → Reversibility**
 See `~/.claude/rules/karpathy-principles.md` for full detail.
 
+## Tool Calls
+
+When a tool call parameter contains non-ASCII text (Korean, CJK, accented Latin, emoji), emit it as literal UTF-8. Never rewrite it as `\uXXXX` unicode escapes.
+
+This applies to every parameter of every tool, including `Write` content, `Edit` old_string/new_string, `Bash` commands, and MCP tool arguments. Escaped Korean can decode to a different but still-valid syllable, so the corruption saves without raising an error.
+
 ## Process
 
 ### Scope Clarification (Before Starting — MANDATORY)
