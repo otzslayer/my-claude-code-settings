@@ -741,11 +741,11 @@ else
     done <<< "$_hook_cmds"
 fi
 
-# 8-2. 추적 스킬 3종
+# 8-2. 추적 스킬 4종
 # 별도 설치 경로가 없다 -- clone에 포함되어 그 자리가 곧 로드 위치다.
 # 부분 clone이나 .gitignore opt-in 누락으로 빠지면 description 트리거가
 # 걸려도 스킬이 없으므로 존재 여부만 확인한다.
-for _skill in fastapi-project-structure python-architecture python-coding-style; do
+for _skill in capturing-learnings fastapi-project-structure python-architecture python-coding-style; do
     if [[ -f "$REPO_ROOT/skills/$_skill/SKILL.md" ]]; then
         ok "손-작성 스킬 $_skill 존재"
     else
