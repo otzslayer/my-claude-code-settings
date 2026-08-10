@@ -134,7 +134,7 @@
     "command": "node \"$(ls -td \"$HOME\"/.claude/plugins/cache/claude-dashboard/claude-dashboard/*/ | head -1)dist/index.js\""
   },
   "enabledPlugins": {
-    "superpowers@claude-plugins-official": true,
+    "superpowers@claude-plugins-official": false,
     "skill-creator@claude-plugins-official": true,
     "context7@claude-plugins-official": true,
     "claude-md-management@claude-plugins-official": true,
