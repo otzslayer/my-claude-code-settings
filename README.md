@@ -2,7 +2,7 @@
 
 `~/.claude`를 git으로 추적하는 개인 설정 저장소. 개인 멀티머신 백업과 공개를 동시에 지원하도록 설계됐다.
 
-**메인 하네스**: Superpowers 단독 워크플로우 (`CLAUDE.md`의 스킬 표가 정본)
+**메인 하네스**: mattpocock-skills (`/ask-matt`가 라우터이자 정본)
 
 **발표자료**: [`PRESENTATION.pdf`](PRESENTATION.pdf) — 이전 하이브리드 워크플로우 발표 자료(아카이브)
 
@@ -20,7 +20,7 @@ bash ~/.claude/scripts/install.sh
 `scripts/install.sh`는 gum TUI 기반 인터랙티브 설치기다. macOS와 WSL2를 지원하며, gum이 없으면 plain read 폴백으로 동작한다.
 
 **설치기가 처리하는 항목**:
-- **jq** — 컴포넌트 선택과 무관하게 항상 확인·설치한다. `rtk-rewrite.sh` · `workflow-stage-inject.sh` · `settings.json` 인라인 `PreToolUse` 훅 2종(`.py` 편집 시 python-coding-style 주입, `docs/plans/*.md`·`docs/superpowers/specs/*.md` 한국어 강제)이 전부 jq 하드 의존이라, 없으면 이들이 **조용히** 죽는다
+- **jq** — 컴포넌트 선택과 무관하게 항상 확인·설치한다. `rtk-rewrite.sh` · `settings.json` 인라인 `PreToolUse` 훅 2종(`.py` 편집 시 python-coding-style 주입, `docs/plans/*.md`·`docs/superpowers/specs/*.md` 한국어 강제)이 전부 jq 하드 의존이라, 없으면 이들이 **조용히** 죽는다
 - **ugrep · bfs** — 컴포넌트 선택과 무관하게 항상 확인·설치한다. `rules/boundaries.md`의 검색 가이드가 아카이브 검색(`-z`)·퍼지 매칭·빠른 breadth-first find를 전제한다. jq와 달리 **소프트 의존**이라 없으면 `grep`·`find`로 폴백되므로, 실패해도 경고만 남기고 점검 미해결 항목에는 넣지 않는다
 - **node/npm 전제 확인** — statusLine(claude-dashboard)이 `node`로 직접 실행되므로 slides-grab을 고르지 않아도 확인한다 (없으면 경고)
 - rtk (token optimizer) + `rtk init -g` (RTK.md 생성 — 순서 보장) + `rtk config`의 `[hooks] exclude_commands`에 `grep`·`find` 추가 — 네이티브 빌드는 셸 스냅샷에서 `grep`·`find`를 임베디드 ugrep·bfs로 shadow하는데, rtk가 `rtk grep`으로 재작성하면 별도 프로세스의 BSD grep이 돌아 gitignore 인식(`--ignore-files`)을 잃는다 (`rtk rg`는 ripgrep을 그대로 실행하므로 제외하지 않음)
@@ -54,8 +54,8 @@ bash ~/.claude/scripts/install.sh
 # RTK (token optimizer) 설치 — brew tap이 없다면 GitHub Releases에서 직접 설치
 brew install reachingforthejack/rtk/rtk   # 또는 릴리즈 바이너리 직접 설치
 
-# jq — 훅 전체의 하드 의존 (rtk-rewrite · workflow-stage-inject ·
-#      settings.json 인라인 훅 2종이 모두 조용히 비활성화됨). rtk를 안 써도 필요하다.
+# jq — 훅 전체의 하드 의존 (rtk-rewrite · settings.json 인라인 훅 2종이
+#      모두 조용히 비활성화됨). rtk를 안 써도 필요하다.
 brew install jq   # Linux/WSL2: sudo apt-get install -y jq
 
 # ugrep · bfs — boundaries.md 검색 가이드의 전제(아카이브 -z · 퍼지 · 빠른 find).
@@ -130,7 +130,7 @@ Claude Code가 `settings.json`의 `enabledPlugins`와 `extraKnownMarketplaces`�
 | `skills/python-architecture/` | Python 레이어드 아키텍처 스킬 (`SKILL.md` 단일 파일). 위와 같은 이유로 추적 |
 | `skills/python-coding-style/` | Python 스타일 규칙 (`SKILL.md` 단일 파일). **ruff 설정의 원본** — `fastapi-project-structure`의 `pyproject-template.toml`이 이걸 인스턴스화하므로 둘은 같이 움직여야 한다 |
 | `memory-templates/` | 세션 간 메모리 seed (현재 본문 seed 없음, 인덱스 스캐폴드만) |
-| `hooks/*.sh` | rtk-rewrite, workflow-stage-inject, graphify-install-check |
+| `hooks/*.sh` | rtk-rewrite, graphify-install-check |
 | `scripts/sync-memory-templates.sh` | 메모리 템플릿 동기화 |
 | `.gitignore`, `.gitattributes`, `README.md` | 저장소 메타 |
 | `PRESENTATION.pdf` | 이전 하이브리드 워크플로우 발표자료 (아카이브) |
@@ -146,7 +146,7 @@ Claude Code가 `settings.json`의 `enabledPlugins`와 `extraKnownMarketplaces`�
 
 ### 스킬 복원 안내
 
-- **플러그인 스킬** (superpowers 단독 — compound-engineering은 `enabledPlugins`에서 비활성): Claude Code 재실행 시 자동 복원
+- **플러그인 스킬** (mattpocock-skills 외 `enabledPlugins`의 활성 항목): Claude Code 재실행 시 자동 복원
 - **npm 스킬** (slides-grab, slides-grab-design, slides-grab-export, slides-grab-plan): `npm install -g slides-grab`
 - **CLI 스킬** (graphify): `uv tool install graphifyy` 뒤에 `graphify install --platform claude`로 스킬을 배치한다. CLI·`graphify-install-check.sh` 훅(프로젝트에 graphify 훅이 없으면 설치 여부를 묻는다)·스킬이 한 세트로 움직인다. 프로젝트별 설정은 아래 "프로젝트별 설정: CodeGraph · graphify" 참조
 - **추적하는 손-작성 스킬** (`capturing-learnings`, `fastapi-project-structure`, `python-architecture`, `python-coding-style`): clone만으로 복원됨. CLAUDE.md 스킬 표(작업 완료 후 학습 기록 / Python 작성 / 새 Python·FastAPI 프로젝트 레이아웃)에서 호출하는 손-콘텐츠라 재설치 경로가 없다. **`python-coding-style`이 ruff 설정의 원본이고 `fastapi-project-structure/templates/pyproject-template.toml`이 그 인스턴스**이므로, 한쪽을 고치면 다른 쪽도 같이 고친다
@@ -154,32 +154,28 @@ Claude Code가 `settings.json`의 `enabledPlugins`와 `extraKnownMarketplaces`�
 
 ---
 
-## 메인 하네스: Superpowers 파이프라인
+## 메인 하네스: mattpocock-skills
 
-워크플로우는 Superpowers 스킬만으로 구성한다. Compound Engineering 플러그인은 `enabledPlugins`에서 **비활성**이다 — `skillOverrides`가 플러그인 스킬을 커버하지 못해, `/ce-compound` 하나를 살리려면 쓰지 않는 CE 스킬 23개의 리스팅 비용(약 2,400 토큰/세션)을 함께 지불해야 했기 때문이다. 정본은 `CLAUDE.md`의 **High-Priority Workflow Skills 표**와 **Planning Trigger** 섹션이고, 단계별 just-in-time 지침은 `hooks/workflow-stage-inject.sh`가 스킬 호출 직후에 주입한다(상주 비용 0).
+워크플로우는 mattpocock-skills로 구성한다. 라우터는 `/ask-matt`이고 그것이 정본이다. `disable-model-invocation: true`라 칠 때만 로드되므로 상주 비용이 0이다.
 
 ```
-Phase 1  brainstorming        → docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md
-Phase 2  writing-plans        → docs/plans/YYYY-MM-DD-<feature>.md
-           └ /clear 여부는 여기서 에이전트가 제안하고 사용자가 결정한다 (아래 참고)
-Phase 3  subagent-driven-development
-           ├ 태스크마다: 구현 서브에이전트 → 태스크 리뷰(spec 준수 + 코드 품질)
-           └ 마지막: 전체 브랜치 리뷰
-         verification-before-completion
-         finishing-a-development-branch
+전제  /setup-matt-pocock-skills   프로젝트 저장소에서 1회 (이 저장소는 예외, 아래 참고)
+1     /grill-with-docs            인터뷰로 아이디어를 다듬고 CONTEXT.md에 남긴다
+2     /prototype                  대화로 안 풀리는 설계 질문이 있을 때만
+3     /to-spec → /to-tickets      멀티세션 규모일 때. 티켓마다 blocking edge
+4     /implement                  티켓마다, 사이사이 /clear
+        └ 내부에서 /tdd 구동, 마무리로 /code-review 후 커밋
 ```
 
-**학습 누적 단계는 비어 있다.** 초판 계획은 여기에 `/ce-compound`를 뒀지만, 플러그인 비활성화와 함께 제거했다. 대체할 커스텀 회고 스킬은 별건으로 설계·구현한다 — 존재하지 않는 스킬을 가리키는 포인터를 남기지 않기 위해, 그 스킬이 생기기 전까지 파이프라인에 자리만 잡아 두지 않는다.
+**자동 라우팅은 없다.** Matt의 메인 플로우 스킬은 전부 `disable-model-invocation: true`라 에이전트가 스스로 켜지 못한다. 라우터도 사용자가 `/ask-matt`를 칠 때만 존재한다. 이전 하네스가 규칙으로 단계를 강제하던 것과 정반대다. 의도한 성질이다.
 
-**실행 스킬은 `subagent-driven-development`(SDD)다.** `executing-plans`는 SKILL.md 자체가 서브에이전트 없는 하네스용 폴백으로 자신을 규정하고, 쓸 수 있으면 SDD를 쓰라고 명시한다 — Claude Code는 그 목록에 들어 있다. 토큰 측면에서도 같은 결론이다: 단일 세션 실행은 매 턴 그때까지 쌓인 컨텍스트를 다시 읽어 턴 수에 대해 O(N²)로 늘지만, SDD는 spawn마다 컨텍스트가 리셋되므로 O(N)이다. 3태스크 이하의 작은 계획에서는 단일 세션이 조금 싸지만(교차점은 대략 5~7태스크), SDD가 붙이는 태스크별 리뷰와 전체 브랜치 리뷰의 값으로 그 차이를 지불한다.
+**`/code-review`는 풀네임으로 부른다.** 접두사 없는 `code-review`는 내장 리뷰 스킬이 차지하고 있다. Matt의 Standards·Spec 2축 리뷰를 쓰려면 `/mattpocock-skills:code-review`라고 쳐야 한다.
 
-**SDD의 종료 단계는 훅이 가로챈다.** SDD는 전체 브랜치 리뷰가 깨끗해지면 스스로 `finishing-a-development-branch`를 호출하며 끝나는데, 그대로 두면 `verification-before-completion`이 건너뛰어진다. `hooks/workflow-stage-inject.sh`의 `*subagent-driven-development` case가 이 지점에서 순서를 바로잡는다. 또 SDD가 최종 리뷰에 `requesting-code-review`의 리뷰어를 내부적으로 dispatch하므로, `requesting-code-review`는 파이프라인의 별도 단계가 아니라 **계획 실행과 무관한 단독 리뷰 요청용**으로만 남는다.
+**이 저장소에서는 `/setup-matt-pocock-skills`를 돌리지 않는다.** 그 스킬은 저장소 루트의 `CLAUDE.md`를 편집하는데 여기서는 그것이 Tier 0 파일이다. 트래커 미설정 상태에서 `to-tickets`는 로컬 마크다운 경로(`.scratch/<feature>/issues/`)를 지원하고 `wayfinder`도 그것을 기본값으로 쓴다. 다만 `to-spec`에는 폴백 문구가 없어 쓸 때마다 로컬 마크다운으로 간다고 지정해야 한다.
 
-**`/clear` 경계는 강제가 아니라 제안이다.** Superpowers 스킬 트리 전체에 `/clear` 언급이 **0회**다 — 이 플러그인의 컨텍스트 격리 수단은 세션 비우기가 아니라 서브에이전트다. `brainstorming/SKILL.md`는 terminal state가 `writing-plans` 호출이라고 못박고("다른 스킬은 호출하지 마라"), `writing-plans/SKILL.md`의 Execution Handoff는 계획 저장 **직후 같은 세션에서** SDD를 제안한다. 그래서 이전에 두 곳(Phase 1 뒤·Phase 2 뒤)에 걸어 뒀던 강제 `/clear`를 걷어냈다.
+**계획·티켓 산출물.** 새 티켓은 `.scratch/<feature>/issues/<NN>-<slug>.md`로 간다. `.gitignore`가 allowlist 방식이라 자동으로 추적 제외된다. `docs/plans/`의 기존 계획 6개는 legacy로 동결하되 **삭제 금지 규칙은 그대로 유지한다**(`rules/boundaries.md` Never). 변경의 근거 기록이기 때문이다.
 
-대신 **계획 작성이 끝난 시점에 에이전트가 작업 특성을 보고 한쪽을 권하고 근거를 한 줄로 밝힌다**(훅의 `*writing-plans` case가 그 지시를 주입한다). `/clear`를 권하는 쪽: 태스크가 많거나(대략 5개 이상) 계획 과정에서 폐기된 선택지·중간 검색 결과가 많이 쌓인 경우 — SDD 코디네이터가 그것을 전부 물려받기 때문이다. 이어가길 권하는 쪽: 계획이 작고 컨텍스트가 얇은 경우. 결정은 사용자가 한다. 어느 쪽이든 **계획 세션에서 직접 코드를 쓰는 것은 금지**다 — 구현은 SDD가 신선한 서브에이전트로 한다.
-
-**계획 파일은 영구 보존물이다.** 경로는 `docs/plans/`이고(`writing-plans` 기본값인 `docs/superpowers/plans/`를 override한다 — `docs/superpowers/`에는 스펙만 산다), **작업이 끝나도 삭제하지 않는다.** 계획 세션과 구현 세션 사이를 건너 살아남는 유일한 산출물이자 변경의 근거 기록이기 때문이다. 프로젝트 저장소에서는 `docs/plans/`를 git 추적 대상으로 둬 `git clean`과 머신 이동에서 보호한다. **이 저장소는 공개용이라 유일한 예외**로 무시를 유지하며, 삭제 금지 규칙만 그대로 적용된다. 이 규칙은 `CLAUDE.md`(Plan Persistence) · `rules/boundaries.md`(Never) · 훅의 `*writing-plans`·`*finishing-a-development-branch` case 세 곳에 심어져 있다.
+**전환 이력.** 2026-08-07에 compound-engineering을 걷어내고 Superpowers 단독으로 수렴했다가(`docs/plans/2026-08-07-superpowers-only-harness.md`), 2026-08-10에 Superpowers도 제거했다(`docs/superpowers/specs/2026-08-10-superpowers-removal-design.md`). 두 번째 전환의 근거는 상주 비용이 아니라 실행 비용이었다. 규칙 파일에 이미 있는 내용을 스킬이 다시 로드해 반복하는 층을 걷어냈고, `rules/boundaries.md`·`rules/git-workflow.md`의 규칙 자체는 그대로 남아 있다.
 
 ### 모델 · effort
 
@@ -193,21 +189,22 @@ Phase 3  subagent-driven-development
 
 | 플러그인 | 역할 |
 |---------|------|
-| `superpowers@claude-plugins-official` | brainstorming, TDD, debugging 등 process skills |
+| `mattpocock-skills@claude-plugins-official` | 메인 하네스. `/ask-matt`가 라우터 |
 | `security-guidance@claude-plugins-official` | 보안 가이드 (보안 리뷰 규칙·security-reviewer) |
 | `plannotator@plannotator` | 계획 파일 브라우저 리뷰 (선택 — 강제 게이트 아님) |
 | `skill-creator@claude-plugins-official` | 스킬 생성·최적화 |
 | `claude-dashboard@claude-dashboard` | statusLine |
 
-**비활성** (`enabledPlugins`에 `false`) — 사용 이력이 없어 컨텍스트에서 내린 것들이다. 필요하면 `/plugin`으로 되살린다.
+**비활성** (`enabledPlugins`에 `false`). 필요하면 `/plugin`으로 되살린다.
 
 | 플러그인 | 내린 이유 |
 |---------|------|
+| `superpowers@claude-plugins-official` | 걷어낸 이유는 위 "전환 이력" 참고. 종료 두 단계가 `rules/boundaries.md`·`rules/git-workflow.md`와, 훅 case가 `capturing-learnings/SKILL.md`와 내용이 겹쳤다 |
 | `compound-engineering@compound-engineering-plugin` | 파이프라인이 Superpowers 단독으로 바뀌었다. `skillOverrides`가 플러그인 스킬을 커버하지 못해(짧은 키·접두사 키 두 형식 모두 실패) `/ce-compound` 하나를 살리려면 쓰지 않는 CE 스킬 23개의 리스팅 비용까지 매 세션 지불해야 했다 — 약 2,400 토큰. 학습 누적은 커스텀 회고 스킬로 대체할 예정 |
 | `context7@claude-plugins-official` | 라이브러리 문서 조회 — MCP 호출 기록 0건 |
 | `claude-md-management@claude-plugins-official` | CLAUDE.md 감사 — 스킬 1회 사용에 그침 |
 | `code-simplifier@claude-plugins-official` | 코드 단순화 — 에이전트 정의만 제공, 호출 0건 |
-| `commit-commands@claude-plugins-official` | 커밋·PR — `superpowers:finishing-a-development-branch`와 중복 |
+| `commit-commands@claude-plugins-official` | 커밋·PR. `rules/git-workflow.md`의 규정과 중복 |
 
 ### 의존 MCP 서버
 
