@@ -102,26 +102,17 @@
         "hooks": [
           {
             "type": "command",
-            "if": "Bash(git commit*)",
             "command": "test -d \"${CLAUDE_PROJECT_DIR:-.}/graphify-out\" || exit 0; cd \"${CLAUDE_PROJECT_DIR:-.}\" && $HOME/.local/bin/graphify update . >/dev/null 2>&1 || true",
-            "async": true,
-            "statusMessage": "graphify 인덱스 갱신"
+            "if": "Bash(git commit*)",
+            "statusMessage": "graphify 인덱스 갱신",
+            "async": true
           },
           {
             "type": "command",
-            "if": "Bash(rtk git commit*)",
             "command": "test -d \"${CLAUDE_PROJECT_DIR:-.}/graphify-out\" || exit 0; cd \"${CLAUDE_PROJECT_DIR:-.}\" && $HOME/.local/bin/graphify update . >/dev/null 2>&1 || true",
-            "async": true,
-            "statusMessage": "graphify 인덱스 갱신"
-          }
-        ]
-      },
-      {
-        "matcher": "Skill",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash $HOME/.claude/hooks/workflow-stage-inject.sh"
+            "if": "Bash(rtk git commit*)",
+            "statusMessage": "graphify 인덱스 갱신",
+            "async": true
           }
         ]
       }
@@ -152,7 +143,8 @@
     "code-simplifier@claude-plugins-official": true,
     "commit-commands@claude-plugins-official": true,
     "compound-engineering@compound-engineering-plugin": false,
-    "claude-dashboard@claude-dashboard": true
+    "claude-dashboard@claude-dashboard": true,
+    "mattpocock-skills@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "plannotator": {

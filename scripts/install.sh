@@ -282,7 +282,6 @@ fi
 # jq: 이 저장소 전체의 하드 의존이다 (rtk 컴포넌트 선택 여부와 무관).
 # 없으면 아래가 전부 조용히 죽는다:
 #   - hooks/rtk-rewrite.sh          (Bash 명령 rtk 재작성)
-#   - hooks/workflow-stage-inject.sh (Skill 호출 시 단계 지침 주입)
 #   - settings.json 인라인 PreToolUse 훅 2종
 #     (.py 편집 시 python-coding-style 주입 / docs/plans·docs/superpowers/specs의 .md 한국어 강제)
 # _register_mcp / 플러그인 안내도 jq를 선호하므로 section 4 이전에 확보한다.
@@ -791,7 +790,7 @@ fi
 echo "수동으로 완료해야 하는 단계:"
 echo
 echo "  1. Claude Code 재시작"
-echo "     -> 플러그인 자동 설치 (superpowers, security-guidance 등)"
+echo "     -> 플러그인 자동 설치 (mattpocock-skills, security-guidance 등)"
 echo
 echo "  2. 나머지 MCP 서버 수동 설정"
 echo "     -> computer-use, sequential-thinking 등 (codegraph는 자동 등록됨)"
