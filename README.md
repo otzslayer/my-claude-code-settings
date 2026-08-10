@@ -175,7 +175,7 @@ Claude Code가 `settings.json`의 `enabledPlugins`와 `extraKnownMarketplaces`�
 
 **계획·티켓 산출물.** 새 티켓은 `.scratch/<feature>/issues/<NN>-<slug>.md`로 간다. `.gitignore`가 allowlist 방식이라 자동으로 추적 제외된다. `docs/plans/`의 기존 계획 6개는 legacy로 동결하되 **삭제 금지 규칙은 그대로 유지한다**(`rules/boundaries.md` Never). 변경의 근거 기록이기 때문이다.
 
-**전환 이력.** 2026-08-07에 compound-engineering을 걷어내고 Superpowers 단독으로 수렴했다가(`docs/plans/2026-08-07-superpowers-only-harness.md`), 2026-08-10에 Superpowers도 제거했다(`docs/superpowers/specs/2026-08-10-superpowers-removal-design.md`). 두 번째 전환의 근거는 상주 비용이 아니라 실행 비용이었다. 규칙 파일에 이미 있는 내용을 스킬이 다시 로드해 반복하는 층을 걷어냈고, `rules/boundaries.md`·`rules/git-workflow.md`의 규칙 자체는 그대로 남아 있다.
+**전환 이력.** 2026-08-07에 compound-engineering을 걷어내고 Superpowers 단독으로 수렴했다(`docs/plans/2026-08-07-superpowers-only-harness.md`). 사흘 뒤인 2026-08-10에 Superpowers도 제거했다(`docs/superpowers/specs/2026-08-10-superpowers-removal-design.md`). 두 번째 전환의 근거는 상주 비용이 아니라 실행 비용이었다. 규칙 파일에 이미 있는 내용을 스킬이 다시 로드해 반복하는 층을 걷어냈다. `rules/boundaries.md`·`rules/git-workflow.md`의 규칙 자체는 그대로 남아 있다.
 
 ### 모델 · effort
 
