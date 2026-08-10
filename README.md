@@ -125,7 +125,7 @@ Claude Code가 `settings.json`의 `enabledPlugins`와 `extraKnownMarketplaces`�
 | `CLAUDE.md` | 메인 개발 가이드라인 |
 | `settings.json` | 포터블화된 플러그인·훅 설정 |
 | `rules/` | 행동 규칙 파일 4종 (boundaries · git-workflow · karpathy-principles · security) |
-| `skills/capturing-learnings/` | 회고 스킬 (`SKILL.md` 단일 파일). ce-compound 비활성화로 비어 있던 학습 누적 단계를 대체한다. `docs/solutions/`에 학습 하나를 쓰거나, 판정에서 탈락하면 아무것도 쓰지 않는다 |
+| `skills/capturing-learnings/` | 회고 스킬 (`SKILL.md` 단일 파일). 이전 파이프라인의 학습 누적 단계를 대체한다. `docs/solutions/`에 학습 하나를 쓰거나, 판정에서 탈락하면 아무것도 쓰지 않는다 |
 | `skills/fastapi-project-structure/` | FastAPI 스캐폴딩 스킬 (템플릿·스크립트·예제·evals). CLAUDE.md 스킬 표에서 직접 호출하는 손-작성 스킬 — 재설치 경로가 없다. `SKILL.md.bak`은 백업 생성물이라 제외 |
 | `skills/python-architecture/` | Python 레이어드 아키텍처 스킬 (`SKILL.md` 단일 파일). 위와 같은 이유로 추적 |
 | `skills/python-coding-style/` | Python 스타일 규칙 (`SKILL.md` 단일 파일). **ruff 설정의 원본** — `fastapi-project-structure`의 `pyproject-template.toml`이 이걸 인스턴스화하므로 둘은 같이 움직여야 한다 |
@@ -167,7 +167,7 @@ Claude Code가 `settings.json`의 `enabledPlugins`와 `extraKnownMarketplaces`�
         └ 내부에서 /tdd 구동, 마무리로 /code-review 후 커밋
 ```
 
-**자동 라우팅은 없다.** Matt의 메인 플로우 스킬은 전부 `disable-model-invocation: true`라 에이전트가 스스로 켜지 못한다. 라우터도 사용자가 `/ask-matt`를 칠 때만 존재한다. 이전 하네스가 규칙으로 단계를 강제하던 것과 정반대다. 의도한 성질이다.
+**강제 라우팅은 없다.** 메인 플로우의 진입점(`grill-with-docs`·`to-spec`·`to-tickets`·`implement`·`ask-matt`)은 `disable-model-invocation: true`라 사용자가 칠 때만 열린다. 라우터도 마찬가지여서 `/ask-matt`를 치지 않으면 존재하지 않는다. 반면 `prototype`·`tdd`·`code-review`는 그 키가 없어 에이전트가 스스로 켤 수 있다. 이전 하네스가 규칙으로 단계 전체를 강제하던 것과 다르다. 의도한 성질이다.
 
 **`/code-review`는 풀네임으로 부른다.** 접두사 없는 `code-review`는 내장 리뷰 스킬이 차지하고 있다. Matt의 Standards·Spec 2축 리뷰를 쓰려면 `/mattpocock-skills:code-review`라고 쳐야 한다.
 
