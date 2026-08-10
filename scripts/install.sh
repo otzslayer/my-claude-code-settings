@@ -282,9 +282,10 @@ fi
 # jq: 이 저장소 전체의 하드 의존이다 (rtk 컴포넌트 선택 여부와 무관).
 # 없으면 아래가 전부 조용히 죽는다:
 #   - hooks/rtk-rewrite.sh          (Bash 명령 rtk 재작성)
-#   - hooks/workflow-stage-inject.sh (Skill 호출 시 단계 지침 주입)
-#   - settings.json 인라인 PreToolUse 훅 2종
-#     (.py 편집 시 python-coding-style 주입 / docs/plans·docs/superpowers/specs의 .md 한국어 강제)
+#   - settings.json 인라인 PreToolUse 훅 4종
+#     (.py 편집 시 python-coding-style 주입
+#      / docs/plans·docs/superpowers/specs·docs/solutions의 .md 한국어 강제
+#      / Read·Grep과 Bash에 CodeGraph 안내 주입)
 # _register_mcp / 플러그인 안내도 jq를 선호하므로 section 4 이전에 확보한다.
 if command -v jq &>/dev/null; then
     ok "jq $(jq --version)"
@@ -740,11 +741,11 @@ else
     done <<< "$_hook_cmds"
 fi
 
-# 8-2. 추적 스킬 3종
+# 8-2. 추적 스킬 4종
 # 별도 설치 경로가 없다 -- clone에 포함되어 그 자리가 곧 로드 위치다.
-# 부분 clone이나 .gitignore opt-in 누락으로 빠지면 CLAUDE.md 스킬 표가
-# 존재하지 않는 스킬을 가리키게 되므로 존재 여부만 확인한다.
-for _skill in fastapi-project-structure python-architecture python-coding-style; do
+# 부분 clone이나 .gitignore opt-in 누락으로 빠지면 description 트리거가
+# 걸려도 스킬이 없으므로 존재 여부만 확인한다.
+for _skill in capturing-learnings fastapi-project-structure python-architecture python-coding-style; do
     if [[ -f "$REPO_ROOT/skills/$_skill/SKILL.md" ]]; then
         ok "손-작성 스킬 $_skill 존재"
     else
@@ -791,7 +792,7 @@ fi
 echo "수동으로 완료해야 하는 단계:"
 echo
 echo "  1. Claude Code 재시작"
-echo "     -> 플러그인 자동 설치 (superpowers, security-guidance 등)"
+echo "     -> 플러그인 자동 설치 (mattpocock-skills, security-guidance 등)"
 echo
 echo "  2. 나머지 MCP 서버 수동 설정"
 echo "     -> computer-use, sequential-thinking 등 (codegraph는 자동 등록됨)"
