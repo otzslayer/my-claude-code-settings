@@ -20,7 +20,7 @@ bash ~/.claude/scripts/install.sh
 `scripts/install.sh`는 gum TUI 기반 인터랙티브 설치기다. macOS와 WSL2를 지원하며, gum이 없으면 plain read 폴백으로 동작한다.
 
 **설치기가 처리하는 항목**:
-- **jq** — 컴포넌트 선택과 무관하게 항상 확인·설치한다. `rtk-rewrite.sh` · `settings.json` 인라인 `PreToolUse` 훅 2종(`.py` 편집 시 python-coding-style 주입, `docs/plans/*.md`·`docs/superpowers/specs/*.md` 한국어 강제)이 전부 jq 하드 의존이라, 없으면 이들이 **조용히** 죽는다
+- **jq** — 컴포넌트 선택과 무관하게 항상 확인·설치한다. `rtk-rewrite.sh` · `settings.json` 인라인 `PreToolUse` 훅 4종(`.py` 편집 시 python-coding-style 주입, `docs/plans/*.md`·`docs/superpowers/specs/*.md`·`docs/solutions/*.md` 한국어 강제, `Read`·`Grep`과 `Bash`에 CodeGraph 안내 주입)이 전부 jq 하드 의존이라, 없으면 이들이 **조용히** 죽는다
 - **ugrep · bfs** — 컴포넌트 선택과 무관하게 항상 확인·설치한다. `rules/boundaries.md`의 검색 가이드가 아카이브 검색(`-z`)·퍼지 매칭·빠른 breadth-first find를 전제한다. jq와 달리 **소프트 의존**이라 없으면 `grep`·`find`로 폴백되므로, 실패해도 경고만 남기고 점검 미해결 항목에는 넣지 않는다
 - **node/npm 전제 확인** — statusLine(claude-dashboard)이 `node`로 직접 실행되므로 slides-grab을 고르지 않아도 확인한다 (없으면 경고)
 - rtk (token optimizer) + `rtk init -g` (RTK.md 생성 — 순서 보장) + `rtk config`의 `[hooks] exclude_commands`에 `grep`·`find` 추가 — 네이티브 빌드는 셸 스냅샷에서 `grep`·`find`를 임베디드 ugrep·bfs로 shadow하는데, rtk가 `rtk grep`으로 재작성하면 별도 프로세스의 BSD grep이 돌아 gitignore 인식(`--ignore-files`)을 잃는다 (`rtk rg`는 ripgrep을 그대로 실행하므로 제외하지 않음)
@@ -54,7 +54,7 @@ bash ~/.claude/scripts/install.sh
 # RTK (token optimizer) 설치 — brew tap이 없다면 GitHub Releases에서 직접 설치
 brew install reachingforthejack/rtk/rtk   # 또는 릴리즈 바이너리 직접 설치
 
-# jq — 훅 전체의 하드 의존 (rtk-rewrite · settings.json 인라인 훅 2종이
+# jq — 훅 전체의 하드 의존 (rtk-rewrite · settings.json 인라인 훅 4종이
 #      모두 조용히 비활성화됨). rtk를 안 써도 필요하다.
 brew install jq   # Linux/WSL2: sudo apt-get install -y jq
 
@@ -126,11 +126,11 @@ Claude Code가 `settings.json`의 `enabledPlugins`와 `extraKnownMarketplaces`�
 | `settings.json` | 포터블화된 플러그인·훅 설정 |
 | `rules/` | 행동 규칙 파일 4종 (boundaries · git-workflow · karpathy-principles · security) |
 | `skills/capturing-learnings/` | 회고 스킬 (`SKILL.md` 단일 파일). 이전 파이프라인의 학습 누적 단계를 대체한다. `docs/solutions/`에 학습 하나를 쓰거나, 판정에서 탈락하면 아무것도 쓰지 않는다 |
-| `skills/fastapi-project-structure/` | FastAPI 스캐폴딩 스킬 (템플릿·스크립트·예제·evals). CLAUDE.md 스킬 표에서 직접 호출하는 손-작성 스킬 — 재설치 경로가 없다. `SKILL.md.bak`은 백업 생성물이라 제외 |
+| `skills/fastapi-project-structure/` | FastAPI 스캐폴딩 스킬 (템플릿·스크립트·예제·evals). description 트리거로 발동하는 손-작성 스킬이라 재설치 경로가 없다. `SKILL.md.bak`은 백업 생성물이라 제외 |
 | `skills/python-architecture/` | Python 레이어드 아키텍처 스킬 (`SKILL.md` 단일 파일). 위와 같은 이유로 추적 |
 | `skills/python-coding-style/` | Python 스타일 규칙 (`SKILL.md` 단일 파일). **ruff 설정의 원본** — `fastapi-project-structure`의 `pyproject-template.toml`이 이걸 인스턴스화하므로 둘은 같이 움직여야 한다 |
 | `memory-templates/` | 세션 간 메모리 seed (현재 본문 seed 없음, 인덱스 스캐폴드만) |
-| `hooks/*.sh` | rtk-rewrite, graphify-install-check |
+| `hooks/*.sh` | rtk-rewrite |
 | `scripts/sync-memory-templates.sh` | 메모리 템플릿 동기화 |
 | `.gitignore`, `.gitattributes`, `README.md` | 저장소 메타 |
 | `PRESENTATION.pdf` | 이전 하이브리드 워크플로우 발표자료 (아카이브) |
@@ -148,8 +148,8 @@ Claude Code가 `settings.json`의 `enabledPlugins`와 `extraKnownMarketplaces`�
 
 - **플러그인 스킬** (mattpocock-skills 외 `enabledPlugins`의 활성 항목): Claude Code 재실행 시 자동 복원
 - **npm 스킬** (slides-grab, slides-grab-design, slides-grab-export, slides-grab-plan): `npm install -g slides-grab`
-- **CLI 스킬** (graphify): `uv tool install graphifyy` 뒤에 `graphify install --platform claude`로 스킬을 배치한다. CLI·`graphify-install-check.sh` 훅(프로젝트에 graphify 훅이 없으면 설치 여부를 묻는다)·스킬이 한 세트로 움직인다. 프로젝트별 설정은 아래 "프로젝트별 설정: CodeGraph · graphify" 참조
-- **추적하는 손-작성 스킬** (`capturing-learnings`, `fastapi-project-structure`, `python-architecture`, `python-coding-style`): clone만으로 복원됨. CLAUDE.md 스킬 표(작업 완료 후 학습 기록 / Python 작성 / 새 Python·FastAPI 프로젝트 레이아웃)에서 호출하는 손-콘텐츠라 재설치 경로가 없다. **`python-coding-style`이 ruff 설정의 원본이고 `fastapi-project-structure/templates/pyproject-template.toml`이 그 인스턴스**이므로, 한쪽을 고치면 다른 쪽도 같이 고친다
+- **CLI 스킬** (graphify): `uv tool install graphifyy` 뒤에 `graphify install --platform claude`로 스킬을 배치한다. CLI와 스킬이 한 세트로 움직인다. 프로젝트별 설정은 아래 "프로젝트별 설정: CodeGraph · graphify" 참조
+- **추적하는 손-작성 스킬** (`capturing-learnings`, `fastapi-project-structure`, `python-architecture`, `python-coding-style`): clone만으로 복원됨. 각 스킬의 description 트리거(작업 완료 후 학습 기록 / Python 작성 / 새 Python·FastAPI 프로젝트 레이아웃)로 발동하는 손-콘텐츠라 재설치 경로가 없다. **`python-coding-style`이 ruff 설정의 원본이고 `fastapi-project-structure/templates/pyproject-template.toml`이 그 인스턴스**이므로, 한쪽을 고치면 다른 쪽도 같이 고친다
 - **순수 bespoke 스킬** (peon-ping-*, plannotator-annotate 등): 별도 보존 필요 (현재 미추적)
 
 ---
@@ -229,7 +229,6 @@ MCP 서버 등록은 `~/.claude.json`에 있고 git으로 추적하지 않는다
 전역에 남은 것은 도구를 쓸 상황인지 판정하는 장치뿐이다.
 
 - `settings.json`의 SessionStart·PreToolUse 훅 3종이 `.codegraph/` 존재를 검사해 CodeGraph 안내를 조건부로 주입한다
-- `hooks/graphify-install-check.sh`가 프로젝트에 graphify 훅이 없으면 설치 여부를 묻고, 거절하면 `.claude/.graphify-skip`을 남겨 같은 프로젝트에서 다시 묻지 않는다
 - `rules/boundaries.md`는 MCP `initialize` 지침에 없는 두 가지(`codegraph status`, CLI 단독 서브도구)만 언급한다
 
 ### CodeGraph
@@ -252,7 +251,7 @@ graphify install --project --platform claude
 graphify update .           # 초기 그래프 생성 (AST 전용, API 비용 없음)
 ```
 
-`--project`가 프로젝트 `.claude/settings.json`에 PreToolUse 훅을 등록한다. 훅 커맨드에 `graphify-out` 경로가 들어가고, `graphify-install-check.sh`는 그 문자열 존재로 설치 여부를 판정한다(권한 항목의 단순 `graphify` 언급 오탐을 피하려는 설계). `--strict`를 더하면 세션당 첫 원본 파일 읽기를 `graphify query` 한 번이 돌기 전까지 막는다.
+`--project`가 프로젝트 `.claude/settings.json`에 PreToolUse 훅을 등록한다. 훅 커맨드에는 `graphify-out` 경로가 들어간다. `--strict`를 더하면 세션당 첫 원본 파일 읽기를 `graphify query` 한 번이 돌기 전까지 막는다.
 
 graphify는 MCP가 아니라 CLI라서 지침이 자동으로 도착하지 않는다. 트리거는 전역 설치된 `graphify` 스킬과 위 프로젝트 훅이 담당하지만, `graphify-out/` 산출물별 사용 규칙은 프로젝트 `CLAUDE.md`에 직접 적는다. 붙여 쓸 최소 형태:
 
