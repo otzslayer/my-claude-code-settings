@@ -71,7 +71,7 @@
           },
           {
             "type": "command",
-            "command": "jq -c 'if (.tool_input.file_path // \"\") | test(\"(docs/plans|docs/superpowers/specs|docs/solutions)/.*\\\\.md$\") then {hookSpecificOutput:{hookEventName:\"PreToolUse\",additionalContext:\"docs/plans/ 계획 파일, docs/superpowers/specs/ 스펙 파일, docs/solutions/ 학습 기록 중 하나를 지금 쓰려 한다. 본문 산문은 반드시 한국어로 작성하라(코드·식별자·파일경로·frontmatter 키·enum 값은 영문 유지). 서브에이전트 중간 산출물이나 초안이 영어라면 이 파일 내용을 한국어로 다시 작성하라. 전역 한국어 규칙은 파일 아티팩트에 도달하지 못하므로 이 write 시점에 명시 강제한다. 문체는 ~/.claude/rules/korean-style.md 를 따른다: 줄표(—)·붙임표(–) 금지(끊을 때는 마침표, 나열은 가운뎃점 ·), 번역투 금지(~를 통해, ~에 대해, ~에 있어서, ~에 의해, ~되어진다, ~을 가지고 있다, ~하는 것, ~할 필요가 있다, ~라는 점, 결론적으로, 시사하는 바가 크다, ~할 수 있을 것으로 보인다), 연결어미 뒤 쉼표 금지, 문두 접속사 연발과 과도한 볼드·이모지 금지. 코드·경로·플래그의 하이픈과 기술 용어·수치·모델명은 그대로 둔다.\"}} else empty end'"
+            "command": "jq -c 'if (.tool_input.file_path // \"\") | test(\"(docs/plans|docs/superpowers/specs|docs/solutions)/.*\\\\.md$\") then {hookSpecificOutput:{hookEventName:\"PreToolUse\",additionalContext:\"docs/plans/ 계획 파일, docs/superpowers/specs/ 스펙 파일, docs/solutions/ 학습 기록 중 하나를 지금 쓰려 한다. 본문 산문은 반드시 한국어로 작성하라(코드, 식별자, 파일경로, frontmatter 키, enum 값은 영문 유지). 서브에이전트 중간 산출물이나 초안이 영어라면 이 파일 내용을 한국어로 다시 작성하라. 전역 한국어 규칙은 파일 아티팩트에 도달하지 못하므로 이 write 시점에 명시 강제한다. 문체는 ~/.claude/output-styles/korean.md 를 따른다: 줄표(—)와 붙임표(–) 금지(끊을 때는 마침표), 가운뎃점(·) 금지(나열은 쉼표, 둘을 묶을 때는 와/과), 명사 종결 금지(동사나 형용사 어미로 끝내되 목록 라벨, 제목, 표의 칸, frontmatter 값, 서술어를 생략한 개조식 불릿은 예외), 번역투 금지(~를 통해, ~에 대해, ~에 있어서, ~에 의해, ~되어진다, ~을 가지고 있다, ~하는 것, ~할 필요가 있다, ~라는 점, ~는 ~에서 나온다, A가 아니라 B다, ~를 마주한다, 결론적으로, 시사하는 바가 크다, ~할 수 있을 것으로 보인다), 연결어미 뒤 쉼표 금지, 문두 접속사 연발과 과도한 볼드, 이모지 금지. 문서 본문은 한다체로 쓴다(해요체와 습니다체는 사용자 응답 전용). 코드, 경로, 플래그의 하이픈과 기술 용어, 수치, 모델명은 그대로 둔다.\"}} else empty end'"
           }
         ]
       },
@@ -169,9 +169,10 @@
       "autoUpdate": true
     }
   },
+  "outputStyle": "Korean",
   "language": "Korean",
   "effortLevel": "high",
-  "advisorModel": "opus",
+  "advisorModel": "fable",
   "tui": "fullscreen",
   "agentPushNotifEnabled": true,
   "skills": {

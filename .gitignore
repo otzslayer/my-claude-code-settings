@@ -12,9 +12,10 @@
 # 발표자료
 !/PRESENTATION.pdf
 
-# 손으로 작성한 규칙·메모리 템플릿
+# 손으로 작성한 규칙·메모리 템플릿, 출력 스타일
 !/rules/
 !/memory-templates/
+!/output-styles/
 
 # 훅: 디렉토리 opt-in → 전체 무시 → .sh만 재opt-in
 !/hooks/
