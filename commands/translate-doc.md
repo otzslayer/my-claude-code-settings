@@ -6,124 +6,165 @@ allowed-tools: Read, Write, Edit, Bash, Glob, AskUserQuestion
 
 # translate-doc
 
-Translate an English markdown/text document to natural Korean. The actual translation is performed by **you (Claude)** in this session — no external API call. You operate as a bilingual translator following the project's curated prompt and accumulated glossary.
+영어 마크다운·텍스트 문서를 자연스러운 한국어로 번역한다. 실제 번역은 이 세션의 **당신(Claude)**이 수행한다. 외부 API 호출은 없다. 프로젝트가 다듬어 둔 프롬프트와 축적된 글로서리를 따르는 이중언어 번역자로 일한다.
 
-**Tone target.** GPT-5.1-level rhythmic and metaphorical fluency, with Claude's accuracy and consistency intact. The output should read as if originally written in Korean by a skilled essayist — not translated.
+**목표 문체.** GPT-5.1 수준의 리듬과 비유 구사력에 Claude의 정확성과 일관성을 그대로 얹는다. 산출물은 번역한 글이 아니라 솜씨 있는 한국어 필자가 처음부터 한국어로 쓴 글처럼 읽혀야 한다.
 
-## Arguments
+## 인자
 
-User input: `$ARGUMENTS`
+사용자 입력: `$ARGUMENTS`
 
-Parse:
-- First positional arg = **input file path** (required).
-- `--output <path>` / `-o <path>` = output file path (optional).
-- If `--output` is omitted, **overwrite the input file in place** — the translated Korean replaces the original English at the same path. No backup is created, so the source English is not retained unless the file is under version control. Pass `--output <path>` to write the translation to a separate file and leave the input untouched.
+파싱 규칙:
+- 첫 위치 인자 = **입력 파일 경로** (필수).
+- `--output <path>` / `-o <path>` = 출력 파일 경로 (선택).
+- `--output`을 생략하면 **입력 파일을 제자리에서 덮어쓴다.** 번역한 한국어가 같은 경로의 영어 원문을 대체한다. 백업을 만들지 않으므로 파일이 버전 관리 아래 있지 않다면 영어 원문은 남지 않는다. 번역을 별도 파일에 쓰고 입력을 그대로 두려면 `--output <path>`를 넘긴다.
 
-If no input file is provided or the path does not exist, stop and tell the user what was missing.
+입력 파일이 주어지지 않았거나 경로가 존재하지 않으면 멈추고 무엇이 빠졌는지 사용자에게 알린다.
 
-## Assets (absolute paths — all managed under `~/.claude/translate-doc-assets/`)
+## 자산 (절대 경로 — 모두 `~/.claude/translate-doc-assets/` 아래에서 관리)
 
-- System prompt: `~/.claude/translate-doc-assets/system_prompt.md`
-- Glossary: `~/.claude/translate-doc-assets/glossary.json`
-  - This is a **symlink** to `/Users/jayhan/workspaces/translate-with-gpt/data/glossary.json`. Reads and writes flow through to the original file, so the glossary stays shared with the `translate-doc` CLI in that repo. Treat the symlink path as the canonical access path.
-- Translationese patterns: `~/.claude/translate-doc-assets/translationese-patterns.md`
-  - Absorbed translationese rules (from `im-not-ai` taxonomy) with definitions, prescriptions, and `영어 원문 → BAD → GOOD` examples. The command references these rules; the rule text lives only in this file.
+- 시스템 프롬프트: `~/.claude/translate-doc-assets/system_prompt.md`
+- 글로서리: `~/.claude/translate-doc-assets/glossary.json`
+  - `/Users/jayhan/workspaces/translate-with-gpt/data/glossary.json`으로 가는 **심링크**다. 읽기와 쓰기가 원본 파일로 흘러가므로 그 저장소의 `translate-doc` CLI와 글로서리를 공유한다. 심링크 경로를 정식 접근 경로로 삼는다.
+- 번역투 패턴: `~/.claude/translate-doc-assets/translationese-patterns.md`
+  - `im-not-ai` 분류 체계에서 흡수한 번역투 규칙을 정의·처방·`영어 원문 → BAD → GOOD` 예문과 함께 담는다. 이 커맨드는 규칙을 참조만 하고, 규칙 본문은 그 파일에만 있다.
 
-## Workflow
+## 여러 파일 일괄 번역 (배치 모드)
 
-### Step 1 — Load assets
+한 폴더의 문서 여러 편을 한 번에 맡길 때 적용한다. 아래만 단일 파일 플로와 다르고 Step 1~8은 각 파일에 그대로 적용한다.
 
-1. `Read` the input file.
-2. `Read` the system prompt. The prompt is XML-tagged. **Internalize every section EXCEPT `<output_format>`** — you will write to a file directly instead of emitting JSON.
-3. `Read` the glossary JSON. It is a flat map `{ "English Term": "한국어(원문)" }`.
-4. `Read` the translationese patterns file (`translationese-patterns.md`). Internalize the absorbed patterns and their `영어 원문 → BAD → GOOD` examples — you will apply them in Step 4 (sentence-level) and Step 5 (density). Skip the YAML header (it is a machine-readable ledger for the resync script, not a translation rule).
+**순차·단일 세션으로 처리하고 서브에이전트에 분산하지 않는다.** 이 커맨드는 스킬이 아니라 슬래시 커맨드라 서브에이전트가 확장하지 못해 커맨드 본문과 `system_prompt.md`·`translationese-patterns.md`를 에이전트마다 다시 읽혀야 하고, Step 4의 파라미터 확인은 서브에이전트가 사용자에게 물을 수 없으며, Step 7이 쓰는 `glossary.json`은 외부 저장소로 가는 심링크라 동시 쓰기가 lost update를 낸다.
 
-### Step 2 — Filter glossary by what actually appears in the input
+1. **전역 용어표 선고정.** 전체를 먼저 통독해 반복되는 핵심 용어·대립쌍·모티프의 영어 → 한국어 매핑을 파일로 적어 두고 모든 파일에 강제한다. 문서마다 즉석에서 정하면 뼈대가 문서마다 어긋난다.
+2. **Step 4의 파라미터 확인은 배치당 1회.** 파일마다 묻지 않는다. 같은 `AskUserQuestion` 호출에 출력 위치(in-place / `--output` / 폴더 복사본)도 함께 묻는다.
+3. **in-place 전에 원본 보호 여부를 확인한다.** git 추적도 백업도 없는 폴더라면 폴더 복사본을 권한다. Step 6은 백업을 만들지 않는다.
+4. **파일럿 1편으로 톤과 용어를 확인받는다.** 핵심 용어를 가장 많이 정의하는 짧은 문서가 적합하다. 확인을 건너뛰었다면 보고 첫머리에 그 사실을 밝힌다.
+5. **위키링크 `[[타깃]]`은 파일명이라 바꾸지 않는다.** alias(`[[Target | 표시 텍스트]]`의 뒷부분)만 번역한다. 파일명에 악센트 표기가 섞여 있어도 교정하지 않는다.
+6. **Step 7 글로서리 병합은 배치 끝에 1회만** 수행한다.
+7. **최종 스윕.** 원본과 파일별로 대조한다. 헤딩·수평선(`---`)·각주 정의 수, 각주 참조 번호 집합(`[^1]` 등 인라인 포함), 위키링크 타깃 목록과 alias 개수, 이미지·외부 URL 목록, 표의 파이프(`|`) 총수, 볼드 마커(`**`) 짝수 여부, 쉼표가 원문 개수를 넘지 않는지, 그리고 Step 5 항목 19·20. 전면 재작성한 파일이 있으면 재작성 뒤 다시 돌린다.
 
-The full glossary has ~2,500 entries. Do **not** inject all of it. Instead, build a **filtered subset** containing only keys whose English term appears in the input text.
+## 작업 흐름
 
-Matching rules:
-- Case-insensitive.
-- **Word boundary** match — `agent` should not match `agentic` unless `agentic` is also a glossary key on its own.
-- Multi-word keys (e.g. `Large Language Model (LLM)`, `prompt chaining`) match as substrings on word boundaries.
+### Step 1 — 자산 로드
 
-If the filtered set is empty, that is fine — proceed with no glossary terms (rare for technical docs).
+1. 입력 파일을 `Read`한다.
+2. 시스템 프롬프트를 `Read`한다. XML 태그로 구분되어 있다. **`<output_format>`을 제외한 모든 절을 내면화한다.** JSON을 내보내는 대신 파일에 직접 쓸 것이기 때문이다.
+3. 글로서리 JSON을 `Read`한다. `{ "English Term": "한국어(원문)" }` 형태의 평평한 맵이다.
+4. 번역투 패턴 파일(`translationese-patterns.md`)을 `Read`한다. 흡수된 패턴과 그 `영어 원문 → BAD → GOOD` 예문을 내면화한다. Step 4(문장 단위)와 Step 5(density)에서 적용한다. YAML 헤더는 건너뛴다. 번역 규칙이 아니라 resync 스크립트용 기계 판독 대장이다.
 
-### Step 3 — Decide whether to chunk
+### Step 2 — 입력에 실제로 나오는 것만 글로서리에서 추린다
 
-- **Single pass** if the input is under ~50,000 characters (≈ 25K English tokens).
-- **Chunk** otherwise: split on `##` (H2) headings. The preamble before the first H2 is one chunk; each H2 block is a chunk. Keep each H2 heading attached to its body.
-- Never split inside a code block, table, list, or callout block. Adjust the boundary outward if a naive H2 split would break one of these.
+전체 글로서리는 약 2,500항목이다. 전부 주입하지 **않는다.** 대신 영어 용어가 입력 텍스트에 나타나는 키만 담은 **필터링된 부분집합**을 만든다.
 
-### Step 4 — Translate
+매칭 규칙:
+- 대소문자를 구분하지 않는다.
+- **단어 경계** 매칭. `agentic`이 그 자체로 글로서리 키가 아니라면 `agent`가 `agentic`에 매칭되어서는 안 된다.
+- 여러 낱말로 된 키(예: `Large Language Model (LLM)`, `prompt chaining`)는 단어 경계 위의 부분 문자열로 매칭한다.
 
-For each chunk (or the whole document if single-pass), translate to natural Korean applying **every rule** from the system prompt's `<role>`, `<core_principles>`, `<cultural_adaptation>`, `<natural_korean_writing>`, `<terminology>`, `<preservation_rules>`, `<heading_translation>` sections.
+필터링 결과가 비어도 괜찮다. 글로서리 용어 없이 진행한다(기술 문서에서는 드물다).
 
-#### Comprehend the whole source before translating
+### Step 3 — 청킹 여부를 정한다
 
-Before producing any Korean text, read the entire input once (or the entire chunk, when chunking) and form a working mental model of:
+- 입력이 약 50,000자(영어 토큰 25K 정도) 미만이면 **단일 패스**로 처리한다.
+- 그 이상이면 **청킹한다.** `##`(H2) 헤딩에서 나눈다. 첫 H2 앞의 도입부가 한 청크이고, 각 H2 블록이 한 청크다. H2 헤딩은 본문에 붙여 둔다.
+- 코드 블록·표·목록·콜아웃 블록 안에서는 절대 자르지 않는다. 단순한 H2 분할이 그중 하나를 깨뜨린다면 경계를 바깥으로 옮긴다.
 
-- **Argument** — what is the author trying to claim, convince me of, or change my mind about?
-- **Tone** — essay, technical reference, business memo, polemic, personal blog? How formal? How playful? How urgent?
-- **Audience** — who is the author writing for? What do they already know?
-- **Emotional undertone** — confident, doubtful, excited, cautious, frustrated, wry?
-- **Recurring images and motifs** — which figures does the author return to? An essay about AI may keep circling back to "teammate", "apprentice", "infrastructure", "memory"; a piece about distributed systems may keep returning to "pressure", "blast radius", "fragility". Note these as a cluster — you will render them consistently in Korean.
+### Step 4 — 번역
 
-The translation must carry all five layers, not just the surface meaning. Skipping this comprehension pass is the single most common reason a translation reads correct sentence-by-sentence yet hollow as a whole.
+각 청크(단일 패스라면 문서 전체)를 자연스러운 한국어로 옮기되, 시스템 프롬프트의 `<role>`·`<core_principles>`·`<cultural_adaptation>`·`<natural_korean_writing>`·`<terminology>`·`<preservation_rules>`·`<heading_translation>` 절에 있는 **모든 규칙**을 적용한다.
 
-When chunking long documents, do this comprehension pass on the **whole document** during Step 1, before translating any chunk. Each chunk is then translated *with the global model in mind*, not as an isolated fragment.
+#### 번역 전에 원문 전체를 파악한다
 
-##### Confirm two parameters with the user (MANDATORY)
+한국어 텍스트를 한 글자라도 내놓기 전에 입력 전체(청킹 시에는 해당 청크 전체)를 한 번 읽고 다음 다섯 층의 작업 모델을 세운다.
 
-After forming the mental model, **before producing any Korean text**, confirm two key translation parameters with the user via the `AskUserQuestion` tool (number-picker UI, not free-form). Ask both questions in a **single** tool call. Mark your comprehension-pass best guess as `(Recommended)` on the appropriate option, with a one-line rationale tied to what you observed in the source.
+- **논증** — 저자는 무엇을 주장하고, 무엇을 설득하며, 어떤 생각을 바꾸려 하는가?
+- **톤** — 에세이인가 기술 참조인가 업무 메모인가 논객 글인가 개인 블로그인가? 얼마나 격식 있는가? 얼마나 장난스러운가? 얼마나 급박한가?
+- **독자** — 저자는 누구를 향해 쓰는가? 그 독자는 무엇을 이미 아는가?
+- **정서의 결** — 확신에 차 있는가, 의심하는가, 들떠 있는가, 조심스러운가, 답답해하는가, 냉소적인가?
+- **되풀이되는 이미지와 모티프** — 저자가 자꾸 돌아오는 형상은 무엇인가? AI를 다룬 에세이는 "teammate"·"apprentice"·"infrastructure"·"memory"로 계속 돌아올 수 있고, 분산 시스템을 다룬 글은 "pressure"·"blast radius"·"fragility"로 돌아올 수 있다. 이것들을 하나의 클러스터로 적어 둔다. 한국어로 일관되게 옮길 대상이다.
 
-**Question 1 — 글의 카테고리와 톤** (header: `글 톤`, 4 options, mutually exclusive)
+번역은 표면 의미만이 아니라 다섯 층을 모두 실어 날라야 한다. 이 파악 단계를 건너뛰는 것이 문장별로는 맞는데 전체로는 텅 빈 번역이 나오는 가장 흔한 이유다.
 
-1. 격식 있는 기술/비즈니스 문서 — formal third-person, terminology-heavy, neutral voice
-2. 균형 있는 에세이 / 장문 블로그 — first-person OK, analytic + narrative mix, columnist voice
-3. 캐주얼한 개인 노트 / 짧은 글 — informal, conversational, close to spoken Korean
-4. 비판적 / 논객 글 — opinionated, persuasive, rhetorical edge
+긴 문서를 청킹할 때는 이 파악을 Step 1에서 **문서 전체**를 놓고 한 번 한다. 어떤 청크도 번역하기 전이다. 그다음 각 청크를 *전역 모델을 염두에 두고* 번역한다. 고립된 조각으로 다루지 않는다.
 
-**Question 2 — 번역 의역 강도** (header: `의역 강도`, 4 options, mutually exclusive — 4단계 슬라이더; AskUserQuestion의 옵션 상한이 4개라 정확히 한 화면에 맞는다. 보수→균형→적극→과감 순으로 단조 증가)
+##### 사용자와 두 파라미터를 확인한다 (MANDATORY)
 
-1. 보수 — 원문 구조 유지, 정확성 우선. 한국어 자연스러움보다 원문 충실. (≤30% 문장 재구성)
-2. 균형 — Korean rhythm으로 재구성하되 원문 의미와 구조에 충실. (~55–70% 문장 재구성) `(Recommended)` by default unless the document obviously calls for another level.
-3. 적극 — 과감에 근접할 만큼 대담하게 Korean rhythm으로 재편하되, 논증·비유·tone만 남기고 문장을 통째로 재창작하는 과감 특유의 자유(전면 재작성)까지는 절제한다. 기존 적극과 과감의 중간. (~80–90% 문장 재구성)
-4. 과감 — 한국어 에세이체로 자유롭게 재작성. 논증·비유·tone만 유지하고 문장 구조는 한국어식으로 전면 재구성. (GPT-5.1-style fluency)
+작업 모델을 세운 뒤, **한국어 텍스트를 내놓기 전에** `AskUserQuestion` 도구로 핵심 번역 파라미터 둘을 사용자와 확인한다(자유 입력이 아니라 번호 선택 UI). 두 질문을 **한 번의** 도구 호출에 담는다. 파악 단계에서 세운 최선의 추정에 `(Recommended)`를 달고, 원문에서 무엇을 보고 그렇게 판단했는지 한 줄로 붙인다.
 
-Use the user's answers to tune translation:
-- **글 톤** → register, vocabulary formality, idiom range, sentence ending texture
-- **의역 강도** → how far you deviate from source sentence structure (보수: minimal restructuring ≤30%; 균형: 55–70%; 적극: 80–90%, 과감에 근접하게 대담히 재편하되 문장 전면 재작성(과감)은 절제; 과감: full Korean essayistic flow, 문장 전면 재작성). 4단계는 단조 증가하는 슬라이더이며, 적극(레벨 3)은 균형보다 훨씬 과감하게 재편해 과감(레벨 4)에 근접한다(기존 적극과 과감의 중간).
+**배치 모드 예외**: 여러 파일을 일괄 번역하는 중이라면 이 확인은 배치 시작 시 1회로 끝났다. 파일마다 다시 묻지 않는다. 위 "여러 파일 일괄 번역" 절 2번을 참조한다.
 
-If the user selects `Other` (free-form) for either question, parse the answer and apply your best interpretation.
+**Question 1 — 글의 카테고리와 톤** (header: `글 톤`, 4개 선택지, 상호 배타)
 
-The other three layers (argument, audience, recurring motifs) you derive automatically from the source — do **not** ask the user about them. The two questions above are the only user-facing checkpoint in this command.
+1. 격식 있는 기술/비즈니스 문서 — 격식 있는 3인칭, 용어 밀도 높음, 중립적 목소리
+2. 균형 있는 에세이 / 장문 블로그 — 1인칭 허용, 분석과 서사의 혼합, 칼럼니스트 목소리
+3. 캐주얼한 개인 노트 / 짧은 글 — 비격식, 대화체, 구어에 가까움
+4. 비판적 / 논객 글 — 의견이 뚜렷하고 설득적이며 수사가 날카로움
 
-#### Non-negotiable baseline
+**Question 2 — 번역 의역 강도** (header: `의역 강도`, 4개 선택지, 상호 배타 — 4단계 슬라이더. `AskUserQuestion`의 선택지 상한이 4개라 정확히 한 화면에 맞는다. 보수→균형→적극→과감 순으로 단조 증가)
 
-- Body text endings: declarative (`~한다`, `~이다`, `~였다`). Polite endings (`~합니다`, `~죠`) **only** inside direct quotation marks.
-- All headings (levels 1–6) MUST be translated. Replace, do not append. Preserve `#` markers and bold formatting.
-- **YAML frontmatter: preserve every field verbatim, including `title`.** Frontmatter is metadata consumed by tools (Obsidian, static site generators, etc.). The `title` field often serves as a stable identifier or matches an external source URL — translating it breaks those linkages. Body-text H1, if present in the source, is the right place for a translated title. If the source has no body H1 and only a frontmatter title, do not add a translated H1 — that would modify markdown structure not in the source.
-- Markdown structure, code blocks (translate only comments inside), inline code, URLs, file paths: preserve verbatim. **Do not add or remove horizontal rules (`---`), blockquotes, or other structural markers that are not in the source.**
-- Apply the **filtered glossary** with highest priority. Every glossary key that appears in source must be rendered using the glossary's Korean form — subject to the **glossary-vs-generic-noun rule** below.
+1. 보수 — 원문 구조 유지, 정확성 우선. 한국어 자연스러움보다 원문 충실. (문장 재구성 30% 이하)
+2. 균형 — 한국어 리듬으로 재구성하되 원문 의미와 구조에 충실. (문장 재구성 55~70%) 문서가 명백히 다른 수준을 요구하지 않는 한 기본 `(Recommended)`다.
+3. 적극 — 과감에 근접할 만큼 대담하게 한국어 리듬으로 재편하되, 논증·비유·톤만 남기고 문장을 통째로 재창작하는 과감 특유의 자유(전면 재작성)까지는 절제한다. 기존 적극과 과감의 중간. (문장 재구성 80~90%)
+4. 과감 — 한국어 에세이체로 자유롭게 재작성. 논증·비유·톤만 유지하고 문장 구조는 한국어식으로 전면 재구성. (GPT-5.1 수준의 유창함)
 
-#### Em dash handling (refined priority order)
+##### 강도별 실행 신호와 대조 예시
 
-Em dashes (—) in source: never copy into Korean prose. Apply this priority order:
+백분율만으로는 실행하는 중에 자기 채점이 되지 않는다. 아래 신호로 판정한다.
 
-1. **Collapse to parenthetical** `( )` — when the dash-flanked phrase lists or restates the preceding noun.
-   - English: `Every finished artifact—code, docs, analysis—becomes context.`
+- **보수**: 원문 문장 하나에 번역 문장 하나가 대응하고 어순도 대체로 따라간다.
+- **균형**: 일부 문단에서 문장이 합쳐지지만 문단 첫 문장의 어순은 원문을 따른다. `It's important that…`이나 `The X is that Y` 같은 영어 틀이 한국어에 흔적으로 남는다.
+- **적극**: 대부분의 문단에서 문장 수가 원문과 어긋난다. 문단 첫 문장의 어순이 원문에서 떨어지고, 영어 틀은 녹아 없어지며, 주어는 문장을 건너뛰며 생략된다.
+- **과감**: 문단 경계까지 재편될 수 있다. 논증·비유·톤만 남고 문장은 새로 지어진다.
+
+**판정 기준**: 적극 이상을 골랐는데 번역 문장이 원문과 1:1로 나란히 가고 있다면 그 산출물은 균형이다. 다시 쓴다.
+
+**자기 채점의 함정**: 같은 패스에서 쓰고 곧바로 검토하면 강도 미달이 그대로 통과한다. 판정은 Step 5 항목 1의 원문 경계 대조로만 내린다.
+
+같은 대목을 네 강도로 옮기면 이렇게 갈린다.
+
+- 영어 원문: `In documentation, the special difficulty is that the instructor is condemned to be absent, and is not there to monitor the learner and correct their mistakes. The instructor must somehow find a way to be present through written instruction alone.`
+- 보수: `문서에서 특별한 어려움은 지도자가 부재하도록 선고받았고, 학습자를 지켜보며 실수를 바로잡아 줄 자리에 없다는 것이다. 지도자는 오직 글로 쓴 지시만으로 어떻게든 곁에 있을 방법을 찾아야 한다.`
+- 균형: `문서에서 특별히 어려운 점은 지도자가 부재하도록 선고받았다는 데 있다. 학습자를 지켜보고 실수를 바로잡아 줄 자리에 없다. 지도자는 오직 글로 쓴 지시만으로 어떻게든 그 자리에 있을 방법을 찾아야 한다.`
+- 적극: `문서에는 특유의 곤경이 있다. 지도자는 곁에 없도록 선고받은 처지라 학습자를 지켜볼 수도 실수를 바로잡아 줄 수도 없다. 그러면서도 글로 쓴 지시 하나만으로 어떻게든 곁에 있을 길을 찾아야 한다.`
+- 과감: `문서를 쓰는 자리에서 지도자는 없는 사람이다. 그렇게 선고받았다. 학습자가 헤매도 볼 수 없고 손을 뻗어 바로잡아 줄 수도 없다. 남은 것은 글자뿐이고, 그 글자만으로 곁에 있어야 한다.`
+
+**주의**: 위 균형 예시는 실제로 적극을 지시받고 나온 산출물이다. 낱말은 저마다 자연스러운데 문장 경계가 원문을 그대로 따라가 균형에 머물렀다. 강도 미달은 이렇게 낱말이 아니라 호흡에서 드러난다.
+
+사용자의 답으로 번역을 조율한다.
+- **글 톤** → 문체 등급, 어휘의 격식, 관용구 범위, 종결어미의 질감
+- **의역 강도** → 원문 문장 구조에서 얼마나 떨어질지(보수: 최소 재구성 30% 이하. 균형: 55~70%. 적극: 80~90%로 과감에 근접하게 대담히 재편하되 문장 전면 재작성(과감)은 절제. 과감: 한국어 에세이의 흐름을 온전히 살린 전면 재작성). 4단계는 단조 증가하는 슬라이더이며, 적극(레벨 3)은 균형보다 훨씬 과감하게 재편해 과감(레벨 4)에 근접한다(기존 적극과 과감의 중간).
+
+번역을 내놓은 뒤 사용자가 "의역이 더 필요하다"고 말하면 진단을 다시 따지지 말고 **강도를 한 눈금 올려 다시 쓴다**. 그 말은 질문이 아니라 재확인이다.
+
+두 질문 중 하나라도 사용자가 `Other`(자유 입력)를 고르면 답을 해석해 최선의 판단으로 적용한다.
+
+나머지 세 층(논증·독자·되풀이되는 모티프)은 원문에서 자동으로 끌어낸다. 사용자에게 **묻지 않는다.** 위 두 질문이 이 커맨드에서 사용자를 마주하는 유일한 지점이다.
+
+#### 타협 없는 기준선
+
+- 본문 종결어미: 평서형(`~한다`, `~이다`, `~였다`). 경어체(`~합니다`, `~죠`)는 직접 인용부호 **안에서만** 쓴다.
+- 모든 헤딩(1~6단계)을 반드시 번역한다. 덧붙이지 말고 대체한다. `#` 마커와 볼드 서식은 유지한다.
+- **YAML frontmatter는 `title`을 포함해 모든 필드를 원문 그대로 보존한다.** frontmatter는 도구(Obsidian, 정적 사이트 생성기 등)가 소비하는 메타데이터다. `title` 필드는 안정적인 식별자로 쓰이거나 외부 원본 URL과 일치하는 경우가 많아, 번역하면 그 연결이 끊어진다. 원문에 본문 H1이 있다면 번역한 제목은 거기 들어간다. 원문에 본문 H1 없이 frontmatter 제목만 있다면 번역한 H1을 새로 만들지 않는다. 원문에 없는 마크다운 구조를 더하는 일이 된다.
+- 마크다운 구조, 코드 블록(내부 주석만 번역), 인라인 코드, URL, 파일 경로는 원문 그대로 보존한다. **원문에 없는 수평선(`---`)·인용 블록·기타 구조 마커를 더하거나 빼지 않는다.**
+- **필터링된 글로서리**를 최우선으로 적용한다. 원문에 나타나는 모든 글로서리 키는 글로서리의 한국어 형태로 옮긴다. 다만 아래 **글로서리와 일반 명사의 충돌** 규칙을 따른다.
+
+#### 줄표 처리 (우선순위)
+
+원문의 줄표(—)는 한국어 산문에 절대 옮겨 적지 않는다. 다음 우선순위를 적용한다.
+
+1. **괄호로 접기** `( )`. 줄표에 둘러싸인 구가 앞 명사를 나열하거나 다시 말할 때.
+   - 영어: `Every finished artifact—code, docs, analysis—becomes context.`
    - GOOD: `완성된 아티팩트(코드, 문서, 분석)는 컨텍스트가 된다.`
-2. **Absorb into a comma-connected clause** — when the aside is short and tight.
-3. **Split into separate sentences** — only when the dash carries a strong pivot or contrast that would feel cramped in one sentence.
+2. **쉼표로 이은 절에 흡수.** 삽입구가 짧고 단단할 때.
+3. **문장을 나눔.** 줄표가 강한 전환이나 대조를 실어 한 문장에 담으면 답답할 때만.
 
-**Default to collapse first.** Splitting fragments the rhythm and often produces awkward repeats. Watch for the failure mode where splitting forces you to repeat a word like `무엇이든 ... 무엇이든 마찬가지다` — that is the symptom of having split when you should have collapsed.
+**먼저 접는 쪽을 기본으로 삼는다.** 나누면 리듬이 조각나고 어색한 반복이 자주 생긴다. 나눈 탓에 `무엇이든 ... 무엇이든 마찬가지다`처럼 같은 낱말을 되풀이하게 되는 실패 양상을 살핀다. 접어야 할 자리에서 나눴다는 신호다.
 
-Exception: em dashes inside code, inline code, or URLs are preserved verbatim.
+예외: 코드·인라인 코드·URL 안의 줄표는 원문 그대로 보존한다.
 
 #### 쉼표 절제 — comma discipline (translationese-patterns.md C-11 확장 · 표면 교정형 · 모든 의역 강도)
 
-한국어는 영어보다 쉼표를 훨씬 적게 쓴다. 쉼표를 **번역하지 않는다** — 원문의 `,`나 영어식 호흡을 1대1로 옮기면 문장이 잘게 끊겨 번역투가 된다. 이 규칙은 C-11(연결어미 뒤 쉼표)을 **주어·부사어·삽입어 뒤 pause 쉼표까지** 넓힌 것으로, **번역하는 그 순간(Step 4)에 지켜 사후 "쉼표 다이어트"가 필요 없게 한다.**
+한국어는 영어보다 쉼표를 훨씬 적게 쓴다. 쉼표를 **번역하지 않는다.** 원문의 `,`나 영어식 호흡을 1대1로 옮기면 문장이 잘게 끊겨 번역투가 된다. 이 규칙은 C-11(연결어미 뒤 쉼표)을 **주어·부사어·삽입어 뒤 pause 쉼표까지** 넓힌 것으로, **번역하는 그 순간(Step 4)에 지켜 사후 "쉼표 다이어트"가 필요 없게 한다.**
 
 한국어에서 쉼표를 쓰는 자리는 다음 넷뿐이다. 그 외에는 찍지 않는다:
 - (a) **3항 이상 나열** — `취향, 뉘앙스, 소신` (2항 `A와 B`는 쉼표 없이 `~와/과`·`~고`로 잇는다)
@@ -137,48 +178,65 @@ Exception: em dashes inside code, inline code, or URLs are preserved verbatim.
 - 연결어미 `-고/-며/-면서` 뒤(C-11): `다듬고, 던지고, 뜯어보고` → `다듬고 던지고 뜯어보고`
 - 극적 효과를 노린 쉼표: `희귀한 것은, 값지다` → `희귀한 것은 값지다`
 
-**의역 강도가 높을수록(적극·과감) 리듬용 쉼표를 흩뿌리기 쉽다 — 특히 경계하라.** 한국어의 리듬은 쉼표가 아니라 **문장 길이와 연결어미**에서 나온다. 짧은 호흡이 필요하면 쉼표 대신 마침표로 끊는다. **기준: 번역본의 쉼표 수가 원문 쉼표 수를 넘기지 않는다.** 문법적으로 (a)~(d) 중 하나로 설명되지 않는 쉼표는 찍지 말고, 이미 찍었다면 지운다.
+**의역 강도가 높을수록(적극·과감) 리듬용 쉼표를 흩뿌리기 쉽다. 특히 경계하라.** 한국어의 리듬은 쉼표가 아니라 **문장 길이와 연결어미**에서 나온다. 짧은 호흡이 필요하면 쉼표 대신 마침표로 끊는다. **기준: 번역본의 쉼표 수가 원문 쉼표 수를 넘기지 않는다.** 문법적으로 (a)~(d) 중 하나로 설명되지 않는 쉼표는 찍지 말고, 이미 찍었다면 지운다.
 
-#### Metaphor and figurative language
+#### 비유와 형상 언어
 
-Every vivid metaphor and figurative verb in the source is doing work — carrying an argument, setting a mood, anchoring an image the author wants the reader to feel. A translation that flattens these to plain verbs is technically correct and rhetorically dead.
+원문의 생생한 비유와 형상적 동사는 저마다 일을 하고 있다. 논증을 실어 나르고, 분위기를 잡고, 저자가 독자에게 느끼게 하려는 이미지를 붙든다. 이것들을 밋밋한 동사로 뭉개면 기술적으로는 맞으나 수사적으로는 죽은 번역이 된다.
 
-Your job is **not** to look up fixed mappings. Your job is to read the figurative phrase in its full context and generate a Korean rendering that does the same job for a Korean reader. Apply the following process to every figurative phrase you encounter:
+할 일은 고정 매핑을 찾아보는 것이 **아니다.** 형상적 표현을 그 온전한 맥락 속에서 읽고, 한국어 독자에게 같은 일을 하는 한국어 표현을 만들어 내는 것이다. 마주치는 모든 형상적 표현에 다음 과정을 적용한다.
 
-1. **Identify** that a phrase is functioning figuratively. Test: would dropping the imagery leave the sentence duller, less specific, or less persuasive than the original? If yes, it is load-bearing and must be preserved. If the imagery is a dead metaphor with no rhetorical weight, plain rendering is fine.
-2. **Trace** what the image is doing inside the larger argument you mapped in the comprehension pass. Is the figure pointing to growth? Distance? Pressure? Fragility? Speed? Inheritance? Compounding return? The same English word can call for very different Korean images depending on the argument it serves. `compound` in a finance-flavored essay points toward `복리처럼`; `compound` in a personal-growth essay might point toward `켜켜이 쌓이다` or `차곡차곡 누적되다`. **The right Korean image depends on what the surrounding argument is doing, not on a dictionary equivalence.**
-3. **Render** with a Korean image that produces the same effect on a Korean reader as the source did on an English reader. The Korean image does not need to be the same image — it needs to do the same job. If the original figure has no natural Korean equivalent, restructure the sentence around a different Korean image that carries the same argumentative weight.
-4. **Calibrate intensity.** If the source uses a quiet, almost-dead metaphor, your Korean should also be quiet. Do not over-poeticize a workaday turn of phrase — that swings to the opposite failure mode of stilted "translation literature." Match the source's register, not your own taste for vivid language.
-5. **Stay consistent within the document.** If the author returns to the same metaphor cluster — e.g. an essay repeatedly framing AI as a "teammate", "new hire", "collaborator" — your Korean renderings of those related figures must stay inside one coherent Korean cluster. Don't randomly switch between `팀원`, `동료`, `협업자`, `신입` when the author was consistent. Pick the cluster on first occurrence and hold it.
+1. **알아본다.** 어떤 표현이 형상적으로 기능하고 있음을 알아챈다. 시험: 그 이미지를 걷어 내면 문장이 원문보다 밋밋하거나 덜 구체적이거나 덜 설득적이 되는가? 그렇다면 그 이미지는 하중을 지고 있으므로 보존해야 한다. 수사적 무게가 없는 죽은 비유라면 밋밋하게 옮겨도 된다.
+2. **좇는다.** 파악 단계에서 그린 더 큰 논증 안에서 그 이미지가 무슨 일을 하는지 좇는다. 성장을 가리키는가? 거리인가? 압력인가? 취약함인가? 속도인가? 상속인가? 복리로 불어나는 수익인가? 같은 영어 낱말이라도 어떤 논증에 복무하느냐에 따라 아주 다른 한국어 이미지를 부른다. 금융 냄새가 나는 에세이의 `compound`는 `복리처럼`을 가리키고, 개인의 성장을 다룬 에세이의 `compound`는 `켜켜이 쌓이다`나 `차곡차곡 누적되다`를 가리킬 수 있다. **알맞은 한국어 이미지는 사전적 대응이 아니라 둘러싼 논증이 무엇을 하고 있느냐로 정해진다.**
+3. **만든다.** 원문이 영어 독자에게 낸 효과와 같은 효과를 한국어 독자에게 내는 한국어 이미지로 옮긴다. 같은 이미지일 필요는 없고 같은 일을 하면 된다. 원래 형상에 자연스러운 한국어 대응이 없다면, 같은 논증적 무게를 지는 다른 한국어 이미지를 중심으로 문장을 재구성한다.
+4. **세기를 맞춘다.** 원문이 조용한, 거의 죽은 비유를 쓴다면 한국어도 조용해야 한다. 일상적인 표현을 과하게 시적으로 만들지 않는다. 그러면 뻣뻣한 "번역 문학"이라는 반대편 실패로 넘어간다. 자신의 화려한 언어 취향이 아니라 원문의 문체 등급에 맞춘다.
+5. **문서 안에서 일관되게 유지한다.** 저자가 같은 비유 클러스터로 돌아온다면(예: AI를 "teammate"·"new hire"·"collaborator"로 되풀이해 그리는 에세이) 관련된 형상들의 한국어 표현도 하나의 일관된 한국어 클러스터 안에 머물러야 한다. 저자가 일관됐는데 `팀원`·`동료`·`협업자`·`신입`을 무작위로 오가지 않는다. 첫 등장에서 클러스터를 정하고 끝까지 지킨다.
 
-The system prompt's `<cultural_adaptation>` section lists a handful of well-known idiom pairs. Treat that list as **examples of the principle**, not as a lookup table you must hit. When the source uses a figurative expression that is not in the list, you generate the Korean rendering from scratch using steps 1–5 above. When the source uses an expression that *is* in the list but the surrounding argument calls for a different image, **override the list — the surrounding argument always wins**.
+   **대립쌍은 같은 어휘 축에 세운다.** 저자가 짝으로 쓰는 개념(`present`/`absent`, `study`/`work`, `acquisition`/`application`)은 한국어에서도 한 계열의 낱말로 대응시켜야 대비가 선다. 한쪽만 다른 계열로 옮기면 한국어 독자에게는 무관한 두 말로 읽혀 대립 자체가 사라진다.
+   - 영어 원문: `the instructor is condemned to be absent … must somehow find a way to be present`
+   - BAD(축이 갈림): `지도자가 **부재**하도록 선고받았다 … 어떻게든 **그 자리에 있을** 방법을 찾아야 한다`
+   - GOOD(한 축): `지도자는 **곁에 없도록** 선고받은 처지라 … 어떻게든 **곁에 있을** 길을 찾아야 한다`
 
-**Sanity check.** After translating, re-read your Korean rendering of any figurative passage in isolation. If a Korean reader saw only your sentence (without the English), would they feel the metaphor doing work — or would they read past it as filler? Aim for "doing work."
+   **문서 간 콜백도 같은 어휘로 묶는다.** 본문의 한 구절을 각주나 다른 문서가 되받아 울리는 경우(위 예에서 `[^7]: You are required to be present, but condemned to be absent.`), 양쪽을 같은 낱말로 옮겨야 저자가 심어 둔 반향이 살아난다. 배치 모드라면 이 짝을 전역 용어표에 적어 둔다.
 
-#### Glossary vs generic-noun conflict
+시스템 프롬프트의 `<cultural_adaptation>` 절은 잘 알려진 관용구 짝을 몇 개 나열한다. 그 목록은 반드시 맞춰야 할 대조표가 아니라 **원리의 예시**로 다룬다. 목록에 없는 형상적 표현을 원문이 쓴다면 위 1~5 과정으로 한국어 표현을 처음부터 만들어 낸다. 목록에 *있는* 표현을 쓰더라도 둘러싼 논증이 다른 이미지를 부른다면 **목록을 무시한다. 둘러싼 논증이 언제나 이긴다.**
 
-The filtered glossary takes priority for **domain-specific technical terms**. But the glossary contains some entries like `Configuration → Configuration` (English preserved) that target product/API/library names. When the source uses the same word as a **generic lowercase noun** in ordinary prose (e.g. *"the latter provides configuration"*), the glossary entry is the wrong rule to apply — follow the system prompt's `<terminology>` Common Technical Terms section instead (`Configuration → 설정`).
+**점검.** 번역을 마친 뒤 형상적인 대목의 한국어를 따로 떼어 다시 읽는다. 한국어 독자가 영어 없이 그 문장만 본다면 비유가 일하고 있다고 느낄까, 아니면 군더더기로 읽고 지나칠까? "일하고 있다"를 목표로 삼는다.
 
-Heuristic:
-- Source word capitalized as a proper noun or product/API name → follow glossary's English-preserve mapping.
-- Source word is a lowercase common noun in a generic sentence → translate to Korean per Common Technical Terms.
+#### 글로서리와 일반 명사의 충돌
 
-When in doubt, choose what reads naturally in the surrounding Korean sentence. **The glossary is a tool for consistency, not a straitjacket.**
+필터링된 글로서리는 **도메인 전문용어**에 우선한다. 그런데 글로서리에는 제품·API·라이브러리 이름을 겨냥한 `Configuration → Configuration`(영어 보존) 같은 항목도 있다. 원문이 같은 낱말을 평범한 산문 속 **소문자 일반 명사**로 쓴다면(예: *"the latter provides configuration"*) 글로서리 항목은 잘못된 규칙이다. 대신 시스템 프롬프트의 `<terminology>` Common Technical Terms 절을 따른다(`Configuration → 설정`).
 
-#### Sentence rhythm — combine over split
+판단 기준:
+- 원문 낱말이 고유명사나 제품·API 이름으로 대문자화 → 글로서리의 영어 보존 매핑을 따른다.
+- 원문 낱말이 일반 문장 속 소문자 보통명사 → Common Technical Terms에 따라 한국어로 옮긴다.
 
-English packs information in short, choppy, subject-led sentences. Korean breathes better with longer, subject-omitted, connector-linked sentences. **Default to combining 2–3 short English sentences into one flowing Korean sentence** when they share an action, condition, or topic. Only split when there is a genuine pivot, contrast, or emphasis shift.
+애매하면 둘러싼 한국어 문장에서 자연스럽게 읽히는 쪽을 고른다. **글로서리는 일관성을 위한 도구이지 구속복이 아니다.**
 
-Example:
-- English: `While I'm still learning, I've repeated my answers often enough that I'm writing it here so the next time I'm asked I can share a link instead.`
-- BAD (split, fragmented end): `아직 배우는 중이지만, 같은 답을 너무 자주 반복해서 이렇게 글로 남긴다. 다음에 또 같은 질문을 받으면 링크 하나만 던져주면 되도록.`
-- GOOD (combined, flowing): `아직 배우는 중이지만 같은 질문을 너무 자주 받다 보니, 이번엔 글로 정리해두고 다음에 또 같은 질문이 들어오면 링크 하나만 건네려 한다.`
+#### 일꾼 동사·추상명사의 고정 매핑 금지 (표면 교정형 · 모든 의역 강도)
 
-The English `so that I can ...` pattern is a particular trap — do not let it terminate the Korean sentence in `~되도록.` Restructure the whole clause around a Korean intent ending (`~려 한다`, `~으면 된다`, `~기 위해서다`).
+`system_prompt.md`의 `<terminology>` Consistency Rule("한 번 정한 번역은 문서 전체에서 일관되게")은 **도메인 전문용어·글로서리 항목·모티프 클러스터에만** 적용한다. 영어의 일꾼 동사와 범용 추상명사(`serve`, `provide`, `address`, `support`, `involve`, `ensure`, `aspect`, `approach`, `issue` 등)에까지 밀어붙이면 한국어가 굳어 문서 전체가 딱딱해진다. 이런 낱말은 문맥마다 새로 그린다.
+
+- 영어 원문: `documentation must serve the needs of its users` · `a tutorial serves the user's study` · `reference serves the user who is at work`
+- BAD(고정 매핑): `문서는 사용자의 요구에 **봉사**해야 한다` · `튜토리얼은 사용자의 공부에 **봉사**한다` · `기술 참조는 일하는 사용자에게 **봉사**한다`
+- GOOD(문맥별): `문서는 사용자의 요구를 **채워야** 한다` · `튜토리얼이 **맡는 것은** 사용자의 공부다` · `기술 참조는 일하는 사용자를 **위한 것이다**`
+
+한국어 쪽에서 어색해진 낱말일수록 위험이 크다. `봉사하다`는 자원봉사 쪽으로 기울어 문서가 요구에 "봉사한다"는 문장이 겉돈다. 점검은 Step 5 항목 20에서 한다.
+
+#### 문장 리듬 — 쪼개기보다 합치기
+
+영어는 짧고 뚝뚝 끊기는 주어 중심 문장에 정보를 욱여넣는다. 한국어는 길고 주어가 생략되며 연결어미로 이어지는 문장에서 더 잘 숨 쉰다. 짧은 영어 문장 두세 개가 행동이나 조건이나 주제를 공유한다면 **하나의 흐르는 한국어 문장으로 합치는 것을 기본으로 삼는다.** 진짜 전환이나 대조나 강조 이동이 있을 때만 나눈다.
+
+예:
+- 영어: `While I'm still learning, I've repeated my answers often enough that I'm writing it here so the next time I'm asked I can share a link instead.`
+- BAD (나뉘고 끝이 조각남): `아직 배우는 중이지만, 같은 답을 너무 자주 반복해서 이렇게 글로 남긴다. 다음에 또 같은 질문을 받으면 링크 하나만 던져주면 되도록.`
+- GOOD (합쳐져 흐름): `아직 배우는 중이지만 같은 질문을 너무 자주 받다 보니, 이번엔 글로 정리해두고 다음에 또 같은 질문이 들어오면 링크 하나만 건네려 한다.`
+
+영어의 `so that I can ...` 패턴은 특히 함정이다. 한국어 문장이 `~되도록.`으로 끝나게 두지 않는다. 절 전체를 한국어의 의도 종결(`~려 한다`, `~으면 된다`, `~기 위해서다`)을 중심으로 재구성한다.
 
 #### 번역투 패턴 흡수 — 문장 단위 (translationese-patterns.md)
 
-`translationese-patterns.md`는 `im-not-ai` 분류 체계에서 흡수한 번역투 패턴의 규칙·예문을 담는다. **규칙 본문은 그 파일에 있다 — 여기서 반복하지 않는다.** 영어 원문을 보며 번역하는 동안, 다음 **문장 단위 패턴**을 원문과 대조하며 적용한다(각 패턴의 정의·처방·`영어 원문 → BAD → GOOD` 예문은 translationese-patterns.md 참조):
+`translationese-patterns.md`는 `im-not-ai` 분류 체계에서 흡수한 번역투 패턴의 규칙·예문을 담는다. **규칙 본문은 그 파일에 있다. 여기서 반복하지 않는다.** 영어 원문을 보며 번역하는 동안, 다음 **문장 단위 패턴**을 원문과 대조하며 적용한다(각 패턴의 정의·처방·`영어 원문 → BAD → GOOD` 예문은 translationese-patterns.md 참조):
 
 - **C-11** 연결어미 뒤 쉼표 — 일괄 제거 (주어·부사어·삽입어 뒤 pause 쉼표까지: 위 "쉼표 절제" 참조)
 - **A-7** light verb (have/make/take/give + 명사) — 동사 환원
@@ -189,7 +247,7 @@ The English `so that I can ...` pattern is a particular trap — do not let it t
 - **PE15** 호칭 직역(Mr./Ms./Dr.) — 한국어 호칭 또는 생략
 - **A-3~A-6·A-11·A-13** 조사 직결 확장(`~에 있어서`·`~라는 점에서`·`~와 관련하여`·`~에 기반하여`·`~을 위해`·명사 나열) — 목적격/주제 조사로 직결
 
-density 기반 패턴(A-16·A-19·G-1/G-2·H-3)은 문장 단위가 아니라 **전체 빈도**로 판단하므로 Step 5(전체 재독)에서 점검한다 — 아래 Step 5 체크리스트 9·15·16·17번 참조.
+density 기반 패턴(A-16·A-19·G-1/G-2·H-3)은 문장 단위가 아니라 **전체 빈도**로 판단하므로 Step 5(전체 재독)에서 점검한다. 아래 Step 5 체크리스트 9·15·16·17번 참조.
 
 ##### 의역 강도와의 precedence (MANDATORY)
 
@@ -200,153 +258,160 @@ density 기반 패턴(A-16·A-19·G-1/G-2·H-3)은 문장 단위가 아니라 **
 
 이 등급 구분이 "보수를 고른 사용자에게 문장 전면 재구성을 강요"하는 모순을 막는다.
 
-#### Avoid translationese in adverb placement
+#### 부사 위치의 번역투를 피한다
 
-English `effectively + verb` should become Korean predicate position, not adverb-first:
-- BAD: `AI와 어떻게 효과적으로 일할 수 있을까?` (mirrors English word order)
-- GOOD: `AI와 어떻게 함께 일해야 효과적일까?` (predicate position)
+영어의 `effectively + verb`는 부사를 앞세우는 대신 한국어의 서술어 자리로 옮긴다.
+- BAD: `AI와 어떻게 효과적으로 일할 수 있을까?` (영어 어순을 그대로 비춤)
+- GOOD: `AI와 어떻게 함께 일해야 효과적일까?` (서술어 위치)
 
-This extends the system prompt's "patterns to eliminate `~적(인)`" rule to adverb placement specifically. Whenever you find yourself writing `~적으로 + 동사`, ask whether the adverb can move to the predicate as `~적이다`.
+시스템 프롬프트의 "`~적(인)`을 없애는 패턴" 규칙을 부사 위치로 특정해 확장한 것이다. `~적으로 + 동사`를 쓰고 있다면 그 부사를 `~적이다`로 서술어에 옮길 수 있는지 따져 본다.
 
-#### Avoid English-derived verb forms
+#### 영어에서 온 동사형을 피한다
 
-Prefer settled Korean verbs over loanword-transliterated verbs:
-- `scale (as verb)` → `확장되다`, NOT `스케일시키다`
-- `update (a config)` → `반영하다`, `수정하다`, NOT always `업데이트하다`
-- Exception: well-established loanwords like `온보딩하다`, `테스트하다`, `디버깅하다` are fine.
+음차한 외래어 동사보다 자리 잡은 한국어 동사를 쓴다.
+- `scale (as verb)` → `확장되다`. `스케일시키다`가 아니다.
+- `update (a config)` → `반영하다`·`수정하다`. 늘 `업데이트하다`인 것은 아니다.
+- 예외: `온보딩하다`·`테스트하다`·`디버깅하다`처럼 확고히 자리 잡은 외래어는 괜찮다.
 
-#### Active voice over passive
+#### 수동태보다 능동태
 
-Convert passive chains to active where the agent is clear. Especially watch for `~되어지다` (double passive — never acceptable) and `~에 의해 ~된다` (replace with `Y가 X한다`).
+행위자가 분명한 곳에서는 수동 연쇄를 능동으로 바꾼다. 특히 `~되어지다`(이중 수동 — 결코 허용되지 않는다)와 `~에 의해 ~된다`(`Y가 X한다`로 교체)를 살핀다.
 
-#### Conversational warmth (essay register, not report register)
+#### 대화의 온기 (보고서체가 아니라 에세이체)
 
-Even after applying every rule above, a translation can still read as **stiff** — technically correct, grammatically natural, but feels like a corporate report rather than a columnist's essay. The user picked `균형 있는 에세이/장문 블로그` for tone — that means warmth comes through rhythm and register, not just word accuracy. Watch for these five stiffness patterns and rewrite them:
+위 규칙을 모두 적용하고도 번역은 여전히 **뻣뻣하게** 읽힐 수 있다. 기술적으로 맞고 문법적으로 자연스러운데 칼럼니스트의 에세이가 아니라 기업 보고서처럼 느껴지는 것이다. 사용자가 톤으로 `균형 있는 에세이/장문 블로그`를 골랐다면 온기는 낱말의 정확성만이 아니라 리듬과 문체 등급에서 나와야 한다. 다음 다섯 가지 뻣뻣함 패턴을 살펴 고쳐 쓴다.
 
-**Pattern A — Two consecutive crisp declaratives where the original is one breath**
+**패턴 A — 원문은 한 호흡인데 딱딱한 평서문 둘로 끊은 경우**
 
-When the source uses two short sentences that share an action, condition, or topic, Korean essay rhythm prefers one flowing sentence ending in `~는 식이다` / `~는 셈이다`. Two `~한다.` declaratives stacked feel like bullet points.
+원문이 행동이나 조건이나 주제를 공유하는 짧은 문장 둘을 쓸 때, 한국어 에세이의 리듬은 `~는 식이다`나 `~는 셈이다`로 끝나는 하나의 흐르는 문장을 선호한다. `~한다.` 평서문 둘을 쌓으면 목록처럼 느껴진다.
 - BAD: `완성된 아티팩트는 다음 세션의 컨텍스트가 된다. 매번의 수정은 설정으로 반영된다.`
 - GOOD: `완성된 아티팩트는 다음 세션의 컨텍스트가 되고, 매번의 수정은 설정으로 쌓이는 식이다.`
 
-**Pattern B — Parallel list ending too abruptly**
+**패턴 B — 병렬 나열이 너무 갑작스럽게 끝나는 경우**
 
-A 4–5 item parallel list (`A하고, B하고, C하고, D한다.`) feels like a command when the final beat is bare `~한다.`. Soften the final beat with `마지막에/마지막으로 ~는 식이다` or a similar closing marker.
+4~5개짜리 병렬 나열(`A하고, B하고, C하고, D한다.`)은 마지막 박자가 맨 `~한다.`면 명령처럼 느껴진다. 마지막 박자를 `마지막에/마지막으로 ~는 식이다`나 비슷한 마무리 표지로 눅인다.
 - BAD: `...더 큰 작업을 위임하고, 루프를 닫는다.`
 - GOOD: `...더 큰 작업을 위임하고, 마지막에 루프를 닫는 식이다.`
 
-**Pattern C — Formal/academic word choice in personal essay**
+**패턴 C — 1인칭 에세이에 격식·학술 어휘를 쓴 경우**
 
-First-person essays prefer everyday words over formal/public-document vocabulary. Soften these where the surrounding text is conversational:
+1인칭 에세이는 격식 있는 공문서 어휘보다 일상어를 선호한다. 둘러싼 글이 대화체라면 다음을 눅인다.
 - `관행` → `방식`, `것들`
 - `실천하다` → `쓰다`, `하다`
-- `제공한다` (repeated) → drop the verb where possible (`앞쪽이 컨텍스트라면, 뒤쪽은 설정이다.`)
-- `거치는 바로 그 과정과 다르지 않다` (ornate double-construction) → `우리가 늘 거치는 그 과정 그대로다` (positive, plain)
+- `제공한다` (반복될 때) → 가능한 곳에서는 동사를 뺀다 (`앞쪽이 컨텍스트라면, 뒤쪽은 설정이다.`)
+- `거치는 바로 그 과정과 다르지 않다` (장식적인 이중 구성) → `우리가 늘 거치는 그 과정 그대로다` (긍정형, 평이하게)
 - `구분하기 위한` → `구분해 두는`
-- `이전` → `예전` (when 1인칭 회상 맥락)
-- `~별` (프로젝트별, 항목별) → `~마다 두는`, `~마다 있는` where it sounds bureaucratic
+- `이전` → `예전` (1인칭 회상 맥락일 때)
+- `~별` (프로젝트별, 항목별) → 관료적으로 들리는 자리에서는 `~마다 두는`, `~마다 있는`
 
-**Pattern D — Report-style punctuation (가운뎃점) in essay prose**
+**패턴 D — 에세이 산문에 보고서식 문장 부호(가운뎃점)를 쓴 경우**
 
-The middle dot `·` is for newspaper headlines and technical specs. In essay/blog prose, replace with comma + `이나` / `같은`.
+가운뎃점 `·`은 신문 표제와 기술 사양의 것이다. 에세이·블로그 산문에서는 쉼표와 `이나`·`같은`으로 바꾼다.
 - BAD: `이전 코드·프로젝트 문서·분석 결과 같은 자산`
 - GOOD: `예전 코드나 프로젝트 문서, 분석 결과 같은 자료`
 
-**Pattern E — `~할 수 있다` literal-translation closure**
+**패턴 E — `~할 수 있다` 직역 종결**
 
-English "can do X" / "to do X" often becomes `~할 수 있다` in Korean and reads as direct translation. When the agent is clear and the meaning is "this results in X" rather than "ability to do X", prefer result-form closures: `~는 셈이다`, `~게 된다`, or active declarative.
+영어의 "can do X"나 "to do X"는 한국어에서 `~할 수 있다`가 되기 쉽고 그대로 직역처럼 읽힌다. 행위자가 분명하고 뜻이 "할 능력이 있다"가 아니라 "그 결과로 X가 된다"라면 결과형 종결을 쓴다. `~는 셈이다`, `~게 된다`, 또는 능동 평서문이다.
 - BAD: `결과를 인덱스에 박아 놓을 수 있다.`
 - GOOD: `결과를 인덱스에 박아 두는 셈이다.`
 
-**Calibration**: do not overshoot into casual blog. The target is "skilled essayist writing a column" — warmth via rhythm, not via polite endings (still forbidden in body text) or slang. If a passage already breathes naturally, leave it alone.
+**조절**: 캐주얼한 블로그로 넘어가지 않는다. 목표는 "칼럼을 쓰는 솜씨 있는 필자"이며, 온기는 리듬에서 나오지 경어체(본문에서는 여전히 금지)나 은어에서 나오지 않는다. 이미 자연스럽게 숨 쉬는 대목은 그대로 둔다.
 
-#### Active localization of generic foreign nouns
+#### 일반 외래 명사의 적극적 현지화
 
-The system prompt's preservation rules are for proper nouns and acronyms (`API`, `HTTP`, `Docker`). For **generic foreign nouns** that have settled Korean forms or that the source uses as ordinary words (not as branded products), prefer the Korean form. Being too conservative — preserving every English-looking word as English — produces a translation that feels half-foreign.
+시스템 프롬프트의 보존 규칙은 고유명사와 약어(`API`, `HTTP`, `Docker`)를 위한 것이다. 자리 잡은 한국어 형태가 있거나 원문이 평범한 낱말로(브랜드 제품이 아니라) 쓰는 **일반 외래 명사**는 한국어 형태를 택한다. 너무 보수적으로, 영어처럼 보이는 낱말을 전부 영어로 남기면 반쯤 외국어인 번역이 나온다.
 
-Heuristic:
-- **Preserve as English**: branded product/library names (`Slack`, `Drive`, `Docker`, `FastAPI`, `Claude Code`), acronyms in the protected list, code identifiers, URLs/paths.
-- **Naturalize to Korean**: generic service categories (`Mail` → `메일`), common technical-but-naturalized nouns where Korean form is dominant (`mail`, `email` → `메일`, `이메일`; generic `cloud` → `클라우드` not `Cloud`), generic loan adjectives.
-- **Judgement edge cases**: when the source capitalizes a generic word ambiguously (e.g. `Mail` next to `Slack`, `Drive`), check whether the author meant a product. If unclear from context and the word has a fully settled Korean form, naturalize. Document-internal consistency wins — once you naturalize a term, don't switch back.
+판단 기준:
+- **영어로 보존**: 브랜드 제품·라이브러리 이름(`Slack`, `Drive`, `Docker`, `FastAPI`, `Claude Code`), 보호 목록의 약어, 코드 식별자, URL과 경로.
+- **한국어로 현지화**: 일반 서비스 범주(`Mail` → `메일`), 한국어 형태가 우세한 기술적이지만 귀화한 명사(`mail`·`email` → `메일`·`이메일`, 일반적인 `cloud` → `Cloud`가 아니라 `클라우드`), 일반 외래 형용사.
+- **판단이 갈리는 경계**: 원문이 일반 낱말을 모호하게 대문자화했다면(예: `Slack`·`Drive` 옆의 `Mail`) 저자가 제품을 뜻했는지 살핀다. 맥락으로 불분명하고 그 낱말에 완전히 자리 잡은 한국어 형태가 있다면 현지화한다. 문서 내부의 일관성이 이긴다. 한 번 현지화한 용어는 되돌리지 않는다.
 
-Examples from real essay context:
-- `Slack, Drive, Mail` → `Slack, Drive, 메일` (Slack/Drive are branded; Mail is generic email service)
-- `cloud storage` → `클라우드 스토리지` (both halves naturalized)
-- `Excel sheet` → `엑셀 시트` if used generically; `Excel` if explicitly the Microsoft product
+실제 에세이 맥락에서 온 예:
+- `Slack, Drive, Mail` → `Slack, Drive, 메일` (Slack과 Drive는 브랜드이고 Mail은 일반 메일 서비스)
+- `cloud storage` → `클라우드 스토리지` (양쪽 다 현지화)
+- `Excel sheet` → 일반적으로 쓰였다면 `엑셀 시트`, 명시적으로 마이크로소프트 제품이라면 `Excel`
 
-The cost of being too conservative is real: every English word that survives untranslated is a small visual speed bump for a Korean reader. Conversely, never naturalize a branded name — `Slack` should never become `슬랙` in body text (parenthetical phonetic for first occurrence is OK only if needed).
+너무 보수적으로 가는 대가는 실재한다. 번역되지 않고 살아남은 영어 낱말 하나하나가 한국어 독자에게는 작은 과속방지턱이다. 반대로 브랜드 이름은 결코 현지화하지 않는다. `Slack`은 본문에서 `슬랙`이 되어서는 안 된다(첫 등장에 한해 필요하다면 괄호 음차는 괜찮다).
 
-#### Tracking new terms
+#### 새 용어 기록
 
-Track every **new technical term** you decide to translate that was not in the glossary. Use the existing convention: `{ "English Term": "한국어(원문)" }` — Korean translation followed by the English original in parentheses for first occurrences of acronyms/proper nouns. Plain Korean translations (no parenthetical) are also acceptable for non-acronym terms — match what makes sense given existing glossary style.
+글로서리에 없던 **새 기술 용어**를 옮기기로 정할 때마다 기록한다. 기존 관례를 따른다. `{ "English Term": "한국어(원문)" }` 형태로, 약어와 고유명사의 첫 등장에는 한국어 번역 뒤 괄호에 영어 원문을 적는다. 약어가 아닌 용어라면 괄호 없는 평범한 한국어 번역도 괜찮다. 기존 글로서리 문체에 비추어 알맞은 쪽에 맞춘다.
 
-#### If chunking
+#### 청킹하는 경우
 
-- Carry **2 sentences of working context** from the previous chunk's translation forward as you translate the next chunk. This keeps tone and terminology consistent. Do not emit the carry-over to the file.
-- Honor newly discovered terms from chunk N consistently in chunks N+1, N+2, …
-- After all chunks are translated, concatenate them with a single blank line between chunks (preserve original document spacing).
+- 앞 청크 번역에서 **작업 맥락 두 문장**을 다음 청크로 이어 간다. 톤과 용어가 일관되게 유지된다. 이어 간 문장을 파일에 내보내지는 않는다.
+- 청크 N에서 새로 발견한 용어를 청크 N+1, N+2, …에서 일관되게 지킨다.
+- 모든 청크를 번역한 뒤 청크 사이에 빈 줄 하나를 넣어 이어 붙인다(원문의 간격을 보존한다).
 
-### Step 5 — Self-review pass for Korean naturalness (MANDATORY)
+### Step 5 — 한국어 자연스러움 자기 검토 (MANDATORY)
 
-Before invoking `Write` in Step 6, **re-read your entire translation once** and walk through this checklist. For each item flagged, rewrite that sentence and re-check. This step is the single biggest determinant of whether the output reads as fluent Korean or as translated Korean. **Do not skip this even for short documents.**
+Step 6에서 `Write`를 호출하기 전에 **번역 전체를 한 번 다시 읽으며** 이 체크리스트를 훑는다. 걸리는 항목마다 그 문장을 고쳐 쓰고 다시 확인한다. 산출물이 유창한 한국어로 읽히느냐 번역한 한국어로 읽히느냐를 가르는 가장 큰 단계다. **짧은 문서라도 건너뛰지 않는다.**
 
-Items 9 (pronouns, A-16) and 15–17 below are **density patterns** absorbed from `translationese-patterns.md`: they depend on whole-document frequency (typically a `3회+` threshold), so this whole-doc re-read is the only correct place to catch them. When chunking, a chunk-local pass cannot count document-wide frequency — these must be checked here, after all chunks are concatenated.
+아래 항목 9(대명사, A-16)와 15~17번은 `translationese-patterns.md`에서 흡수한 **density 패턴**이다. 문서 전체의 빈도(대개 `3회+` 임계)에 달려 있으므로 이 전체 재독이 그것들을 잡을 수 있는 유일하게 올바른 자리다. 청킹할 때 청크 단위 검토는 문서 전체 빈도를 셀 수 없으므로, 모든 청크를 이어 붙인 뒤 여기서 확인해야 한다.
 
-1. **Rhythm.** Any 2+ consecutive short sentences that share a subject/topic and could merge into one breathing Korean sentence? Combine them.
-2. **Figurative language audit.** For every vivid metaphor, figurative verb, or image-bearing turn of phrase in the source, did your Korean rendering carry an image of equivalent force — generated from the surrounding argument, not from a fixed mapping? Read each figurative passage in isolation: does the Korean still feel like the image is doing work, or does it read past as filler? If flattened, regenerate using the Metaphor and Figurative Language process (identify → trace → render → calibrate → stay consistent). Also check the cluster: if the author reuses a motif, are your Korean renderings sitting in one coherent cluster instead of drifting between near-synonyms?
-3. **Adverb position.** Any `~적으로 + 동사` constructions that mirror English adverb-verb order? Reposition to predicate (`~적이다`) or drop `~적` entirely.
-4. **Loanword verbs.** Any English-derived verbs that have natural Korean equivalents? (`스케일시키다` → `확장하다`)
-5. **Sentence endings.** Any sentence ending in `~되도록.`, `~할 수 있도록.`, or other awkwardly cut endings that lose closure? Rewrite for a clean final beat.
-6. **Em dash fragments.** Any place where you split on em dash but the result feels choppy with repeated words (e.g. `무엇이든 ... 무엇이든`)? Try collapsing to parenthetical or comma.
-7. **Glossary collision.** Did any glossary mapping produce an unnatural English-in-Korean sentence for a generic-noun usage? Override per the glossary-vs-generic-noun rule.
-8. **Active voice.** Any passive constructions (`~되어지다`, `~에 의해 ~된다`) that should flip to active? Convert.
-9. **Subject omission & 영어 대명사 직역 (A-16).** Any subjects you carried over from English that Korean would naturally drop when the referent is clear from context? Drop them. **Extend this to English pronouns** (`he/she/it/they` → `그/그녀/그것/그들`): when a paragraph carries 3+ personal pronouns, treat 50–70% of them as deletion candidates and restructure — but only where dropping them does not create '누가 무엇을' ambiguity (verify against the English source). Render `they` as `사람들·일부·어떤 이들`, not reflexively `그들`. This is a 구조 재구성형 pattern — apply in proportion to the chosen 의역 강도. (See translationese-patterns.md.)
-10. **Unnecessary English parenthetical.** Did you bracket an English word for a common noun like `사실(facts)`, `주석(annotated)`? The first-occurrence-with-original rule applies to **acronyms, proper nouns, and technical terms** — not to ordinary words. Remove unnecessary parentheticals.
-11. **Idiom completeness.** Any vivid Korean idiom that fits better than your literal rendering? Swap in.
-12. **Stiff-register audit (Patterns A–E).** Walk the five stiffness patterns from the Conversational warmth section:
-    - (A) Two consecutive crisp `~한다.` declaratives that should merge into one `~는 식이다` breath?
-    - (B) A 4–5 item parallel list ending bare with `~한다.` that should close with `마지막에 ... ~는 식이다`?
-    - (C) Formal/academic word in 1인칭 essay context (`관행`, `실천`, `~별`, `거치는 바로 그 과정과 다르지 않다`)?
-    - (D) `·` middle dot in essay prose where comma + `이나`/`같은` would breathe better?
-    - (E) `~할 수 있다` literal closure where the meaning is result, not ability — swap to `~는 셈이다` / `~게 된다`?
-13. **Localization aggressiveness.** Any generic foreign noun preserved as English where the Korean form is fully settled and the source word is not a branded product? (`Mail` → `메일`, generic `cloud` → `클라우드`, etc.) Naturalize; don't be over-conservative. But never naturalize a branded name (`Slack` stays `Slack`, not `슬랙`).
-14. **Frontmatter integrity.** If the source has YAML frontmatter, did every field — especially `title` — stay byte-identical to the source? Translating frontmatter fields is a structural change that breaks tool linkages. Revert any field that was modified.
-15. **이중 조사 결합 (A-19, density).** Scan the whole document for double-particle stacks (`~에서의·~에로의·~으로의·~에의·~으로부터의·~로부터의`). At 3+ occurrences, unfold them into clauses/phrases (`긴장으로부터의 해방 → 긴장에서 벗어남`). 단순 `~의`는 제외(caveat C5). 표면 교정형 — apply at every 의역 강도. (See translationese-patterns.md.)
-16. **Hedging 남발 (G-1/G-2, density).** Are observation-form endings (`~로 보인다`/`~인 듯하다`/`~로 판단된다`) or double/triple hedges (`~할 가능성이 있을 수 있다`/`~로 보여질 수 있다`) piling up across the document? Assert where the English source asserts; keep one hedge layer only where the source itself hedges. 표면 교정형 — apply at every 의역 강도. (See translationese-patterns.md.)
-17. **메타 진입 (H-3, density).** Count meta-entry phrases (`이는 ~을 의미한다`/`이 점에서`/`이 관점에서 보면`/`이 말은`). At 3+ occurrences, merge into the preceding sentence or state the content directly (`이는 X를 의미한다 → X다`). 표면 교정형 — apply at every 의역 강도. (See translationese-patterns.md.)
-18. **쉼표 절제 (C-11 확장, density).** 문서 전체의 쉼표를 훑어, "쉼표 절제" 규칙 (a)~(d)로 설명되지 않는 것 — 주어·부사어·삽입어 뒤 pause 쉼표, 연결어미 뒤 쉼표, 극적 쉼표 — 을 지운다. **번역본 쉼표 수 ≤ 원문 쉼표 수**인지 확인한다. 이미 Step 4에서 지켰다면 여기서 걸리는 건 거의 없어야 한다(사후 다이어트가 아니라 사전 예방이 목적). 표면 교정형 — apply at every 의역 강도. (See Step 4 "쉼표 절제".)
+항목 19·20도 같은 이유로 이 자리에서만 제대로 검사된다(다만 흡수 패턴이 아니라 이 커맨드의 자체 규칙이다). 19는 원문 전체를, 20은 번역본 전체를 훑어야 하므로 청킹 시 chunk별로는 판정할 수 없다.
 
-After this pass, the translation should read as if originally written in Korean by a skilled essayist. If you finish the checklist and made zero rewrites, you have probably skimmed — go back and re-read with fresh eyes once more.
+1. **리듬 — 원문 문장 경계와 대조한다.** 한국어만 읽지 말고 원문 문단을 나란히 놓는다. 번역 문장이 원문 문장과 1:1로 줄지어 가고 있다면(균형 이상 강도에서) 병합이 일어나지 않았다는 신호다. 주어나 주제를 공유하는 짧은 문장 2개 이상은 한 호흡으로 합친다. 낱말이 모두 자연스러워도 호흡이 영어 것이면 독자에게는 "번역한 글"로 읽힌다. **문장 수 비율 같은 스칼라 지표로 재려 하지 않는다.** 한국어의 정당한 분할·병합과 영어 모방을 구별하지 못해 아무것도 판별해 주지 않는다.
+2. **형상 언어 감사.** 원문의 모든 생생한 비유, 형상적 동사, 이미지를 실은 표현에 대해, 한국어가 같은 힘의 이미지를 실어 냈는가? 고정 매핑이 아니라 둘러싼 논증에서 만들어 냈는가? 형상적인 대목을 따로 떼어 읽는다. 한국어에서 그 이미지가 여전히 일하고 있다고 느껴지는가, 아니면 군더더기로 읽고 지나치는가? 뭉개졌다면 "비유와 형상 언어"의 과정(알아본다 → 좇는다 → 만든다 → 세기를 맞춘다 → 일관되게 유지한다)으로 다시 만든다. 클러스터도 확인한다. 저자가 모티프를 재사용한다면 한국어 표현들이 유의어 사이를 표류하지 않고 하나의 일관된 클러스터에 앉아 있는가?
+3. **부사 위치.** 영어의 부사-동사 순서를 비추는 `~적으로 + 동사` 구성이 있는가? 서술어(`~적이다`)로 옮기거나 `~적`을 아예 뺀다.
+4. **외래어 동사.** 자연스러운 한국어 대응이 있는데 영어에서 온 동사를 쓴 곳이 있는가? (`스케일시키다` → `확장하다`)
+5. **문장 종결.** `~되도록.`, `~할 수 있도록.`처럼 어색하게 잘려 마무리를 잃은 종결이 있는가? 깔끔한 마지막 박자로 고쳐 쓴다.
+6. **줄표 조각.** 줄표에서 나눴는데 낱말이 되풀이되어 조각조각 느껴지는 곳이 있는가(예: `무엇이든 ... 무엇이든`)? 괄호나 쉼표로 접어 본다.
+7. **글로서리 충돌.** 일반 명사 용법인데 글로서리 매핑이 부자연스러운 영어 섞인 한국어 문장을 만들지 않았는가? 글로서리와 일반 명사 규칙에 따라 무시한다.
+8. **능동태.** 능동으로 뒤집어야 할 수동 구성(`~되어지다`, `~에 의해 ~된다`)이 있는가? 바꾼다.
+9. **주어 생략 및 영어 대명사 직역 (A-16).** 지시 대상이 맥락에서 분명해 한국어라면 자연스럽게 뺄 주어를 영어에서 그대로 옮겨 오지 않았는가? 뺀다. **영어 대명사(`he/she/it/they` → `그/그녀/그것/그들`)까지 확장한다.** 한 문단에 인칭대명사가 3회 이상이면 그중 50~70%를 삭제 후보로 보고 재구성한다. 다만 '누가 무엇을'의 모호함이 생기지 않는 곳에서만 뺀다(영어 원문과 대조해 확인한다). `they`는 반사적으로 `그들`이 아니라 `사람들·일부·어떤 이들`로 옮긴다. 구조 재구성형 패턴이므로 고른 의역 강도에 비례해 적용한다. (translationese-patterns.md 참조.)
+10. **불필요한 영어 병기.** `사실(facts)`, `주석(annotated)`처럼 보통 명사에 영어를 괄호로 달지 않았는가? 첫 등장 원문 병기 규칙은 **약어·고유명사·기술 용어**에 적용되지 평범한 낱말에는 적용되지 않는다. 불필요한 병기를 없앤다.
+11. **관용구 완성도.** 직역보다 더 잘 맞는 생생한 한국어 관용구가 있는가? 바꿔 넣는다.
+12. **뻣뻣함 감사 (패턴 A~E).** "대화의 온기" 절의 다섯 가지 뻣뻣함 패턴을 훑는다.
+    - (A) 하나의 `~는 식이다` 호흡으로 합쳐야 할 딱딱한 `~한다.` 평서문 둘이 이어지는가?
+    - (B) 4~5개짜리 병렬 나열이 맨 `~한다.`로 끝나 `마지막에 ... ~는 식이다`로 닫아야 하는가?
+    - (C) 1인칭 에세이 맥락에 격식·학술 어휘(`관행`, `실천`, `~별`, `거치는 바로 그 과정과 다르지 않다`)를 썼는가?
+    - (D) 쉼표와 `이나`·`같은`이 더 잘 숨 쉴 자리에 에세이 산문에서 가운뎃점 `·`을 썼는가?
+    - (E) 뜻이 능력이 아니라 결과인데 `~할 수 있다`로 직역 종결했는가? `~는 셈이다`·`~게 된다`로 바꾼다.
+13. **현지화 적극성.** 한국어 형태가 완전히 자리 잡았고 원문 낱말이 브랜드 제품이 아닌데 일반 외래 명사를 영어로 남긴 곳이 있는가? (`Mail` → `메일`, 일반적인 `cloud` → `클라우드` 등) 현지화한다. 지나치게 보수적으로 가지 않는다. 다만 브랜드 이름은 결코 현지화하지 않는다(`Slack`은 `슬랙`이 아니라 `Slack`이다).
+14. **frontmatter 무결성.** 원문에 YAML frontmatter가 있다면 모든 필드가, 특히 `title`이 원문과 바이트 단위로 같은가? frontmatter 필드를 번역하는 것은 도구 연결을 끊는 구조 변경이다. 수정된 필드는 되돌린다.
+15. **이중 조사 결합 (A-19, density).** 문서 전체에서 이중 조사 결합(`~에서의·~에로의·~으로의·~에의·~으로부터의·~로부터의`)을 훑는다. 3회 이상이면 절이나 구로 풀어쓴다(`긴장으로부터의 해방 → 긴장에서 벗어남`). 단순 `~의`는 제외(caveat C5). 표면 교정형이므로 모든 의역 강도에서 적용한다. (translationese-patterns.md 참조.)
+16. **Hedging 남발 (G-1/G-2, density).** 관측형 종결(`~로 보인다`·`~인 듯하다`·`~로 판단된다`)이나 이중·삼중 완곡(`~할 가능성이 있을 수 있다`·`~로 보여질 수 있다`)이 문서 전체에 쌓이고 있는가? 영어 원문이 단언하는 곳에서는 단언하고, 원문 자체가 완곡한 곳에만 완곡을 한 겹 남긴다. 표면 교정형이므로 모든 의역 강도에서 적용한다. (translationese-patterns.md 참조.)
+17. **메타 진입 (H-3, density).** 메타 진입 구문(`이는 ~을 의미한다`·`이 점에서`·`이 관점에서 보면`·`이 말은`)을 센다. 3회 이상이면 앞 문장에 붙이거나 내용을 곧바로 진술한다(`이는 X를 의미한다 → X다`). 표면 교정형이므로 모든 의역 강도에서 적용한다. (translationese-patterns.md 참조.)
+18. **쉼표 절제 (C-11 확장, density).** 문서 전체의 쉼표를 훑어, "쉼표 절제" 규칙 (a)~(d)로 설명되지 않는 것, 곧 주어·부사어·삽입어 뒤 pause 쉼표와 연결어미 뒤 쉼표와 극적 쉼표를 지운다. **번역본 쉼표 수 ≤ 원문 쉼표 수**인지 확인한다. 이미 Step 4에서 지켰다면 여기서 걸리는 건 거의 없어야 한다(사후 다이어트가 아니라 사전 예방이 목적). 표면 교정형이므로 모든 의역 강도에서 적용한다. (Step 4 "쉼표 절제" 참조.)
 
-### Step 6 — Write the output file
+19. **역방향 용어 검증 (배치 모드 필수 · 단일 파일도 권장).** 자신이 정한 한국어 용어를 grep하는 것만으로는 **애초에 정하지 않은 축의 분열**을 구조적으로 잡지 못한다. 원문 쪽에서 핵심 명사와 역할어 계열(`teacher`/`instructor`/`tutor`/`learner`/`pupil` 같은)을 세어, 영어 용어 하나가 한국어 렌더링 하나에 대응하는지 확인한다. 어형 변화(복수형·동사형)와 한국어 어미 오탐(`인지`가 `무엇인지`에 걸리는 등)을 감안해 숫자가 아니라 문맥을 본다. 한 문단 안에서 같은 영어 낱말이 두 갈래로 갈리는 사례가 실제로 나온다(`instructor` 하나가 같은 문단에서 `교수자`와 `지도자`로 분열).
 
-- Compute the output path per the argument parsing rules: the `--output` path if given, otherwise the input file path itself (in-place overwrite).
-- Use `Write` to save the translated text. Write **raw markdown only** — no code fences, no JSON wrapper, no commentary.
-- When `--output` is given, leave the source input file untouched. When `--output` is omitted, `Write` overwrites the input file with the translation — no backup is made, so the original English is replaced.
+20. **일꾼 동사 밀도 (density).** 번역본에서 고빈도 낱말을 뽑아 원문 대응어의 출현 횟수와 견준다. 글로서리 항목도 모티프 클러스터도 아닌데 대응어 출현의 절반을 넘게 한 낱말로 반복되고 있다면 고정 매핑이 일어난 것이다. Step 4 "일꾼 동사·추상명사의 고정 매핑 금지"에 따라 문맥별로 흩는다. 표면 교정형이므로 모든 의역 강도에서 적용한다.
 
-### Step 7 — Update the glossary (only if new technical proper nouns were discovered)
+이 검토를 마치면 번역은 솜씨 있는 한국어 필자가 처음부터 한국어로 쓴 글처럼 읽혀야 한다. 체크리스트를 끝냈는데 고쳐 쓴 곳이 하나도 없다면 대충 훑었을 가능성이 높다. 눈을 새로 하고 한 번 더 읽는다.
 
-**Scope rule (MANDATORY)**: The glossary is a controlled vocabulary for **technical proper nouns only**. Its value comes from forcing the same domain-specific term to be rendered identically across documents.
+### Step 6 — 출력 파일 쓰기
 
-- **OK to register**: product/library/framework names (FastAPI, Docker, LangChain), API/SDK names, technical acronyms with expansion (MCP, RAG, KV cache, RLHF), named architectures/patterns with established Korean translations (Hexagonal Architecture, Transformer block), domain-specific industry/academic terms with a settled translation.
-- **NEVER register**: metaphors and figurative expressions (`compound`, `blast radius`, `flow state`, `close the loop`), idioms (`hit the ground running`, `low hanging fruit`, `elephant in the room`), general English phrases that translate naturally (`blank slate`, `new hire`, `knowledge work`, `do the heavy lifting`), common adverbs/adjectives (`holistically`, `genuinely uncertain`), or plain nouns that would be rendered differently depending on context.
+- 인자 파싱 규칙에 따라 출력 경로를 정한다. `--output`이 주어졌다면 그 경로이고, 아니면 입력 파일 경로 자체다(제자리 덮어쓰기).
+- `Write`로 번역문을 저장한다. **순수 마크다운만** 쓴다. 코드 펜스도, JSON 래퍼도, 부연도 넣지 않는다.
+- `--output`이 주어졌다면 원본 입력 파일은 그대로 둔다. `--output`을 생략했다면 `Write`가 입력 파일을 번역문으로 덮어쓴다. 백업을 만들지 않으므로 영어 원문은 대체된다.
 
-**Why this matters**: registering a metaphor or general phrase forces every future translation to use the same Korean mapping even when the surrounding argument calls for a different image. That kills natural rhythm and metaphor work (see Step 4 — Metaphor and Figurative Language). When in doubt, **do not add**. If the same phrase shows up in a future document, re-render it from context.
+### Step 7 — 글로서리 갱신 (새 기술 고유명사를 발견했을 때만)
 
-**How to update if (and only if) new technical proper nouns were discovered**:
+**범위 규칙 (MANDATORY)**: 글로서리는 **기술 고유명사만**을 위한 통제 어휘집이다. 같은 도메인 특화 용어가 문서를 가로질러 동일하게 옮겨지도록 강제하는 데 그 값어치가 있다.
 
-1. `Read` the glossary file again — it may have changed since Step 1.
-2. Merge new terms in. **Do not overwrite** existing keys. If a discovered term collides with an existing key, skip the new one and keep the existing translation.
-3. Use `Edit` (preferred) or `Write` to update the glossary file:
-   - JSON formatting: 2-space indent, UTF-8, **preserve Korean characters as-is** (do not escape to `\uXXXX`).
-   - Append new entries at the end, preserving the order of existing keys.
-   - Validate the file is still valid JSON before exiting.
+- **등록해도 되는 것**: 제품·라이브러리·프레임워크 이름(FastAPI, Docker, LangChain), API·SDK 이름, 확장형을 갖춘 기술 약어(MCP, RAG, KV cache, RLHF), 한국어 번역이 확립된 명명된 아키텍처·패턴(Hexagonal Architecture, Transformer block), 정착된 번역이 있는 도메인 특화 산업·학술 용어.
+- **결코 등록하지 않는 것**: 비유와 형상적 표현(`compound`, `blast radius`, `flow state`, `close the loop`), 관용구(`hit the ground running`, `low hanging fruit`, `elephant in the room`), 자연스럽게 번역되는 일반 영어 표현(`blank slate`, `new hire`, `knowledge work`, `do the heavy lifting`), 흔한 부사·형용사(`holistically`, `genuinely uncertain`), 맥락에 따라 달리 옮겨야 할 평범한 명사.
 
-If no new technical proper nouns were discovered, leave the glossary file untouched. Report `New terms added: 0` in Step 8.
+**왜 중요한가**: 비유나 일반 표현을 등록하면 둘러싼 논증이 다른 이미지를 부르는 상황에서도 앞으로의 모든 번역이 같은 한국어 매핑을 쓰도록 강제된다. 자연스러운 리듬과 비유 작업이 죽는다(Step 4 "비유와 형상 언어" 참조). 애매하면 **추가하지 않는다.** 같은 표현이 다음 문서에 나오면 그때 맥락에서 다시 만든다.
 
-### Step 8 — Report
+**새 기술 고유명사를 발견했을 때에 한해, 갱신하는 방법**:
 
-Print a single concise block to the user:
+1. 글로서리 파일을 다시 `Read`한다. Step 1 이후에 바뀌었을 수 있다.
+2. 새 용어를 병합한다. 기존 키를 **덮어쓰지 않는다.** 발견한 용어가 기존 키와 충돌하면 새것을 건너뛰고 기존 번역을 지킨다.
+3. `Edit`(권장) 또는 `Write`로 글로서리 파일을 갱신한다.
+   - JSON 서식: 2칸 들여쓰기, UTF-8, **한국어 문자를 있는 그대로 보존한다**(`\uXXXX`로 이스케이프하지 않는다).
+   - 새 항목은 끝에 덧붙이고 기존 키의 순서를 보존한다.
+   - **파일 전체를 재직렬화하지 않는다.** `json.dump`로 다시 쓰면 말미 개행이나 이스케이프가 바뀌어 공유 저장소에 무관한 diff를 남긴다. `Edit`로 항목만 덧붙이고, 쓴 뒤 diff가 추가한 줄뿐인지 확인한다.
+   - 빠져나오기 전에 파일이 여전히 유효한 JSON인지 검증한다.
+
+새 기술 고유명사를 발견하지 못했다면 글로서리 파일을 그대로 둔다. Step 8에서 `New terms added: 0`으로 보고한다.
+
+### Step 8 — 보고
+
+사용자에게 간결한 블록 하나를 출력한다.
 
 ```
 ✓ Translated → <output_path>
@@ -357,15 +422,15 @@ Print a single concise block to the user:
   · Self-review rewrites: <~count of sentences rewritten in Step 5>
 ```
 
-Do **not** print the translation contents to the chat. The file is the deliverable.
+번역 내용을 대화창에 출력하지 **않는다.** 파일이 산출물이다.
 
-## Hard rules
+## 절대 규칙
 
-- Do not emit JSON wrappers — the system prompt's `<output_format>` section is overridden by this command.
-- Do not include the original English text alongside the translation (this is a common heading mistake — replace, never duplicate).
-- Do not paraphrase code, identifiers, URLs, or file paths.
-- Do not invent glossary terms that don't appear in the source.
-- **Do not skip Step 5 (self-review).** This is the rule that separates competent translation from fluent translation.
-- **번역투 패턴은 source-blind 후처리를 하지 않는다.** 모든 흡수 패턴(translationese-patterns.md)은 영어 원문과 대조하며 고친다 — 한글 출력만 보고 추정하지 않는다. 이것이 후처리 파이프라인 대신 흡수를 택한 핵심 이유다(source-access 우위 유지).
-- Do not modify markdown structure that is not in the source (no extra horizontal rules, no inserted blockquotes, etc.).
-- If you must stop partway (e.g., context constraint), write what was completed and tell the user exactly where the boundary is and what remains.
+- JSON 래퍼를 내보내지 않는다. 시스템 프롬프트의 `<output_format>` 절은 이 커맨드가 무효화한다.
+- 번역과 나란히 영어 원문을 넣지 않는다(헤딩에서 흔히 저지르는 실수다. 덧붙이지 말고 대체한다).
+- 코드·식별자·URL·파일 경로를 의역하지 않는다.
+- 원문에 없는 글로서리 용어를 지어내지 않는다.
+- **Step 5(자기 검토)를 건너뛰지 않는다.** 유능한 번역과 유창한 번역을 가르는 규칙이다.
+- **번역투 패턴은 source-blind 후처리를 하지 않는다.** 모든 흡수 패턴(translationese-patterns.md)은 영어 원문과 대조하며 고친다. 한글 출력만 보고 추정하지 않는다. 이것이 후처리 파이프라인 대신 흡수를 택한 핵심 이유다(source-access 우위 유지).
+- 원문에 없는 마크다운 구조를 바꾸지 않는다(수평선을 더하거나 인용 블록을 끼워 넣지 않는다).
+- 도중에 멈춰야 한다면(예: 컨텍스트 제약) 완료한 만큼을 쓰고, 경계가 정확히 어디이며 무엇이 남았는지 사용자에게 알린다.
