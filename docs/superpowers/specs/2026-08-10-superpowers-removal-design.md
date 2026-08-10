@@ -62,7 +62,7 @@ Superpowers를 완전히 제거하고 Matt을 메인 하네스로 삼는다.
 | `CLAUDE.md` | 5 | Planning Trigger 섹션(조건 5개·Exempt 목록·`/clear` 판단·Plan Mode 문단)과 Plan Persistence 삭제. Mandatory Skill Protocol의 죽은 Superpowers 예외 3개 삭제 |
 | `README.md` | 11 | 메인 하네스 서술·파이프라인 다이어그램·플러그인 표를 Matt 기준으로 재작성 |
 | `scripts/install.sh` | 2 | 존재 확인 루프와 주석의 잔여 참조 정리 |
-| `settings.json` | 1 | `enabledPlugins.superpowers`를 `false`로. 함께 `PostToolUse`의 `matcher:"Skill"` 등록도 제거한다(문자열 매치에는 안 잡히지만 삭제될 훅을 가리킨다) |
+| `settings.json` | 1 | `enabledPlugins.superpowers`를 `false`로(태스크 4). `PostToolUse`의 `matcher:"Skill"` 등록 제거는 훅 파일이 죽는 태스크 3에 속한다. 문자열 매치에는 안 잡히지만 삭제될 파일을 가리키므로 같은 커밋에서 사라져야 한다 |
 
 `CLAUDE.md`에서 삭제하지 않는 것: Scope Clarification·Core Principles·TODO Management·RTK·CodeGraph 마커 블록·graphify 섹션.
 
@@ -78,6 +78,8 @@ Superpowers를 완전히 제거하고 Matt을 메인 하네스로 삼는다.
 - `skillOverrides` 30개. 전부 사용자 스킬이고 Superpowers 항목이 없다.
 
 `docs/superpowers/specs/`는 동결한다. 이 문서가 마지막 입주자이고 이후 스펙은 Matt의 `to-spec`이 처리한다.
+
+같은 일이 계획 파일에도 일어난다. 이 스펙에서 파생될 `docs/plans/2026-08-10-remove-superpowers.md`가 `writing-plans`의 마지막 산출물이다. 자기를 지우는 계획을 자기가 쓰는 셈이지만 순서상 그것 말고 방법이 없다.
 
 ## 5. 잃는 것
 
@@ -121,7 +123,7 @@ Superpowers를 완전히 제거하고 Matt을 메인 하네스로 삼는다.
 
 1. `CLAUDE.md` 재작성
 2. `README.md` 재작성
-3. 훅 삭제와 `settings.json` PostToolUse 등록 제거, `scripts/install.sh` 정리
+3. 훅 파일 삭제·`settings.json`의 PostToolUse `matcher:"Skill"` 등록 제거·`scripts/install.sh` 정리. 셋이 한 커밋인 이유는 등록과 참조가 삭제될 파일을 가리키기 때문이다
 4. `enabledPlugins.superpowers`를 `false`로
 5. 잔여 참조 grep 검증
 
@@ -135,7 +137,22 @@ Superpowers를 완전히 제거하고 Matt을 메인 하네스로 삼는다.
 
 - `grep` 카운트: 편집 전과 후를 각각 실행한다. 편집 전 값이 계획의 기대값과 다르면 멈추고 보고한다.
 - `jq . settings.json`: JSON 유효성.
-- 종료 검증: `~/.claude` 전체에서 `superpowers` 문자열을 훑어 남은 것이 §4.3의 손대지 않기로 한 항목뿐인지 확인한다.
+종료 검증은 `~/.claude` 전체에서 `superpowers` 문자열을 훑어 아래 기대값과 대조한다. `plugins/`·`node_modules/`·`shell-snapshots/`·`docs/`·`jobs/`는 제외한다.
+
+| 파일 | 기대 건수 | 근거 |
+|---|---|---|
+| `rules/korean-style.md` | 1 | `docs/superpowers/specs` 경로 |
+| `skills/capturing-learnings/SKILL.md` | 2 | 같은 경로 |
+| `settings.json` | 1 | PreToolUse 정규식의 같은 경로 |
+| `TODO.md` | 3 | 2026-08-07 작업 기록 |
+| `projects/.../planning-tool-ce-plan-over-writing-plans.md` | 4 | 죽은 Tier 1 메모리 |
+| `.claude/settings.local.json` | 1 | 과거 경로 문자열 |
+| `.gitignore` | 3줄(39에서 41) | `docs/superpowers/` allowlist |
+| `CLAUDE.md` | 0 | 전부 제거 대상 |
+| `hooks/workflow-stage-inject.sh` | 파일 없음 | 삭제 |
+| `README.md` | 계획 단계에서 확정 | 이력 서술을 남길지 정한 뒤 기대값을 못 박는다 |
+
+`README.md`만 기대값을 비워 둔다. "이전에는 Superpowers 하네스였다"는 이력 한 줄은 남기는 편이 나을 수 있고, 그 판단은 실제 문안을 쓰는 계획 단계에서 한다. 침묵하면 검증하는 쪽이 0으로 읽으므로 명시한다.
 
 플러그인 비활성화의 실제 반영은 새 세션에서만 확인된다. 태스크 4 이후 사용자가 재시작하고 `/context`로 Superpowers 스킬 13개가 사라졌는지 확인한다.
 
