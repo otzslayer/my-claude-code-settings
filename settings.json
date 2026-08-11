@@ -96,27 +96,6 @@
         ]
       }
     ],
-    "PostToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "test -d \"${CLAUDE_PROJECT_DIR:-.}/graphify-out\" || exit 0; cd \"${CLAUDE_PROJECT_DIR:-.}\" && $HOME/.local/bin/graphify update . >/dev/null 2>&1 || true",
-            "if": "Bash(git commit*)",
-            "statusMessage": "graphify 인덱스 갱신",
-            "async": true
-          },
-          {
-            "type": "command",
-            "command": "test -d \"${CLAUDE_PROJECT_DIR:-.}/graphify-out\" || exit 0; cd \"${CLAUDE_PROJECT_DIR:-.}\" && $HOME/.local/bin/graphify update . >/dev/null 2>&1 || true",
-            "if": "Bash(rtk git commit*)",
-            "statusMessage": "graphify 인덱스 갱신",
-            "async": true
-          }
-        ]
-      }
-    ],
     "SessionStart": [
       {
         "hooks": [
@@ -181,7 +160,7 @@
   },
   "outputStyle": "Korean",
   "language": "Korean",
-  "effortLevel": "high",
+  "effortLevel": "medium",
   "advisorModel": "fable",
   "tui": "fullscreen",
   "agentPushNotifEnabled": true,
