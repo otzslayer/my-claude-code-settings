@@ -90,7 +90,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "test -d \"${CLAUDE_PROJECT_DIR:-.}/.codegraph\" || exit 0; jq -c 'if ((.tool_input.command // \"\") | test(\"(^|[^A-Za-z0-9_.-])(rtk +)?(grep|egrep|fgrep|zgrep|rg|ugrep|bfs)\\\\b\")) or ((.tool_input.command // \"\") | test(\"(^|[|&;(]|\\\\n) *(rtk +)?ug\\\\b\")) then {hookSpecificOutput:{hookEventName:\"PreToolUse\",additionalContext:\"CodeGraph 보완 안내(차단 아님, 검색은 그대로 진행해도 된다): 찾는 대상이 심볼의 정의·구현·호출관계·영향범위라면 grep 여러 번보다 mcp__codegraph__codegraph_explore 1회가 정확하고 왕복이 적다 — 동적 디스패치(콜백·리렌더·JSX children)는 grep이 구조적으로 놓친다. 반대로 문자열 리터럴·설정값·로그·주석·비코드 파일 검색은 grep이 맞는 도구다. 이미 graphify query로 오리엔테이션을 받았다면 중복 조회하지 말고 그대로 grep을 실행한다.\"}} else empty end' 2>/dev/null || true",
+            "command": "test -d \"${CLAUDE_PROJECT_DIR:-.}/.codegraph\" || exit 0; jq -c 'if ((.tool_input.command // \"\") | test(\"(^|[^A-Za-z0-9_.-])(rtk +)?(grep|egrep|fgrep|zgrep|rg|ugrep|bfs)\\\\b\")) or ((.tool_input.command // \"\") | test(\"(^|[|&;(]|\\\\n) *(rtk +)?ug\\\\b\")) then {hookSpecificOutput:{hookEventName:\"PreToolUse\",additionalContext:\"CodeGraph: 찾는 대상이 심볼의 정의, 구현, 호출 관계, 영향 범위 중 하나라면 이 grep을 멈추고 mcp__codegraph__codegraph_explore 를 먼저 호출한다. 한 번의 호출로 verbatim 소스와 호출 경로, 영향 범위를 함게 얻는다. 콜백이나 리렌더, JSX children 같은 동적 디스패치는 grep이 구조적으로 놓친다. 문자열 리터럴, 설정값, 로그, 주석, 비코드 파일을 찾는 경우라면 grep이 맞는 도구이니 그대로 진행한다.\"}} else empty end' 2>/dev/null || true",
             "statusMessage": "CodeGraph 보완 안내"
           }
         ]
@@ -123,6 +123,16 @@
           {
             "type": "command",
             "command": "test -d \"${CLAUDE_PROJECT_DIR:-.}/.codegraph\" && echo \"{\\\"hookSpecificOutput\\\":{\\\"hookEventName\\\":\\\"SessionStart\\\",\\\"additionalContext\\\":\\\"CodeGraph MCP 사용 준비: 이 저장소에는 .codegraph/ 인덱스가 있고 데몬이 파일 변경을 실시간 반영한다. 코드 탐색·이해·수정 작업을 시작할 때 첫 조회는 mcp__codegraph__codegraph_explore 로 한다. 이 도구가 deferred 목록에 있으면 먼저 ToolSearch \\\\\\\"select:mcp__codegraph__codegraph_explore\\\\\\\" 로 스키마를 로드해 둔다.\\\"}}\" || true"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/mattpocock-flow.sh"
           }
         ]
       }
