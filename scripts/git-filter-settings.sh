@@ -68,6 +68,18 @@ case "${1:-}" in
         ;;
     smudge)
         if [[ -f "$FRAGMENT" ]]; then
+            tmp=$(mktemp)
+            trap 'rm -f "$tmp"' EXIT
+            cat > "$tmp"
+            # 유효한 JSON이 아니면 손대지 않고 그대로 흘려보낸다. merge나 rebase
+            # 도중 git이 충돌 마커가 박힌 중간 파일을 smudge에 넘기는데, 여기서
+            # 죽으면 required=true가 작업 전체를 중단시키고 워킹트리에서 파일이
+            # 사라진다(실측). smudge 실패는 로컬 훅을 유출시키지 않으므로
+            # fail-open이 맞다. 반대로 clean은 fail-closed를 유지한다.
+            if ! jq -e . "$tmp" >/dev/null 2>&1; then
+                cat "$tmp"
+                exit 0
+            fi
             # UserPromptSubmit만 떼어내고 나머지는 재귀 병합한 뒤, 그 이벤트는
             # FRAGMENT 것을 앞에 두고 이어 붙인다.
             jq -s '
@@ -76,7 +88,7 @@ case "${1:-}" in
                 | (($f.hooks.UserPromptSubmit // []) + ($s.hooks.UserPromptSubmit // [])) as $ups
                 | ($s * $fm)
                 | if ($ups | length) > 0 then .hooks.UserPromptSubmit = $ups else . end
-            ' - "$FRAGMENT"
+            ' "$tmp" "$FRAGMENT"
         else
             # 프래그먼트가 없는 머신(다른 clone 등)에서는 원본 그대로 통과시킨다.
             cat
