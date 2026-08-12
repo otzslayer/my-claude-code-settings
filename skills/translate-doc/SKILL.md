@@ -1,6 +1,6 @@
 ---
 name: translate-doc
-description: Translate English markdown to natural Korean using the project's translation prompt and accumulated glossary. 사용자가 `/translate-doc <input_file> [--output <path>]`로 명시적으로 부를 때만 연다.
+description: Translate English markdown to natural Korean using the project's translation prompt and accumulated translation memo. 사용자가 `/translate-doc <input_file> [--output <path>]`로 명시적으로 부를 때만 연다.
 disable-model-invocation: true
 ---
 
