@@ -6,7 +6,7 @@
 옛 글로서리(`glossary.json`)는 외부 저장소 소유라 읽기 전용 폴백으로만 쓰이고,
 맥락이 없으므로 신뢰도 낮은 후보로 구분해 내보낸다.
 
-조회 결과는 강제가 아니라 후보다. 문서의 용법과 맞는지는 모델이 판정한다.
+조회 결과는 후보일 뿐 강제가 없다. 문서의 용법과 맞는지는 모델이 판정한다.
 
 사용법:
     python3 translation_memo.py lookup <input_file>
@@ -48,11 +48,22 @@ def boundary_pattern(term: str) -> re.Pattern[str]:
 
 
 def is_sentence_start(text: str, pos: int) -> bool:
-    """`pos`가 문장 첫머리인가. 마크다운 줄머리 마커는 걷어내고 본다."""
+    """`pos`가 문장 첫머리인가. 마크다운 줄머리 마커는 걷어내고 본다.
+
+    줄바꿈 하나는 문장 끝이 아니다. 하드랩된 문단의 다음 줄 첫 낱말은 문장
+    중간이므로 보정하지 않는다. 빈 줄로 갈렸다면 문단이 바뀐 것이라 문장
+    첫머리로 친다.
+    """
     before = text[:pos].rstrip(" \t")
     while (marker := LINE_LEAD.search(before)) is not None:
         before = before[: marker.start()].rstrip(" \t")
-    return not before or before[-1] in ".!?\n"
+
+    head = before.rstrip()
+    if not head:
+        return True
+    if head[-1] in ".!?:":
+        return True
+    return before[len(head) :].count("\n") >= 2
 
 
 def occurs(text: str, term: str) -> bool:
@@ -90,26 +101,27 @@ def load_glossary(path: Path) -> dict[str, str]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _fallback(
-    glossary: dict[str, str], memo_terms: set[str], hit: Callable[[str], bool]
-) -> list[Entry]:
-    """메모장에 없는 표기만 신뢰도 낮은 후보로 올린다."""
-    return [
-        {"term": k, "ko": v, "confidence": "low"}
-        for k, v in glossary.items()
-        if k not in memo_terms and hit(k)
-    ]
+def _candidates(
+    memo: list[Entry], glossary: dict[str, str], hit: Callable[[str], bool]
+) -> dict[str, list[Entry]]:
+    """두 소스에서 후보를 모은다. 옛 글로서리는 메모장에 없는 표기만 올리고,
+    맥락이 없으므로 신뢰도 낮음으로 구분해 표시한다."""
+    memo_terms = {e["term"] for e in memo}
+    return {
+        "memo": [e for e in memo if hit(e["term"])],
+        "glossary": [
+            {"term": k, "ko": v, "confidence": "low"}
+            for k, v in glossary.items()
+            if k not in memo_terms and hit(k)
+        ],
+    }
 
 
 def lookup(
     text: str, memo: list[Entry], glossary: dict[str, str]
 ) -> dict[str, list[Entry]]:
-    """문서에 실제로 나오는 표기의 후보를 두 소스에서 모은다."""
-    memo_terms = {e["term"] for e in memo}
-    return {
-        "memo": [e for e in memo if occurs(text, e["term"])],
-        "glossary": _fallback(glossary, memo_terms, lambda k: occurs(text, k)),
-    }
+    """문서에 실제로 나오는 표기의 후보를 모은다."""
+    return _candidates(memo, glossary, lambda term: occurs(text, term))
 
 
 def lookup_terms(
@@ -117,11 +129,7 @@ def lookup_terms(
 ) -> dict[str, list[Entry]]:
     """문서 매칭을 거치지 않고 표기를 직접 조회한다. 매칭이 놓친 것을 잡는다."""
     wanted = set(terms)
-    memo_terms = {e["term"] for e in memo}
-    return {
-        "memo": [e for e in memo if e["term"] in wanted],
-        "glossary": _fallback(glossary, memo_terms, lambda k: k in wanted),
-    }
+    return _candidates(memo, glossary, lambda term: term in wanted)
 
 
 def append_entries(path: Path, entries: list[Entry], doc: str, date: str) -> int:
@@ -134,8 +142,8 @@ def append_entries(path: Path, entries: list[Entry], doc: str, date: str) -> int
             "term": e["term"],
             "ko": e["ko"],
             "context": e["context"],
-            "doc": e.get("doc", doc),
-            "date": e.get("date", date),
+            "doc": doc,
+            "date": date,
         }
         for e in _validated(entries)
     ]
@@ -163,12 +171,10 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     look.add_argument("input_file", nargs="?", type=Path)
     look.add_argument("--term", action="append", default=[], help="표기 직접 조회")
     look.add_argument("--memo", type=Path, default=DEFAULT_MEMO)
-    look.add_argument("--glossary", type=Path, default=DEFAULT_GLOSSARY)
 
     rec = sub.add_parser("record", help="확정된 결정을 덧붙인다")
     rec.add_argument("entries", help='[{"term":..,"ko":..,"context":..}] JSON')
     rec.add_argument("--doc", required=True, help="번역한 문서 이름")
-    rec.add_argument("--date", default=dt.date.today().isoformat())
     rec.add_argument("--memo", type=Path, default=DEFAULT_MEMO)
 
     return parser.parse_args(argv)
@@ -176,7 +182,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
 
 def _run_lookup(args: argparse.Namespace) -> int:
     memo = load_memo(args.memo)
-    glossary = load_glossary(args.glossary)
+    glossary = load_glossary(DEFAULT_GLOSSARY)
 
     if args.term:
         result = lookup_terms(args.term, memo, glossary)
@@ -196,10 +202,12 @@ def _run_lookup(args: argparse.Namespace) -> int:
 
 
 def _run_record(args: argparse.Namespace) -> int:
-    entries = json.loads(args.entries)
-    if isinstance(entries, dict):
-        entries = [entries]
-    added = append_entries(args.memo, entries, doc=args.doc, date=args.date)
+    added = append_entries(
+        args.memo,
+        json.loads(args.entries),
+        doc=args.doc,
+        date=dt.date.today().isoformat(),
+    )
     print(f"recorded {added}")
     return 0
 

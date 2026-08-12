@@ -133,6 +133,24 @@ def test_mid_sentence_capital_is_not_folded(tmp_path: Path) -> None:
     assert result["memo"] == []
 
 
+def test_hard_wrap_continuation_is_not_a_sentence_start(tmp_path: Path) -> None:
+    memo, glossary = fixtures(tmp_path)
+    text = "We must treat this problem as an\nAlignment issue in production."
+
+    result = tm.lookup(text, tm.load_memo(memo), tm.load_glossary(glossary))
+
+    assert result["memo"] == []
+
+
+def test_paragraph_start_without_a_period_is_folded(tmp_path: Path) -> None:
+    memo, glossary = fixtures(tmp_path)
+    text = "| col | col |\n\nAlignment matters here.\n"
+
+    result = tm.lookup(text, tm.load_memo(memo), tm.load_glossary(glossary))
+
+    assert {e["ko"] for e in result["memo"]} == {"정렬", "맞춤"}
+
+
 def test_plural_matches_but_prefix_does_not(tmp_path: Path) -> None:
     memo, glossary = fixtures(tmp_path)
 
