@@ -1,7 +1,7 @@
 ---
-description: Translate English markdown to natural Korean using the project's translation prompt and accumulated glossary
-argument-hint: <input_file> [--output <path>]
-allowed-tools: Read, Write, Edit, Bash, Glob, AskUserQuestion
+name: translate-doc
+description: Translate English markdown to natural Korean using the project's translation prompt and accumulated glossary. 사용자가 `/translate-doc <input_file> [--output <path>]`로 명시적으로 부를 때만 연다.
+disable-model-invocation: true
 ---
 
 # translate-doc
@@ -12,7 +12,7 @@ allowed-tools: Read, Write, Edit, Bash, Glob, AskUserQuestion
 
 ## 인자
 
-사용자 입력: `$ARGUMENTS`
+이 스킬을 부를 때 함께 넘어온 인자를 파싱한다. `/translate-doc <input_file> [--output <path>]`로 부르면 슬래시 뒤에 적은 문자열이 그대로 인자로 들어오고, 대화에서 파일 경로만 주어진 경우에는 그 경로를 입력 파일로 삼는다.
 
 파싱 규칙:
 - 첫 위치 인자 = **입력 파일 경로** (필수).
@@ -21,29 +21,19 @@ allowed-tools: Read, Write, Edit, Bash, Glob, AskUserQuestion
 
 입력 파일이 주어지지 않았거나 경로가 존재하지 않으면 멈추고 무엇이 빠졌는지 사용자에게 알린다.
 
-## 자산 (절대 경로 — 모두 `~/.claude/translate-doc-assets/` 아래에서 관리)
+## 자산 (절대 경로 — 모두 `~/.claude/skills/translate-doc/assets/` 아래에서 관리)
 
-- 시스템 프롬프트: `~/.claude/translate-doc-assets/system_prompt.md`
-- 글로서리: `~/.claude/translate-doc-assets/glossary.json`
+- 시스템 프롬프트: `~/.claude/skills/translate-doc/assets/system_prompt.md`
+- 글로서리: `~/.claude/skills/translate-doc/assets/glossary.json`
   - `/Users/jayhan/workspaces/translate-with-gpt/data/glossary.json`으로 가는 **심링크**다. 읽기와 쓰기가 원본 파일로 흘러가므로 그 저장소의 `translate-doc` CLI와 글로서리를 공유한다. 심링크 경로를 정식 접근 경로로 삼는다.
-- 글로서리 필터: `~/.claude/translate-doc-assets/filter_glossary.py` (Step 2)
-- 글로서리 추가: `~/.claude/translate-doc-assets/append_glossary.py` (Step 7)
-- 번역투 패턴: `~/.claude/translate-doc-assets/translationese-patterns.md`
-  - `im-not-ai` 분류 체계에서 흡수한 번역투 규칙을 정의, 처방, `영어 원문 → BAD → GOOD` 예문과 함께 담는다. 이 커맨드는 규칙을 참조만 하고, 규칙 본문은 그 파일에만 있다.
+- 글로서리 필터: `~/.claude/skills/translate-doc/assets/filter_glossary.py` (Step 2)
+- 글로서리 추가: `~/.claude/skills/translate-doc/assets/append_glossary.py` (Step 7)
+- 번역투 패턴: `~/.claude/skills/translate-doc/assets/translationese-patterns.md`
+  - `im-not-ai` 분류 체계에서 흡수한 번역투 규칙을 정의, 처방, `영어 원문 → BAD → GOOD` 예문과 함께 담는다. 이 스킬은 규칙을 참조만 하고, 규칙 본문은 그 파일에만 있다.
 
 ## 여러 파일 일괄 번역 (배치 모드)
 
-한 폴더의 문서 여러 편을 한 번에 맡길 때 적용한다. 아래만 단일 파일 플로와 다르고 Step 1~8은 각 파일에 그대로 적용한다.
-
-**순차, 단일 세션으로 처리하고 서브에이전트에 분산하지 않는다.** 이 커맨드는 스킬이 아니라 슬래시 커맨드라 서브에이전트가 확장하지 못해 커맨드 본문과 `system_prompt.md`, `translationese-patterns.md`를 에이전트마다 다시 읽혀야 하고, Step 4의 파라미터 확인은 서브에이전트가 사용자에게 물을 수 없으며, Step 7이 쓰는 `glossary.json`은 외부 저장소로 가는 심링크라 동시 쓰기가 lost update를 낸다.
-
-1. **전역 용어표 선고정.** 전체를 먼저 통독해 반복되는 핵심 용어, 대립쌍, 모티프의 영어 → 한국어 매핑을 파일로 적어 두고 모든 파일에 강제한다. 문서마다 즉석에서 정하면 뼈대가 문서마다 어긋난다.
-2. **Step 4의 파라미터 확인은 배치당 1회.** 파일마다 묻지 않는다. 같은 `AskUserQuestion` 호출에 출력 위치(in-place / `--output` / 폴더 복사본)도 함께 묻는다.
-3. **in-place 전에 원본 보호 여부를 확인한다.** git 추적도 백업도 없는 폴더라면 폴더 복사본을 권한다. Step 6은 백업을 만들지 않는다.
-4. **파일럿 1편으로 톤과 용어를 확인받는다.** 핵심 용어를 가장 많이 정의하는 짧은 문서가 적합하다. 확인을 건너뛰었다면 보고 첫머리에 그 사실을 밝힌다.
-5. **위키링크 `[[타깃]]`은 파일명이라 바꾸지 않는다.** alias(`[[Target | 표시 텍스트]]`의 뒷부분)만 번역한다. 파일명에 악센트 표기가 섞여 있어도 교정하지 않는다.
-6. **Step 7 글로서리 병합은 배치 끝에 1회만** 수행한다.
-7. **최종 스윕.** 원본과 파일별로 대조한다. 헤딩, 수평선(`---`), 각주 정의 수, 각주 참조 번호 집합(`[^1]` 등 인라인 포함), 위키링크 타깃 목록과 alias 개수, 이미지, 외부 URL 목록, 표의 파이프(`|`) 총수, 볼드 마커(`**`) 짝수 여부, 쉼표가 원문 개수를 넘지 않는지, 그리고 Step 5 항목 19, 20. 전면 재작성한 파일이 있으면 재작성 뒤 다시 돌린다.
+한 폴더의 문서 여러 편을 한 번에 맡을 때는 `references/batch-mode.md`를 읽는다.
 
 ## 작업 흐름
 
@@ -59,7 +49,7 @@ allowed-tools: Read, Write, Edit, Bash, Glob, AskUserQuestion
 전체 글로서리는 2,430항목, 110K자다. 전부 주입하지 **않는다.** 입력에 실제로 나오는 키만 뽑아 그 출력만 컨텍스트에 넣는다.
 
 ```bash
-python3 ~/.claude/translate-doc-assets/filter_glossary.py <input_file>
+python3 ~/.claude/skills/translate-doc/assets/filter_glossary.py <input_file>
 ```
 
 매칭한 `{ "English Term": "한국어(원문)" }` 맵을 stdout으로, `N / 2430 terms matched`를 stderr로 낸다. 대소문자를 구분하지 않고, 단어 경계 위에서만 맞추되 영어 복수형(`-s`/`-es`)은 허용한다. `subagents`는 `subagent`에 걸리고 `agentic`은 `agent`에 걸리지 않는다.
@@ -94,7 +84,7 @@ python3 ~/.claude/translate-doc-assets/filter_glossary.py <input_file>
 
 작업 모델을 세운 뒤, **한국어 텍스트를 내놓기 전에** `AskUserQuestion` 도구로 핵심 번역 파라미터 둘을 사용자와 확인한다(자유 입력이 아니라 번호 선택 UI). 두 질문을 **한 번의** 도구 호출에 담는다. 파악 단계에서 세운 최선의 추정에 `(Recommended)`를 달고, 원문에서 무엇을 보고 그렇게 판단했는지 한 줄로 붙인다.
 
-**배치 모드 예외**: 여러 파일을 일괄 번역하는 중이라면 이 확인은 배치 시작 시 1회로 끝났다. 파일마다 다시 묻지 않는다. 위 "여러 파일 일괄 번역" 절 2번을 참조한다.
+**배치 모드 예외**: 여러 파일을 일괄 번역하는 중이라면 이 확인은 배치 시작 시 1회로 끝났다. 파일마다 다시 묻지 않는다. `references/batch-mode.md` 2번을 참조한다.
 
 **Question 1 — 글의 카테고리와 톤** (header: `글 톤`, 4개 선택지, 상호 배타)
 
@@ -141,7 +131,7 @@ python3 ~/.claude/translate-doc-assets/filter_glossary.py <input_file>
 
 두 질문 중 하나라도 사용자가 `Other`(자유 입력)를 고르면 답을 해석해 최선의 판단으로 적용한다.
 
-나머지 세 층(논증, 독자, 되풀이되는 모티프)은 원문에서 자동으로 끌어낸다. 사용자에게 **묻지 않는다.** 위 두 질문이 이 커맨드에서 사용자를 마주하는 유일한 지점이다.
+나머지 세 층(논증, 독자, 되풀이되는 모티프)은 원문에서 자동으로 끌어낸다. 사용자에게 **묻지 않는다.** 위 두 질문이 이 스킬에서 사용자를 마주하는 유일한 지점이다.
 
 #### 타협 없는 기준선
 
@@ -353,7 +343,7 @@ Step 6에서 `Write`를 호출하기 전에 **번역 전체를 한 번 다시 �
 
 아래 항목 9(대명사, A-16)와 15~17번은 `translationese-patterns.md`에서 흡수한 **density 패턴**이다. 문서 전체의 빈도(대개 `3회+` 임계)에 달려 있으므로 이 전체 재독이 그것들을 잡을 수 있는 유일하게 올바른 자리다. 청킹할 때 청크 단위 검토는 문서 전체 빈도를 셀 수 없으므로, 모든 청크를 이어 붙인 뒤 여기서 확인해야 한다.
 
-항목 19, 20도 같은 이유로 이 자리에서만 제대로 검사된다(다만 흡수 패턴이 아니라 이 커맨드의 자체 규칙이다). 19는 원문 전체를, 20은 번역본 전체를 훑어야 하므로 청킹 시 chunk별로는 판정할 수 없다.
+항목 19, 20도 같은 이유로 이 자리에서만 제대로 검사된다(다만 흡수 패턴이 아니라 이 스킬의 자체 규칙이다). 19는 원문 전체를, 20은 번역본 전체를 훑어야 하므로 청킹 시 chunk별로는 판정할 수 없다.
 
 1. **리듬 — 원문 문장 경계와 대조한다.** 한국어만 읽지 말고 원문 문단을 나란히 놓는다. 번역 문장이 원문 문장과 1:1로 줄지어 가고 있다면(균형 이상 강도에서) 병합이 일어나지 않았다는 신호다. 주어나 주제를 공유하는 짧은 문장 2개 이상은 한 호흡으로 합친다. 낱말이 모두 자연스러워도 호흡이 영어 것이면 독자에게는 "번역한 글"로 읽힌다. **문장 수 비율 같은 스칼라 지표로 재려 하지 않는다.** 한국어의 정당한 분할, 병합과 영어 모방을 구별하지 못해 아무것도 판별해 주지 않는다.
 2. **형상 언어 감사.** 원문의 모든 생생한 비유, 형상적 동사, 이미지를 실은 표현에 대해, 한국어가 같은 힘의 이미지를 실어 냈는가? 고정 매핑이 아니라 둘러싼 논증에서 만들어 냈는가? 형상적인 대목을 따로 떼어 읽는다. 한국어에서 그 이미지가 여전히 일하고 있다고 느껴지는가, 아니면 군더더기로 읽고 지나치는가? 뭉개졌다면 "비유와 형상 언어"의 과정(알아본다 → 좇는다 → 만든다 → 세기를 맞춘다 → 일관되게 유지한다)으로 다시 만든다. 클러스터도 확인한다. 저자가 모티프를 재사용한다면 한국어 표현들이 유의어 사이를 표류하지 않고 하나의 일관된 클러스터에 앉아 있는가?
@@ -405,7 +395,7 @@ Step 6에서 `Write`를 호출하기 전에 **번역 전체를 한 번 다시 �
 글로서리를 `Read`하거나 `Edit`하지 **않는다.** Step 1과 같은 잘림 문제가 있고, 전체 재직렬화는 공유 저장소에 무관한 diff를 남긴다. 아래 스크립트로 덧붙인다.
 
 ```bash
-python3 ~/.claude/translate-doc-assets/append_glossary.py '{"Term": "번역"}'
+python3 ~/.claude/skills/translate-doc/assets/append_glossary.py '{"Term": "번역"}'
 ```
 
 기존 키와 충돌하면 그 항목만 건너뛰고 기존 번역을 지킨다. 새 항목은 끝에 줄 단위로 덧붙어 기존 키의 순서와 서식이 그대로 남고, 한국어는 `\uXXXX`로 이스케이프되지 않으며, 쓴 뒤 유효한 JSON인지 스스로 검증한다. `added N, skipped M`을 보고한다.
@@ -429,7 +419,7 @@ python3 ~/.claude/translate-doc-assets/append_glossary.py '{"Term": "번역"}'
 
 ## 절대 규칙
 
-- JSON 래퍼를 내보내지 않는다. 시스템 프롬프트의 `<output_format>` 절은 이 커맨드가 무효화한다.
+- JSON 래퍼를 내보내지 않는다. 시스템 프롬프트의 `<output_format>` 절은 이 스킬이 무효화한다.
 - 번역과 나란히 영어 원문을 넣지 않는다(헤딩에서 흔히 저지르는 실수다. 덧붙이지 말고 대체한다).
 - 코드, 식별자, URL, 파일 경로를 의역하지 않는다.
 - 원문에 없는 글로서리 용어를 지어내지 않는다.

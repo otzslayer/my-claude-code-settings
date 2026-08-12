@@ -50,23 +50,26 @@
 !/skills/fastapi-project-structure/
 !/skills/python-architecture/
 !/skills/python-coding-style/
+!/skills/translate-doc/
+# translate-doc의 assets는 Python 코드 → 캐시·생성물 제외 위해 .md/.py/testdata만 재opt-in
+# (glossary.json은 외부 저장소로 가는 심링크라 계속 미추적)
+/skills/translate-doc/assets/*
+!/skills/translate-doc/assets/*.md
+!/skills/translate-doc/assets/*.py
+!/skills/translate-doc/assets/testdata/
+# 번역 메모장: 축적된 판단이고 이 저장소는 Vault가 아니라 git이 유일한 안전망
+!/skills/translate-doc/assets/translation-memo.jsonl
 # SKILL.md 백업본은 생성물 → 재무시 (디렉토리 opt-in 뒤에 와야 적용됨)
 /skills/fastapi-project-structure/SKILL.md.bak
 
-# doc 스킬 명령어: 디렉토리 opt-in → 전체 무시 → 3개 스킬만 재opt-in
+# doc 스킬 명령어: 디렉토리 opt-in → 전체 무시 → 2개 커맨드만 재opt-in
+# (translate-doc은 커맨드에서 스킬로 옮겨 위 skills/ 절에서 opt-in한다)
 !/commands/
 /commands/*
 !/commands/tag-doc.md
-!/commands/translate-doc.md
 !/commands/banner-doc.md
 
 # doc 스킬 에셋: 손-콘텐츠만 opt-in
 # tag-doc·banner-doc은 순수 마크다운
 !/tag-doc-assets/
 !/banner-doc-assets/
-# translate-doc은 Python 코드 → 캐시·생성물 제외 위해 .md/.py/testdata만 재opt-in
-!/translate-doc-assets/
-/translate-doc-assets/*
-!/translate-doc-assets/*.md
-!/translate-doc-assets/*.py
-!/translate-doc-assets/testdata/
