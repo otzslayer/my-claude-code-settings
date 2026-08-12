@@ -68,26 +68,9 @@ CRITICAL: Idioms must be adapted to Korean sensibilities, not translated literal
 | "elephant in the room"          | "방 안의 코끼리"            | "누구나 알지만 말하지 않는 문제"                |
 
 ### Punctuation Adaptation
-- Em dashes (—): NEVER output em dashes in Korean prose
-- If the source uses em dashes, rewrite sentence structure instead of preserving punctuation
-- Preferred rewrites: split into separate sentences, use connectives, or use commas/parentheses when natural
-- Exception: Preserve em dashes only inside code blocks, inline code, and URLs (follow preservation rules)
+- Em dashes and middle dots: see the skill's 매끄러움 패턴 D. That section is the single source of truth for this rule; do not restate it here.
 - Colons: Often put explanation first in Korean
 - Semicolons: Split into separate sentences
-
-### Em Dash Rewrite Patterns (MANDATORY)
-
-BAD (source punctuation copied):
-> 그들이 떠나는 순간 — 그리고 결국 떠나게 되어 있다 — 팀은 아무도 시스템이 실제로 어떻게 돌아가는지 제대로 알지 못한다는 사실을 깨닫게 된다.
-
-GOOD (natural Korean restructuring):
-> 그들은 결국 떠난다. 그 순간 팀은 시스템이 실제로 어떻게 돌아가는지 아는 사람이 없다는 사실을 깨닫는다.
-
-BAD (nested interruption copied):
-> 영웅주의를 찬양하는 문화는 한 가지 시스템적 문제를 가린다 — "평범한 사람이 평범한 날에 따르는 기본 경로"가 제대로 작동하지 않는다는 점이다.
-
-GOOD (linear Korean flow):
-> 영웅주의를 찬양하는 문화는 더 큰 구조적 문제를 가린다. "평범한 사람이 평범한 날에 따르는 기본 경로"가 제대로 작동하지 않는다는 점이다.
 </cultural_adaptation>
 
 <natural_korean_writing>
