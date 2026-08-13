@@ -20,7 +20,7 @@ disable-model-invocation: true
 - `--output`을 생략하면 **입력 파일을 제자리에서 덮어쓴다.** 번역한 한국어가 같은 경로의 영어 원문을 대체하고 백업은 만들지 않는다. 번역을 별도 파일에 쓰고 입력을 그대로 두려면 `--output <path>`를 넘긴다.
 
 **제자리 덮어쓰기 경고는 조건부다. 이 규칙의 정본은 여기 하나뿐이다.**
-- 입력 경로가 `/Users/jayhan/Vault/` 아래라면 Obsidian Sync가 되돌릴 수 있으므로 **경고 없이 그대로 진행한다.**
+- 입력 경로가 Obsidian Vault 안이라면 Obsidian Sync가 되돌릴 수 있으므로 **경고 없이 그대로 진행한다.**
 - 그 밖의 경로라면 **번역을 시작하기 전에 경고한다.** 원문이 버전 관리 아래 있지 않으면 되돌릴 방법이 없다.
 
 입력 파일이 주어지지 않았거나 경로가 존재하지 않으면 멈추고 무엇이 빠졌는지 사용자에게 알린다.
@@ -30,9 +30,10 @@ disable-model-invocation: true
 - 시스템 프롬프트: `~/.claude/skills/translate-doc/assets/system_prompt.md`
 - 번역 메모장: `~/.claude/skills/translate-doc/assets/translation-memo.jsonl`
   - 번역 결정의 기록이다. 한 줄에 한 결정이고 `term`, `ko`, `context`, `doc`, `date` 다섯 필드를 담는다. `context`가 판정의 근거이고 나머지는 추적용이다. 같은 `term`이 여러 줄인 것이 곧 다의어다.
+  - 개인 기록이라 이 저장소는 추적하지 않는다. 여러 머신에서 쓸 때는 별도 저장소에 실물을 두고 이 자리에 **심링크**를 건다. 심링크가 없으면 Step 7의 기록이 이 자리에 실물 파일을 새로 만들고, 그 상태로도 스킬은 온전히 돈다. 심링크는 있는데 대상 저장소를 아직 내려받지 않았다면 기록이 `FileNotFoundError`로 멈추니 그때 대상을 먼저 갖춘다.
 - 메모장 도구: `~/.claude/skills/translate-doc/assets/translation_memo.py` (조회는 Step 2, 기록은 Step 7)
 - 옛 글로서리: `~/.claude/skills/translate-doc/assets/glossary.json`
-  - `/Users/jayhan/workspaces/translate-with-gpt/data/glossary.json`으로 가는 **심링크**다. 그 저장소의 배치 번역 CLI가 소유하므로 이 스킬은 **읽기 전용 폴백**으로만 쓰고 절대 쓰지 않는다. 조회 도구가 알아서 읽으니 직접 열 일은 없다.
+  - 배치 번역 CLI가 소유하는 외부 저장소로 가는 **심링크**라 이 스킬은 **읽기 전용 폴백**으로만 쓰고 절대 쓰지 않는다. 조회 도구가 알아서 읽으니 직접 열 일은 없다. 파일이 없으면 폴백 없이 메모장만으로 조회하며, 그것도 정상 동작이다.
 - 번역투 패턴: `~/.claude/skills/translate-doc/assets/translationese-patterns.md`
   - `im-not-ai` 분류 체계에서 흡수한 번역투 규칙을 정의, 처방, `영어 원문 → BAD → GOOD` 예문과 함께 담는다. 이 스킬은 규칙을 참조만 하고, 규칙 본문은 그 파일에만 있다.
 

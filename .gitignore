@@ -52,13 +52,13 @@
 !/skills/python-coding-style/
 !/skills/translate-doc/
 # translate-doc의 assets는 Python 코드 → 캐시·생성물 제외 위해 .md/.py/testdata만 재opt-in
-# (glossary.json은 외부 저장소로 가는 심링크라 계속 미추적)
+# (glossary.json과 translation-memo.jsonl은 개인 저장소로 가는 심링크라 계속 미추적.
+#  메모장은 doc 필드에 문서 제목이 남아 공개 저장소에 둘 수 없고, 백업과 다중 머신
+#  동기화는 otzslayer/translation-memo 쪽 git이 담당한다)
 /skills/translate-doc/assets/*
 !/skills/translate-doc/assets/*.md
 !/skills/translate-doc/assets/*.py
 !/skills/translate-doc/assets/testdata/
-# 번역 메모장: 축적된 판단이고 이 저장소는 Vault가 아니라 git이 유일한 안전망
-!/skills/translate-doc/assets/translation-memo.jsonl
 # SKILL.md 백업본은 생성물 → 재무시 (디렉토리 opt-in 뒤에 와야 적용됨)
 /skills/fastapi-project-structure/SKILL.md.bak
 
