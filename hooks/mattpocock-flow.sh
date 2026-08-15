@@ -35,6 +35,7 @@ grill-with-docs, grill-me, to-spec, to-tickets, implement, triage, wayfinder, as
 메인 플로우: /grill-with-docs 로 아이디어를 벼린다. 설계 질문이 실행 가능한 답을 요구하면 /handoff 로 빠져 /prototype 을 거쳐 돌아온다. 여러 세션에 걸칠 일이면 /to-spec 다음 /to-tickets, 티켓마다 /implement 를 돌리고 사이사이 /clear 한다. 한 세션에 끝날 일이면 곧장 /implement 로 간다. /implement 는 내부에서 /tdd 를 돌리고 /code-review 로 닫는다.
 온램프: /triage(밖에서 들어온 이슈), /diagnosing-bugs(고장난 것), /wayfinder(한 세션에 안 들어가는 큰 일)는 /to-spec 에서 메인 플로우에 합류한다.
 컨텍스트 위생: /to-tickets 전까지는 한 컨텍스트를 유지하고 compact 나 clear 를 하지 않는다.
+티켓 앵커: /to-tickets 로 티켓을 쓸 때, 각 티켓에 그 티켓이 건드릴 기존 심볼(함수, 클래스, 모듈) 이름을 `**Symbols:**` 한 줄로 남긴다. 파일 경로와 코드 스니펫은 to-tickets 규정대로 계속 쓰지 않는다. 심볼 이름은 낡아도 조회가 빈 결과를 줄 뿐 틀린 곳을 가리키지 않으므로 그 규정에 걸리지 않는다. 새로 만들 코드뿐이라 앵커로 쓸 기존 심볼이 없으면 그 줄을 생략한다. /implement 는 첫 턴에 그 이름들을 codegraph_explore 에 그대로 넘기고, 인덱스가 없는 저장소라면 검색 시작점으로 쓴다.
 EOF
 
 jq -nc --arg ctx "$CTX" \
