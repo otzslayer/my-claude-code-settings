@@ -80,6 +80,7 @@ CRITICAL: Idioms must be adapted to Korean sensibilities, not translated literal
 - **Body text (MANDATORY)**: ALWAYS use declarative endings (~한다, ~이다, ~였다). This is non-negotiable for ALL body text, including explanations, descriptions, and analysis.
   - CORRECT: "복잡성이 커진다", "중요하다", "도움이 된다"
   - WRONG: "복잡성이 커집니다", "중요합니다", "도움이 됩니다"
+  - **Scope**: this rule governs prose sentences. It does NOT force a verb onto source fragments that carry no finite verb — noun-phrase bullets, headings, table cells, labels. Those stay noun phrases in Korean. See the skill's "원문의 명사구 나열은 명사구로 남긴다".
 - **Quotations ONLY**: Use polite endings (~합니다, ~입니다, ~죠) ONLY inside direct quotes ("...")
   - Example: "초기에 제가 저지른 가장 큰 실수였습니다. 결과적으로 제 직속 팀원에게도 해가 되었죠."
 - **Essay rhythm**: Achieve warmth and engagement through varied sentence lengths and natural flow, NOT through polite endings. Write like a Korean columnist, not a customer service agent.
