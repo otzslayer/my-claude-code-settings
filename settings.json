@@ -156,6 +156,12 @@
         "repo": "uppinote20/claude-dashboard"
       },
       "autoUpdate": true
+    },
+    "im-not-ai": {
+      "source": {
+        "source": "github",
+        "repo": "epoko77-ai/im-not-ai"
+      }
     }
   },
   "outputStyle": "Korean",
@@ -164,10 +170,6 @@
   "advisorModel": "fable",
   "tui": "fullscreen",
   "agentPushNotifEnabled": true,
-  "skills": {
-    "enabled": true,
-    "path": ".claude/skills"
-  },
   "autoMode": {
     "environment": [
       "### Org-wide",
@@ -195,5 +197,9 @@
       "**Trusted repo**: /Users/jayhan/.claude, remote github.com/otzslayer/my-claude-code-settings (PUBLIC) — since public, only this repo's own work belongs here; confidential/secret material is never cleared into it by visibility alone",
       "**Org-specific CLIs**: None configured — codegraph, rtk, graphify, and claude appear as frequently-used personal CLIs in this project but are not tied to any organization"
     ]
+  },
+  "skills": {
+    "enabled": true,
+    "path": ".claude/skills"
   }
 }
