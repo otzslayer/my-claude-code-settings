@@ -2,7 +2,6 @@
 name: polish-korean
 description: 이미 쓴 한국어 산문을 하우스 스타일과 AI 티 규칙으로 한 패스에 교정한다.
 argument-hint: "<파일 경로 또는 붙여넣은 텍스트> [--output <path>]"
-disable-model-invocation: true
 ---
 
 # polish-korean
