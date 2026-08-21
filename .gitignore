@@ -52,6 +52,7 @@
 !/skills/polish-korean/
 !/skills/python-coding-style/
 !/skills/translate-doc/
+!/skills/editorial-flow-diagram/
 # translate-doc의 assets는 Python 코드 → 캐시·생성물 제외 위해 .md/.py/testdata만 재opt-in
 # (glossary.json과 translation-memo.jsonl은 개인 저장소로 가는 심링크라 계속 미추적.
 #  메모장은 doc 필드에 문서 제목이 남아 공개 저장소에 둘 수 없고, 백업과 다중 머신
@@ -62,6 +63,9 @@
 !/skills/translate-doc/assets/testdata/
 # SKILL.md 백업본은 생성물 → 재무시 (디렉토리 opt-in 뒤에 와야 적용됨)
 /skills/fastapi-project-structure/SKILL.md.bak
+# editorial-flow-diagram의 캐시와 바이트코드는 생성물 → 재무시
+/skills/editorial-flow-diagram/.ruff_cache/
+/skills/editorial-flow-diagram/**/__pycache__/
 
 # doc 스킬 명령어: 디렉토리 opt-in → 전체 무시 → 2개 커맨드만 재opt-in
 # (translate-doc은 커맨드에서 스킬로 옮겨 위 skills/ 절에서 opt-in한다)
