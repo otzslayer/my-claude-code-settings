@@ -4,12 +4,6 @@
 
 When a relevant skill exists, call the `Skill` tool **before proceeding**. Available skills are auto-listed in session context with their own trigger descriptions — invoke via `Skill(skill="...")`.
 
-### Korean wording produced by a skill (MANDATORY)
-
-Whenever running a skill leads you to write Korean wording that lands in a file or a deliverable — a document, a spec value, a diagram title or label, a commit message, a caption — run it through `polish-korean` (text mode) **before** it is written or built. Do this every time; never skip it because the wording is short or reads fine.
-
-Out of scope: conversational replies to the user (the Korean output style already governs those, and polish-korean itself refuses to restyle a sent reply); code identifiers, paths, commands, flags, and quoted source text; and the `polish-korean`, `translate-doc`, and `humanize-korean` skills themselves, which already carry the house style.
-
 ## Core Principles
 
 `Understand → Test (RED) → Implement (GREEN) → Refactor → Commit`
