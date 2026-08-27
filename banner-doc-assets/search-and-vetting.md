@@ -1,7 +1,7 @@
 # banner-doc 검색·감별 SSOT
 
 > banner-doc 검색·감별 SSOT — 커맨드(`commands/banner-doc.md`)가 이 파일을 읽어 사용한다.
-> 검색 소스 우선순위·Wikimedia API 필드매핑·감별 휴리스틱·컨셉 도출 지식은 여기에만 존재한다.
+> 검색 소스 우선순위·소스별 API 필드매핑·중복 배제·감별 휴리스틱·컨셉 도출 지식은 여기에만 존재한다.
 > tag-doc ↔ tag-rules, translate-doc ↔ translationese-patterns 분리 구조와 동일.
 
 이 파일은 공개 도메인(PD) 역사 이미지 — 고판화·고지도·빈티지 도표·고전 회화 — 를 노트 주제에
@@ -22,7 +22,8 @@
 
 ### 검색어 만들기 (컨셉당 1개)
 
-각 컨셉마다 **영어/라틴어 검색어를 하나씩** 고른다(§ 호출 레시피 예산 — 컨셉 3개 × 검색어 1개).
+각 컨셉마다 **영어/라틴어 검색어를 하나씩** 고른다(§ 호출 레시피 예산). 소스마다 검색어 문법이
+달라서, Wikimedia는 어구를 그대로 쓰고 CMA는 낱말 1~2개로 줄인다(§ 호출 레시피 콜 1).
 노트가 한국어일 수 있으므로 검색은 반드시 영어/라틴어 개념어로 한다(Wikimedia Commons는 영어
 메타데이터가 지배적). 아래 축을 **한 줄로 조합**해 하나를 만든다 — 변형을 여러 개 준비해 순차
 시도하는 방식은 라운드트립만 먹는다:
@@ -54,21 +55,31 @@
 
 ---
 
-## § 1차 소스 개관 (Wikimedia 단일)
+## § 1차 소스 개관 (3소스 병렬)
 
-**1차 소스는 Wikimedia Commons 하나다.** 정상 경로는 Wikimedia만으로 최소 후보 수를 채우는
-것이고, 못 채울 때만 § 보조 소스(LoC 포함)로 내려간다.
+1차 소스는 **Wikimedia Commons · Cleveland Museum of Art(CMA) · Wellcome Collection** 셋이다.
+셋 다 인증 키가 필요 없고, 검색 응답 하나에 라이선스와 직접 래스터 URL이 함께 담겨 온다. 매
+실행에서 셋을 **같은 fan-out 콜에 함께** 넣어 부르므로 소스가 늘어도 Bash 라운드트립은 그대로
+2콜이다.
 
-- **왜 단일인가** — Wikimedia 검색 JSON은 한 번의 호출로 래스터 URL·라이선스·mime·**width/height**를
-  전부 준다. 즉 라이선스·mime·해상도 **3중 사전 필터가 추가 호출 없이 공짜**다. LoC를 비롯한 다른
-  소스는 이 셋 중 일부를 검색 JSON에 담지 않아 후보당 별도 호출이 필요하고, 그 호출은 대부분
-  탈락할 후보에 쓰인다(§ 보조 소스 — LoC).
-- **transport** — **`Bash` curl + `-H 'User-Agent: …'` 헤더로 raw JSON을 발행**한다. `WebFetch`는
-  금지(커스텀 헤더·raw JSON 불가). `WebSearch`/`WebFetch`는 § 보조 소스 탐색용이다. 구체적 호출은
-  **§ 호출 레시피**를 그대로 따른다.
-- **라이선스 태그** — `LicenseShortName`. 소스가 명시한 태그만 신뢰하며 저작권을 독자 판단하지
-  않는다(§ 감별 1).
-- LoC·NYPL·Met·Rijksmuseum·Internet Archive는 § 보조 소스(best-effort)다. **AIC(시카고 미술관)는
+셋을 병렬로 두는 까닭은 **후보 반복**이다. Wikimedia 단일 시절에는 검색 랭킹이 결정적이라 비슷한
+주제의 노트가 같은 상위 파일을 계속 뽑았다. 소장품이 서로 겹치지 않는 소스를 섞는 것이 그 반복을
+푸는 가장 직접적인 방법이고, § 중복 배제가 나머지 절반을 맡는다.
+
+| 소스 | 성격 | 검색 응답이 주는 것 | 배너 URL |
+|---|---|---|---|
+| Wikimedia Commons | 범용. 고지도·회화·판화 전반 | 라이선스·mime·width/height 전부 | `thumburl`, 없으면 `url` |
+| CMA | 미술관 소장품. 판화·소묘·회화 | `share_license_status`, 이미지 3종의 width | `images.print.url` |
+| Wellcome Collection | 의학·과학사 도해와 판화. 앞 둘과 겹침이 가장 적다 | 라이선스(`pdm`·`cc0`), IIIF 이미지 ID | IIIF `full/1024,/0/default.jpg` |
+
+- **transport** — 셋 다 **`Bash` curl에 `-H 'User-Agent: …'`를 붙여 raw JSON**을 받는다.
+  `WebFetch`는 금지한다(커스텀 헤더와 raw JSON을 쓸 수 없다). `WebSearch`·`WebFetch`는 § 보조 소스
+  탐색용이다. 구체적 호출은 **§ 호출 레시피**를 그대로 따르고, 소스별 필드 매핑은 § Wikimedia
+  1차 소스 · § CMA 1차 소스 · § Wellcome 1차 소스에 있다.
+- **라이선스 태그** — 소스가 명시한 태그만 신뢰하며 저작권을 독자 판단하지 않는다(§ 감별 1).
+- **LoC는 보조 소스로 남는다**(§ 보조 소스 — LoC). 3소스 병렬로도 통과 후보가 2개 미만일 때만
+  부른다. 검색 JSON에 라이선스도 크기도 없어 후보당 추가 호출이 필요하다는 비대칭은 그대로다.
+- NYPL·Met·Rijksmuseum·Internet Archive는 § 보조 소스(best-effort)다. **AIC(시카고 미술관)는
   Cloudflare 핫링크 불가로 배너 소스에서 제외**됐다(§ 보조 소스 하단 상세).
 
 ---
@@ -82,55 +93,139 @@
 
 | 항목 | 상한 |
 |---|---|
-| 컨셉 | 3개 (직결형 ≥1 + 연상형 1~2) |
-| 컨셉당 검색어 | **1개** |
-| 검색 Bash 콜 | **1콜** (전 컨셉 fan-out) |
-| 파싱 Bash 콜 | **1콜** (전 파일 일괄) |
-| 시각 감별 `Read` | 통과 후보 **2~3개 확보까지** (하드 상한 아님 — § 감별 4) |
+| 컨셉 | 3개 (직결형 1개 이상, 연상형 1~2개) |
+| 컨셉당 검색어 | 소스별 **1개** (Wikimedia 어구 1개, CMA 낱말 1~2개, Wellcome 어구 1개) |
+| 검색 Bash 콜 | **1콜** (3소스 × 전 컨셉 fan-out) |
+| 파싱 Bash 콜 | **1콜** (전 파일 일괄 + 중복 배제) |
+| 시각 감별 `Read` | **1회** (컨택트 시트 1장). 시트 재생성이 필요하면 추가 (§ 감별 4) |
 
 **빈 결과가 나온 검색어는 버린다.** 변형을 만들어 재시도하지 않는다 — 통과 후보가 2개 미만이면
 사용자에게 검색어 조정을 요청하고 중단한다(§ 최소 확보 실패).
 
-### 콜 1 — 전 컨셉 fan-out (파일로 저장)
+### 콜 1 — 3소스 × 전 컨셉 fan-out (파일로 저장)
+
+한 번의 `Bash` 안에서 세 소스를 모두 부르고, 같은 콜에서 **볼트가 이미 쓴 배너 URL 목록**까지
+거둔다(§ 중복 배제).
 
 ```bash
 cd <scratchpad>
-f(){ curl -s -H 'User-Agent: banner-doc/1.0 (Claude Code; contact via user)' \
-  "https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=$2&gsrnamespace=6&gsrlimit=25&prop=imageinfo&iiprop=url%7Cextmetadata%7Cmime%7Csize&iiurlwidth=1200&format=json" -o "wm_$1.json"; }
-f tree    "filetype%3Abitmap%20genealogical%20tree%20engraving"                  # 직결형
-f meander "filetype%3Abitmap%20ancient%20courses%20mississippi%20meander%20belt"  # 연상형
-f strata  "filetype%3Abitmap%20geological%20cross%20section%20engraving"          # 연상형
+UA='User-Agent: banner-doc/1.0 (Claude Code; contact via user)'
+
+wm(){ curl -s -H "$UA" \
+  "https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=$2&gsrnamespace=6&gsrlimit=40&prop=imageinfo&iiprop=url%7Cextmetadata%7Cmime%7Csize&iiurlwidth=1200&format=json" -o "wm_$1.json"; }
+cma(){ curl -s -H "$UA" \
+  "https://openaccess-api.clevelandart.org/api/artworks/?q=$2&cc0=1&has_image=1&limit=20" -o "cma_$1.json"; }
+wel(){ curl -s -H "$UA" \
+  "https://api.wellcomecollection.org/catalogue/v2/works?query=$2&items.locations.license=pdm&include=items,contributors,production&pageSize=20" -o "wel_$1.json"; }
+
+wm  tree    "filetype%3Abitmap%20genealogical%20tree%20engraving"                  # 직결형
+wm  meander "filetype%3Abitmap%20ancient%20courses%20mississippi%20meander%20belt"  # 연상형
+wm  strata  "filetype%3Abitmap%20geological%20cross%20section%20engraving"          # 연상형
+cma tree    "genealogy"          # CMA는 낱말 1~2개, 공백은 +
+cma strata  "geological"
+wel tree    "genealogical+tree"  # Wellcome은 어구 가능, 공백은 +
+wel strata  "geological+strata"
+
+# 이미 쓰인 배너 URL (VAULT는 입력 파일에서 .obsidian 을 찾아 위로 거슬러 올라간 경로)
+grep -rhoE '^banner:[[:space:]]*.*' "$VAULT" --include='*.md' > used_banners.txt 2>/dev/null || : > used_banners.txt
 ```
 
-(예시는 "기록·계보·과거의 층" 결의 컨셉 3갈래. 실제 컨셉은 노트 주제에서 도출한다.)
+(예시는 "기록·계보·과거의 층" 결의 컨셉 3갈래다. 실제 컨셉은 노트 주제에서 도출한다.)
 
-**모든 `gsrsearch`는 `filetype%3Abitmap%20`으로 시작한다.** File 네임스페이스 전문 검색은 Internet
-Archive의 PDF 책 스캔이 지배한다 — 빼면 § 감별 2의 mime 필터를 통과하는 후보가 0건에 수렴하고,
-결과에 섞인 PDF 한 건이 검색 전체를 죽인다(§ 실측 함정).
+**Wikimedia의 모든 `gsrsearch`는 `filetype%3Abitmap%20`으로 시작한다.** File 네임스페이스 전문
+검색은 Internet Archive의 PDF 책 스캔이 지배하기 때문에, 이를 빼면 § 감별 2의 mime 필터를 통과하는
+후보가 0건에 수렴하고 결과에 섞인 PDF 한 건이 검색 전체를 죽인다(§ 실측 함정).
 
-### 콜 2 — 일괄 파싱 (라이선스·mime·해상도 필터 적용 후 컴팩트 표만 출력)
+**소스마다 검색어 문법이 다르다.** Wikimedia는 공백을 `%20`으로만 인코딩하고, CMA와 Wellcome은
+`+`를 쓴다. CMA의 `q`는 전 필드 AND 매칭이라 어구가 길면 0건이 되므로 **낱말 1~2개**로 줄인다
+(실측: `geological engraving` 0건, `geological` 9건, `engraving+map` 19건). 컨셉 3개를 세 소스에
+모두 태울 필요는 없다. **CMA와 Wellcome은 어울리는 컨셉에만** 붙여 2개씩이면 충분하다.
+
+### 콜 2 — 일괄 파싱 (라이선스·mime·해상도 필터 + 중복 배제 후 컴팩트 표만 출력)
+
+세 소스의 JSON 형태를 한 파서가 모두 처리하고, § 중복 배제를 같은 자리에서 적용한다. 컨셉·소스당
+**최대 5줄 묶음**만 출력하며, 출력 직전에 섞어 상위 랭킹 고착을 푼다.
 
 ```bash
 cd <scratchpad>
 python3 - <<'EOF'
-import json,glob,re
+import json,glob,re,random
+from urllib.parse import unquote
 strip=lambda s: re.sub(r'<[^>]*>','',s or '').strip()
+def key(u):                                   # § 중복 배제 — 소스 넘어 같은 작품은 같은 키
+    u=(u or '').split('?')[0]
+    m=re.search(r'/image/([^/]+)/full/',u)
+    if m: return 'wel:'+m.group(1)
+    m=re.search(r'clevelandart\.org/([^/]+)/',u)
+    if m: return 'cma:'+m.group(1)
+    b=unquote(u.rsplit('/',1)[-1]); b=re.sub(r'^\d+px-','',b)
+    m=re.search(r'[Ww]ellcome[_ ]([VLMN]\d{7})',b)   # WM에 미러된 Wellcome 스캔
+    if m: return 'wel:'+m.group(1)
+    return 'wm:'+b.lower()
+seen=set()
+try:
+    for L in open('used_banners.txt',encoding='utf-8',errors='replace'):
+        v=L.split(':',1)[1].strip().strip('"\'')
+        if v: seen.add(key(v))
+except FileNotFoundError: pass
+NEW=SKIP=0
+def emit(rows,tag):
+    global NEW,SKIP
+    out=[]
+    for k,line in rows:
+        if k in seen: SKIP+=1; continue
+        seen.add(k); out.append(line); NEW+=1
+    random.shuffle(out)
+    print('='*10,tag,f'({len(out)})')
+    for line in out[:5]: print(line)
+
 for fn in sorted(glob.glob('wm_*.json')):
-    print('='*12, fn)
-    pages=json.load(open(fn)).get('query',{}).get('pages',{})
-    if not pages: print('  (none)'); continue
-    for p in pages.values():
-        ii=p['imageinfo'][0]; em=ii.get('extmetadata',{})
-        if ii['mime'] not in ('image/jpeg','image/png','image/webp'): continue  # § 감별 2
-        if (ii.get('width') or 0) < 1000: continue                              # § 감별 3
-        print(f"* {p['title'][5:]}\n  {strip(em.get('LicenseShortName',{}).get('value'))} | "
-              f"{ii.get('width')}x{ii.get('height')} | {strip(em.get('Artist',{}).get('value'))[:45]} | "
-              f"{strip(em.get('DateTimeOriginal',{}).get('value'))[:30]}\n  {ii.get('thumburl') or ii.get('url')}")
+    rows=[]
+    for p in (json.load(open(fn)).get('query',{}).get('pages',{}) or {}).values():
+        ii=(p.get('imageinfo') or [{}])[0]; em=ii.get('extmetadata',{})
+        if ii.get('mime') not in ('image/jpeg','image/png','image/webp'): continue  # § 감별 2
+        if (ii.get('width') or 0) < 1000: continue                                  # § 감별 3
+        u=ii.get('thumburl') or ii.get('url')
+        rows.append((key(u), f"* WM {p['title'][5:][:60]}\n  "
+            f"{strip(em.get('LicenseShortName',{}).get('value'))} | {ii.get('width')}x{ii.get('height')} | "
+            f"{strip(em.get('Artist',{}).get('value'))[:40]} | "
+            f"{strip(em.get('DateTimeOriginal',{}).get('value'))[:24]}\n  {u}"))
+    emit(rows,fn)
+
+for fn in sorted(glob.glob('cma_*.json')):
+    rows=[]
+    for a in json.load(open(fn)).get('data',[]) or []:
+        pr=(a.get('images') or {}).get('print') or {}     # web은 대개 900px 미만, full은 .tif
+        u=pr.get('url','')
+        if not u.endswith('.jpg'): continue
+        if int(pr.get('width') or 0) < 1000: continue
+        cr=', '.join(c.get('description','') for c in (a.get('creators') or []))
+        rows.append((key(u), f"* CMA[{a.get('type')}] {(a.get('title') or '')[:55]}\n  "
+            f"{a.get('share_license_status')} | {pr.get('width')}x{pr.get('height')} | {cr[:40]} | "
+            f"{(a.get('creation_date') or '')[:24]}\n  {u}\n  src {a.get('url')}"))
+    emit(rows,fn)
+
+for fn in sorted(glob.glob('wel_*.json')):
+    rows=[]
+    for w in json.load(open(fn)).get('results',[]) or []:
+        iid=lic=None
+        for it in w.get('items') or []:
+            for L in it.get('locations') or []:
+                m=re.search(r'/image/([^/]+)/info\.json',L.get('url') or '')
+                if m: iid,lic = m.group(1),(L.get('license') or {}).get('id')
+        if not iid or lic not in ('pdm','cc0'): continue
+        u=f'https://iiif.wellcomecollection.org/image/{iid}/full/1024,/0/default.jpg'
+        cr=', '.join(c['agent']['label'] for c in (w.get('contributors') or []))
+        yr=next((((pp.get('dates') or [{}])[0].get('label')) or '' for pp in (w.get('production') or [])),'')
+        rows.append((key(u), f"* WEL {w['title'][:60]}\n  {lic} | 1024w(사다리 상한, 받아서 0바이트면 탈락) | "
+            f"{cr[:40]} | {yr[:24]}\n  {u}\n  src https://wellcomecollection.org/works/{w['id']}"))
+    emit(rows,fn)
+print(f'\n-- 신규 {NEW}건 / 중복 배제 {SKIP}건')
 EOF
 ```
 
 최종 후보가 정해지면 같은 파일들을 한 번 더 파싱해 `descriptionurl`·`ObjectName` 등 기록용
-필드를 뽑는다(§ 반환 필드 매핑). 재검색하지 않는다 — JSON은 이미 스크래치패드에 있다.
+필드를 뽑는다(§ 반환 필드 매핑). 재검색하지 않는다. JSON은 이미 스크래치패드에 있다.
 
 ### RTK 상호작용 — `-o <file>`이 필수인 **진짜** 이유
 
@@ -170,7 +265,37 @@ EOF
 | `filetype:bitmap` 누락 | IA의 PDF 책 스캔이 결과를 뒤덮어 mime 필터 후 **0건**. 게다가 PDF가 한 건이라도 섞이면 `iiurlwidth` 정규화가 실패해 **검색 자체가 `urlparamnormal` 에러**로 죽는다 | `gsrsearch`는 **`filetype%3Abitmap%20`으로 시작** |
 | 검색어에 `+`를 공백으로 | 결과 0건 (조용히 실패) | `gsrsearch` 인코딩은 **`%20`만** |
 | bash 연관배열 `${!Q[@]}` | zsh `bad substitution` | 셸은 **zsh**. 연관배열 대신 위 `f()` 반복 호출 |
-| raw JSON 그대로 출력 | 한 묶음에 20k자 | 파싱 출력은 **후보당 2~3줄**로 투영 |
+| raw JSON 그대로 출력 | 한 묶음에 20k자 | 파싱 출력은 **후보당 2~4줄**로 투영 |
+| Wellcome IIIF에 사다리 밖 크기 요청 | `1200,`·`full/full`이 **HTTP 200 + `image/jpeg` + 0바이트**로 온다. 에러가 아니라 빈 몸통이라 조용히 깨진다 | 폭은 **`1024,`로 고정**한다. 0바이트면 그 항목의 사다리 상한이 1024 미만(세로로 긴 자료)이라는 뜻이니 후보에서 버린다 |
+| CMA `images.web`을 배너로 | 대개 **900px 미만**이라 § 감별 3에서 전멸 | **`images.print`**(jpg)를 쓴다. `images.full`은 `.tif`라 배제 |
+| CMA `q`에 긴 어구 | 전 필드 AND 매칭이라 0건. 실측: `geological engraving` 0건, `geological` 9건 | CMA 검색어는 **낱말 1~2개**, 공백은 `+` |
+| zsh에서 `rm -f wm_*.json` | 매치가 없으면 `no matches found`로 죽는다 | 정리는 `rm -f wm_*.json 2>/dev/null \|\| true` 형태로 |
+
+---
+
+## § 중복 배제 (반복을 푸는 절반)
+
+소스를 늘려도 볼트에 이미 쓴 이미지를 다시 뽑으면 사용자 눈에는 그대로 반복이다. 그래서 파서는
+**두 층위**로 배제한다.
+
+1. **볼트 배제** — 콜 1이 거둔 `used_banners.txt`(볼트 전 노트의 `banner:` 값)의 키를 미리
+   `seen`에 채운다. 볼트 루트는 **입력 파일에서 위로 거슬러 올라가며 `.obsidian/` 디렉터리를
+   찾아** 정한다. 경로를 코드에 박지 않는다.
+2. **실행 내 배제** — 유명 자료 하나가 컨셉 셋에 모두 걸리는 일이 흔하다. 한 실행 안에서도 이미
+   출력한 키는 다시 내보내지 않는다.
+
+**키는 URL 전체가 아니라 작품 식별자로 잡는다.** 같은 파일이 `1024px-`·`1280px-` 접두어나 `utm_*`
+쿼리만 다른 채로 오면 문자열 비교는 다른 것으로 본다. 위 `key()`는 쿼리를 떼고, 픽셀 접두어를
+벗기고, CMA는 accession 번호로, Wellcome은 IIIF 이미지 ID로 정규화한다. **Wikimedia에 미러된
+Wellcome 스캔**(`…_Wellcome_V0025106.jpg`)도 파일명에서 ID를 뽑아 Wellcome 후보와 같은 키로
+묶는다. 실측에서 이 교차 배제가 Wellcome 후보 3건 중 2건을 걸러냈다.
+
+### 랭킹 고착을 푸는 법
+
+`gsrsort=random`은 **쓰지 않는다.** 실측에서 문법 오류 없이 동작하기는 하지만 관련도를 통째로
+버려서, "geological engraving" 검색에 20420px짜리 무관한 책 스캔이 1위로 올라왔다. 대신
+**`gsrlimit`을 40으로 올려 통과 후보 풀을 넓히고, 필터를 통과한 것들을 섞어** 출력한다. 관련도
+순위는 검색이 지키고, 그 안에서의 선택만 흔든다.
 
 ---
 
@@ -248,18 +373,95 @@ CC 라이선스**다. 필드를 곧이곧대로 기록하면 1766년 회화가
 
 ---
 
+## § CMA 1차 소스 (완전 배선)
+
+Cleveland Museum of Art Open Access. 인증 키가 필요 없고, 검색 응답 하나에 CC0 여부와 직접 jpg
+URL과 크기가 함께 온다.
+
+```
+https://openaccess-api.clevelandart.org/api/artworks/?q=<낱말1+낱말2>&cc0=1&has_image=1&limit=20
+```
+
+- `cc0=1`이 **쿼리 단계에서 라이선스를 건다**. 응답의 `share_license_status`는 `CC0`으로 온다.
+- `has_image=1`로 이미지 없는 레코드를 미리 뺀다.
+- 핫링크 실측 확인: `openaccess-cdn.clevelandart.org`는 특별한 헤더 없이 3400x2286 JPEG를 돌려준다.
+  AIC와 달리 봇 차단이 없다.
+
+### 반환 필드 매핑 (`data[*]`)
+
+| 반환 필드 | 매핑 대상 | 비고 |
+|---|---|---|
+| `images.print.url` | `banner` | 직접 `.jpg`. **`images.web`은 대개 900px 미만이라 쓰지 않고**, `images.full`은 `.tif`라 배제 |
+| `images.print.width` / `height` | 해상도 게이트 | 검색 JSON에 이미 있어 공짜 |
+| `share_license_status` | `banner_license` | `CC0` |
+| `title` | `banner_title` | |
+| `creators[*].description` | `banner_creator` | `Giulio Campagnola (Italian, 1482–1515)` 형태의 평문. HTML 평문화 불필요 |
+| `creation_date` | `banner_year` | `c. 1508–9` 형태 |
+| `url` | `banner_source` | `https://clevelandart.org/art/<accession>` |
+| `type` | 시각 판정 힌트 | `Print`·`Painting`·`Photograph`. 사진이 섞여 나오므로 컨셉과 대조할 때 참고 |
+
+6개 `banner*` 스칼라는 § 쓰기 안전(모든 소스 파생 값) 규칙을 동일하게 적용한다.
+
+---
+
+## § Wellcome 1차 소스 (완전 배선)
+
+Wellcome Collection 카탈로그. 의학·과학사 도해와 판화가 두터워 Wikimedia·CMA와 **소장품 겹침이
+가장 적다.** 인증 키가 필요 없다.
+
+```
+https://api.wellcomecollection.org/catalogue/v2/works?query=<어구+어구>&items.locations.license=pdm&include=items,contributors,production&pageSize=20
+```
+
+- `items.locations.license=pdm`이 **쿼리 단계에서 라이선스를 건다**(`cc0`도 같은 방식으로 받는다).
+- `include=items`가 없으면 IIIF 이미지 ID가 응답에 오지 않는다. `contributors,production`은
+  작가·연도용이다.
+
+### 배너 URL 조립
+
+검색 응답은 직접 래스터 URL 대신 `items[*].locations[*].url`에
+`https://iiif.wellcomecollection.org/image/<ID>/info.json` 형태로 IIIF 이미지 ID를 준다. 배너 URL은
+여기서 조립한다:
+
+```
+https://iiif.wellcomecollection.org/image/<ID>/full/1024,/0/default.jpg
+```
+
+**폭은 1024로 고정한다.** Wellcome IIIF는 임의 폭을 서빙하지 않고 항목마다 정해진 크기 사다리만
+내주며(실측: `[1024, 400, 200, 100]`), 사다리 밖 크기는 **HTTP 200 · `image/jpeg` · 0바이트**라는
+조용한 형태로 실패한다. 사다리 상한은 항목의 긴 변을 1024로 맞춘 값이라, 세로로 긴 자료는 상한이
+1024보다 작다(실측: 2125x3526 항목의 상한은 617).
+
+**그래서 Wellcome의 해상도 게이트는 별도 호출이 아니라 다운로드 자체다.** § 감별 4에서 컨택트
+시트를 만들려고 어차피 받으므로, **받아서 0바이트면 그 후보를 버린다.** `info.json`을 후보마다
+따로 조회하면 LoC를 1차에서 내린 것과 같은 이유로 라운드트립이 샌다. 조회하지 않는다.
+
+### 반환 필드 매핑 (`results[*]`)
+
+| 반환 필드 | 매핑 대상 | 비고 |
+|---|---|---|
+| 조립한 IIIF URL | `banner` | 위 참조 |
+| `items[*].locations[*].license.id` | `banner_license` | `pdm`(Public Domain Mark) 또는 `cc0`. 이 둘만 통과 |
+| `title` | `banner_title` | |
+| `contributors[*].agent.label` | `banner_creator` | 평문. 없으면 비운다 |
+| `production[*].dates[0].label` | `banner_year` | `1822` 형태. 없으면 비운다 |
+| `https://wellcomecollection.org/works/<id>` | `banner_source` | `results[*].id`로 조립 |
+
+6개 `banner*` 스칼라는 § 쓰기 안전(모든 소스 파생 값) 규칙을 동일하게 적용한다.
+
+---
+
 ## § 보조 소스 — LoC (배선은 완전하되 1차 아님)
 
-미 의회도서관 Prints & Photographs 온라인 카탈로그. 유일하게 **완전 배선된 보조 소스**다.
+미 의회도서관 Prints & Photographs 온라인 카탈로그. 보조 소스 중 유일하게 **완전 배선**돼 있다.
 
-**호출 조건 — Wikimedia만으로 통과 후보가 2개 미만일 때만 부른다.** 매 실행 무조건 도는 소스가
-아니다.
+**호출 조건은 3소스 병렬로도 통과 후보가 2개 미만일 때뿐이다.** 매 실행 무조건 도는 소스가 아니다.
 
-**왜 1차가 아닌가** — LoC 검색 JSON에는 **`width`/`height`도 라이선스 필드도 없다.** 그래서
-Wikimedia가 검색 JSON 하나로 공짜로 끝내는 3중 사전 필터(§ 감별 1·2·3)를 LoC는 후보당 별도
-호출(라이선스) + 실제 다운로드(해상도) 없이는 못 한다. 즉 **탈락할 후보에 라운드트립을 먼저
-지불하는 구조**다. 이는 소스 품질 문제가 아니라 API 구조의 비대칭이며, § 보조 소스의 "직접 래스터
-URL을 안정 추출 가능할 때만 보강한다"는 원칙과 같은 결이다.
+**왜 1차가 아닌가.** LoC 검색 JSON에는 **`width`/`height`도 라이선스 필드도 없다.** 1차 소스 셋이
+검색 JSON 하나로 끝내는 사전 필터(§ 감별 1·2·3)를 LoC는 후보당 별도 호출(라이선스)과 실제
+다운로드(해상도) 없이 하지 못한다. 즉 **탈락할 후보에 라운드트립을 먼저 지불하는 구조**다. 이는
+소스 품질 문제가 아니라 API 구조의 비대칭이고, § 보조 소스의 "직접 래스터 URL을 안정 추출 가능할
+때만 보강한다"는 원칙과 같은 결이다.
 
 ### 1단계 — 검색
 
@@ -321,42 +523,68 @@ Banner의 fetch는 이 조건을 못 붙이고 JS 챌린지도 못 풀어 **배�
 
 ## § 감별 휴리스틱
 
-통과 순서: **라이선스 → mime → 해상도 → 시각 판정**. 앞의 셋은 Wikimedia 검색 JSON만으로 **추가
-호출 없이** 판정되므로, 비싼 시각 확인(다운로드 + `Read`)은 셋을 모두 통과한 후보에만 쓴다.
-§ 호출 레시피의 콜 2 파서가 1~3을 이미 적용하니, 표에 남은 것만 눈으로 보면 된다.
+통과 순서: **라이선스 → mime → 해상도 → 중복 배제 → 시각 판정**. 앞의 넷은 1차 소스 셋의 검색
+JSON만으로 **추가 호출 없이** 판정되므로, 비싼 시각 확인(다운로드 + `Read`)은 넷을 모두 통과한
+후보에만 쓴다. § 호출 레시피의 콜 2 파서가 넷을 이미 적용하니, 표에 남은 것만 눈으로 보면 된다.
 
 ### 1. 라이선스 필터
 
 - 소스가 **PD / CC0 / 자유 라이선스(CC BY · CC BY-SA 등)로 태깅한 것만** 통과.
 - 라이선스 필드가 없거나 모호하면 **제외**.
 - **스킬은 저작권을 독자 판단하지 않고 소스의 태깅을 신뢰한다.** 법적 판단은 스킬의 책임 범위
-  밖이다 — `LicenseShortName` 등 소스가 명시한 라이선스 태그만 근거로 삼는다.
+  밖이고, 소스가 명시한 라이선스 태그만 근거로 삼는다. 소스별 태그 필드는 Wikimedia
+  `LicenseShortName`, CMA `share_license_status`, Wellcome `locations[*].license.id`다.
+- CMA와 Wellcome은 **쿼리 파라미터(`cc0=1`, `items.locations.license=pdm`)로 라이선스를 이미
+  걸어** 결과를 받으므로, 파서는 필드 값을 기록용으로만 읽는다.
 
 ### 2. mime 필터
 
-- `imageinfo[0].mime`이 `image/*`(`image/jpeg`·`image/png`·`image/webp`)인지 확인.
-- SVG(`image/svg+xml`)·PDF·GIF는 배너로 부적합하므로 **배제**.
+- Wikimedia는 `imageinfo[0].mime`이 `image/*`(`image/jpeg`·`image/png`·`image/webp`)인지 확인한다.
+- SVG(`image/svg+xml`)·PDF·GIF는 배너로 부적합하므로 **배제**한다.
+- CMA는 mime 필드가 없으므로 **URL 확장자가 `.jpg`인지로 판정**한다(`images.full`의 `.tif` 배제).
+  Wellcome IIIF는 조립한 URL이 `default.jpg`라 항상 충족된다.
 
 ### 3. 해상도 게이트
 
-- `imageinfo[0].width`가 **1000 미만이면 배제**한다. 배너는 노트 상단을 가로로 채우므로 저해상은
-  얹는 순간 뭉개진다.
-- 이 판정은 검색 JSON에 이미 들어 있어 **공짜**다. 다운로드하고 `Read`한 뒤에야 "작네" 하고
-  버리는 것이 시각 감별 단계에서 가장 흔한 낭비였다 — 그 왕복을 여기서 없앤다.
+폭이 **1000 미만이면 배제**한다. 배너는 노트 상단을 가로로 채우므로 저해상은 얹는 순간 뭉개진다.
 
-### 4. 시각 판정
+- **Wikimedia** `imageinfo[0].width`, **CMA** `images.print.width`. 둘 다 검색 JSON에 이미 들어 있어
+  **공짜**다. 다운로드하고 `Read`한 뒤에야 "작네" 하고 버리는 것이 시각 감별 단계에서 가장 흔한
+  낭비였고, 그 왕복을 여기서 없앤다.
+- **Wellcome은 예외다.** 검색 JSON에 크기가 없고 `info.json`은 후보당 추가 호출이라, 게이트를
+  § 감별 4의 다운로드로 미룬다. `full/1024,`가 **0바이트로 오면 사다리 상한이 1024 미만**이라는
+  뜻이므로 그 자리에서 버린다(§ Wellcome 1차 소스).
 
-라이선스·mime·해상도를 통과한 후보의 썸네일(`iiurlwidth`로 얻은 1200px급 URL)을 `Bash`(curl)로
-**스크래치패드에 임시 저장** → `Read`로 실제 이미지를 본다. **볼트엔 저장하지 않는다.**
+### 4. 시각 판정 (컨택트 시트 1장, `Read` 1회)
 
-**보는 순서** — ① 컨셉당 1장씩 먼저(직결형/연상형 믹스를 보존한다) → ② 그다음 해상도 높은 순.
-아래 배제 사유는 **메타데이터로 알 수 없는 것들**이라 여기서 탈락이 나오는 건 설계상 정상이다.
-탈락하면 같은 컨셉의 다음 후보로 **대체 `Read`**를 한 장 더 쓰고, **통과 후보 2~3개가 모이면
-멈춘다**.
+앞 단계를 통과한 후보를 **한 장씩 `Read`하지 않는다.** 6~9장을 한꺼번에 받아 **격자 컨택트 시트
+하나로 합친 뒤 `Read` 한 번**으로 본다. 이 단계가 스킬 전체에서 가장 느린 곳이었고, 시트 방식이
+그 지연을 후보 수만큼 나눈다.
 
-`Read`가 이 단계에서 가장 비싼 연산이지만 **횟수 상한을 걸지는 않는다** — 상한 때문에 통과
-후보가 2개 미만인 채로 § 최소 확보 실패에 빠지면 전체 재검색(콜 1+2+추가 `Read`)을 부르는데,
-그게 `Read` 한 장보다 훨씬 비싸다. 아끼려다 더 쓰는 구조를 만들지 않는다.
+```bash
+cd <scratchpad>
+# picks.txt — 콜 2 표에서 고른 후보 URL을 컨셉·소스가 섞이도록 한 줄에 하나씩
+i=0
+while read -r u; do i=$((i+1)); curl -sL -H 'User-Agent: banner-doc/1.0' -o "c$(printf %02d $i).jpg" "$u"; done < picks.txt
+for f in c*.jpg; do [ -s "$f" ] || { echo "drop $f (0바이트)"; rm -f "$f"; }; done   # § Wellcome 해상도 게이트
+montage -label '%f' c*.jpg -tile 3x -geometry 420x420+10+10 \
+  -background '#1b1b1b' -fill '#eee' -pointsize 22 sheet.jpg
+```
+
+그다음 `sheet.jpg`를 **`Read` 한 번**으로 본다. 라벨의 `cNN.jpg`가 picks.txt의 몇 번째 줄인지로
+후보를 되짚는다. 실측에서 1320x938 시트 한 장으로 계보 판화·지질 단면도·풍경 사진·고서 텍스트
+페이지의 적부 판정이 모두 됐다.
+
+- **`montage`가 없으면**(`which montage`) 후보를 한 장씩 `Read`하는 옛 방식으로 내려간다. 이걸
+  위해 무엇도 설치하지 않는다.
+- **후보를 담는 순서** — 컨셉당 1장씩 먼저 채워 직결형과 연상형 믹스를 보존하고, 남는 칸을 소스가
+  섞이도록 메운다. 한 소스가 시트를 독점하면 반복 문제가 되돌아온다.
+- 시트에서 통과가 2개 미만이면 표의 다음 후보로 **시트를 한 번 더** 만든다. 시트 재생성에도
+  상한을 걸지 않는다. 상한 때문에 § 최소 확보 실패에 빠지면 전체 재검색(콜 1+2)을 부르는데, 그게
+  시트 한 장보다 훨씬 비싸다.
+- **볼트엔 저장하지 않는다.** 시트와 조각 이미지는 스크래치패드에만 두고 끝나면 정리한다.
+
+아래 배제 사유는 **메타데이터로 알 수 없는 것들**이라, 여기서 탈락이 나오는 건 설계상 정상이다.
 
 - **적합** — 고판화의 고대비·인쇄판 질감, 고지도·빈티지 도표의 선명한 선, 고전 회화의 구성.
   배너로 얹었을 때 상단에 걸쳐 읽히는 자료.
