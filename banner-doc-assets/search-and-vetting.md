@@ -1,8 +1,14 @@
 # banner-doc 검색·감별 SSOT
 
-> banner-doc 검색·감별 SSOT — 커맨드(`commands/banner-doc.md`)가 이 파일을 읽어 사용한다.
-> 검색 소스 우선순위·소스별 API 필드매핑·중복 배제·감별 휴리스틱·컨셉 도출 지식은 여기에만 존재한다.
+> banner-doc 검색·감별 SSOT — 커맨드(`commands/banner-doc.md`)가 매 실행에 이 파일을 읽는다.
+> 컨셉 도출·호출 레시피·중복 배제·감별 휴리스틱·쓰기 안전이 여기에 있다.
 > tag-doc ↔ tag-rules, translate-doc ↔ translationese-patterns 분리 구조와 동일.
+>
+> **`banner-doc-assets/sources-and-fields.md`를 읽어야 할 때가 셋 있다.**
+> ① 통과 후보가 2개 미만이라 **LoC 등 보조 소스로 내려갈 때**,
+> ② 파서가 낸 표 밖의 **소스 필드를 직접 봐야 할 때**,
+> ③ **검색 쿼리를 손보려는 편집 세션**일 때(이미 실측해서 버린 연산자 기록이 거기 있다).
+> 셋 중 어디에도 해당하지 않으면 이 파일만으로 끝난다.
 
 이 파일은 공개 도메인(PD) 역사 이미지 — 고판화·고지도·빈티지 도표·고전 회화 — 를 노트 주제에
 맞게 찾아, 라이선스가 깨끗한 직접 래스터 URL을 뽑고, 눈으로 감별하는 지식을 담는다.
@@ -14,8 +20,8 @@
 노트의 주제 신호(제목·파일명·첫 H1)와 **본문**을 함께 읽어 **비주얼 컨셉을 2~3갈래**로 생성한다.
 후보 묶음에 직결형과 연상형이 **섞이도록** 한다.
 
-**제목만으로 컨셉을 짜지 않는다.** 제목은 대개 낱말 두셋이라 검색어로 옮기면 뜻이 넓은 일반어가
-되고, 그 검색이 관련도가 낮은 후보를 부른다. 본문은 Step 1에서 이미 읽어 컨텍스트에 있으므로
+**컨셉은 제목과 본문을 함께 읽고 짠다.** 제목은 대개 낱말 두셋이라 그것만 검색어로 옮기면 뜻이
+넓은 일반어가 되고, 그 검색이 관련도 낮은 후보를 부른다. 본문은 Step 1에서 이미 읽어 컨텍스트에 있으므로
 **본문을 쓰는 데 드는 추가 비용이 없다.** 본문에서 다음을 건져 검색어에 반영한다.
 
 - **고유 명사** — 인물·지명·기관·저작 이름. 검색어에서 가장 강한 신호다.
@@ -88,10 +94,9 @@
   탐색용이다. 구체적 호출은 **§ 호출 레시피**를 그대로 따르고, 소스별 필드 매핑은 § Wikimedia
   1차 소스 · § CMA 1차 소스 · § Wellcome 1차 소스에 있다.
 - **라이선스 태그** — 소스가 명시한 태그만 신뢰하며 저작권을 독자 판단하지 않는다(§ 감별 1).
-- **LoC는 보조 소스로 남는다**(§ 보조 소스 — LoC). 3소스 병렬로도 통과 후보가 2개 미만일 때만
-  부른다. 검색 JSON에 라이선스도 크기도 없어 후보당 추가 호출이 필요하다는 비대칭은 그대로다.
-- NYPL·Met·Rijksmuseum·Internet Archive는 § 보조 소스(best-effort)다. **AIC(시카고 미술관)는
-  Cloudflare 핫링크 불가로 배너 소스에서 제외**됐다(§ 보조 소스 하단 상세).
+- **보조 소스는 통과 후보가 2개 미만일 때만 부른다.** 그때 `sources-and-fields.md`를 읽는다.
+  LoC 배선, NYPL·Met·Rijksmuseum·Internet Archive의 best-effort 원칙, **AIC 제외**(Cloudflare
+  핫링크 불가) 근거가 거기 있다.
 
 ---
 
@@ -112,7 +117,7 @@
 | 선택 후 Bash 콜 | **0콜** — 표가 필드를 다 냈으므로 재파싱하지 않는다 |
 | 시각 감별 `Read` | **1회** (컨택트 시트 1장). 시트 재생성이 필요하면 추가 (§ 감별 4) |
 
-### § 병렬화 (지연의 지배 요인)
+### 병렬화 (지연의 지배 요인)
 
 이 스킬의 벽시계 시간은 토큰이 아니라 **네트워크 대기**가 지배한다. 검색 요청 7개와 시트 이미지
 6장은 서로 의존하지 않으므로 전부 `&`로 띄우고 `wait` 한 번으로 받는다. 실측 효과는 아래와 같다.
@@ -122,15 +127,14 @@
 | 검색 fan-out (7 요청) | 9.19초 | **2.00초** | 콜 1 |
 | 시트 다운로드 (6장) | 8.97초 / 13MB | **1.31초 / 2.3MB** | 콜 3. 축소 효과가 함께 들어 있다 |
 
-**빈 결과가 나온 검색어는 버린다.** 변형을 만들어 재시도하지 않는다 — 통과 후보가 2개 미만이면
-사용자에게 검색어 조정을 요청하고 중단한다(§ 최소 확보 실패).
+**빈 결과가 나온 검색어는 버린다.** 변형을 만들어 재시도하는 대신 다음 컨셉으로 넘어가고, 통과
+후보가 2개 미만으로 끝나면 사용자에게 검색어 조정을 요청하고 중단한다(§ 최소 확보 실패).
 
 ### 콜 1 — 3소스 × 전 컨셉 fan-out (파일로 저장)
 
 한 번의 `Bash` 안에서 세 소스를 모두 부르고, 같은 콜에서 **볼트가 이미 쓴 배너 URL 목록**까지
 거둔다(§ 중복 배제). **모든 curl을 `&`로 띄우고 끝에서 `wait` 한 번**으로 받는다. 검색 요청은
-서로 의존하지 않으므로 순차로 돌릴 이유가 없다. 실측에서 7개 요청이 **9.19초에서 2.00초**로
-줄었다(§ 병렬화).
+서로 의존하지 않으므로 순차로 돌릴 이유가 없다(효과는 § 병렬화 표).
 
 ```bash
 cd <scratchpad>
@@ -278,36 +282,19 @@ EOF
 Bash 라운드트립 없이 바로 쓰기로 간다. 재파싱은 왕복을 하나 더 쓸 뿐 아니라, 같은 값을 두 번
 유도하면서 어긋날 여지를 만든다.
 
-### RTK 상호작용 — `-o <file>`이 필수인 **진짜** 이유
+### RTK 상호작용 — `-o <file>`이 필수인 이유
 
-이 환경에는 `PreToolUse:Bash` 훅(`~/.claude/hooks/rtk-rewrite.sh`)이 있어 **`curl …`을
-`rtk curl …`로 자동 재작성**한다. 파이프·리다이렉트 유무와 **무관**하게 항상 재작성된다.
+`PreToolUse:Bash` 훅(`~/.claude/hooks/rtk-rewrite.sh`)이 **`curl …`을 `rtk curl …`로 항상
+재작성**하고, `rtk curl`은 응답 본문 대신 **스키마 개요를 stdout에 낸다.** 즉 **stdout으로 나온
+것은 JSON이 아니다.** `-o <file>`은 stdout을 거치지 않아 파일에 원본 바이트가 그대로 떨어진다.
 
-`rtk curl`은 토큰 최적화기라 **응답 본문 대신 "스키마 개요"를 stdout에 출력**한다:
+**"파이프가 문제"가 아니라 stdout 자체가 문제다.** 파이프(`| python3`)는 `JSONDecodeError`로
+곧장 터지지만, 셸 리다이렉트(`> out.json`)는 스키마 개요를 **조용히** 파일에 담아 나중 파싱에서야
+터지므로 원인이 멀어진다. 파이프를 리다이렉트로 바꾸는 "수정"은 증상만 감춘다.
 
-```
-{
-  batchcomplete: string,
-  continue: { continue: string, gsroffset: int }
-  ...
-```
-
-즉 **stdout으로 나온 것은 JSON이 아니다.** 반면 `-o <file>`은 stdout을 거치지 않아 rtk가 가로챌
-것이 없으므로 **파일에는 원본 응답 바이트가 그대로** 떨어진다. 실측 비교:
-
-| 형태 | 파일/파서가 받는 것 |
-|---|---|
-| `curl … -o out.json` | **진짜 JSON** ✅ ← 레시피가 쓰는 형태 |
-| `curl … > out.json` (셸 리다이렉트) | 스키마 개요 ❌ — **조용히** 잘못된다. 나중 파싱에서야 터져 원인이 멀어진다 |
-| `curl … \| python3` | 스키마 개요 ❌ → `JSONDecodeError` |
-| `rtk proxy curl … -o out.json` | 진짜 JSON ✅ (문서화된 명시적 우회 — `-o`가 막힐 때의 탈출구) |
-
-**"파이프가 문제"가 아니다.** 문제는 **stdout 자체**다. 파이프를 리다이렉트로 바꾸는 "수정"은
-증상만 조용하게 만들 뿐 더 나쁘다.
-
-**RTK를 끄지 않는다.** `-o`가 이미 우회하고, 평범한 `curl -o`는 rtk가 없는 환경에서도 그대로
-동작한다(훅은 rtk 부재 시 경고 후 통과시킨다). `rtk proxy`는 rtk 설치를 전제하므로 오히려
-이식성이 낮다. 훅은 전역 `matcher: Bash`라 커맨드 단위 off 스위치도 없다.
+RTK는 켜 둔 채로 쓴다. `-o`가 이미 우회하고, 평범한 `curl -o`는 rtk가 없는 환경에서도 그대로
+동작한다(훅은 rtk 부재 시 경고 후 통과시킨다). `-o`가 막히는 자리에서만 문서화된 탈출구
+`rtk proxy curl … -o out.json`을 쓴다. 훅은 전역 `matcher: Bash`라 커맨드 단위 off 스위치가 없다.
 
 ### 그 밖의 실측 함정
 
@@ -362,44 +349,14 @@ Wellcome 스캔**(`…_Wellcome_V0025106.jpg`)도 파일명에서 ID를 뽑아 W
 `gsrsort=random`은 **쓰지 않는다.** 실측에서 문법 오류 없이 동작하기는 하지만 관련도를 통째로
 버려서, "geological engraving" 검색에 20420px짜리 무관한 책 스캔이 1위로 올라왔다.
 
-### 효과가 없어서 버린 연산자 (재시도 금지)
-
-기준 질의 `filetype:bitmap "genealogical tree" engraving`(71건)에 하나씩 얹어 실측한 결과다.
-
-| 시도 | 결과 | 판정 |
-|---|---|---|
-| `-incategory:"Files from Internet Archive Book Images Flickr stream"` | 64건 → 63건 | 카테고리명은 맞지만 효과가 1건. 쿼리만 길어진다 |
-| `incategory:"Engravings"` | **0건** | `incategory`는 **직접 소속만** 본다. 상위 카테고리는 하위만 거느려 직접 파일이 없다 |
-| `deepcategory:"Genealogical trees"` | **0건** | 이 엔드포인트에서 동작하지 않는다 |
-| CMA `&type=Print` | **0건** (`geological` 9건 중) | 결과 수가 적은 소스에 하드 필터를 걸면 통째로 비운다. `type`은 § CMA 반환 필드 매핑처럼 **시각 판정 힌트로만** 쓴다 |
-
----
-
 ## § Wikimedia 1차 소스 (완전 배선)
 
-**1차 소스는 Wikimedia Commons.** MediaWiki API 한 번의 호출로 래스터 URL·라이선스·mime·크기·
-작가·연도를 모두 얻는다.
+MediaWiki API 한 번의 호출로 래스터 URL·라이선스·mime·크기·작가·연도를 모두 얻는다. 호출은
+**§ 호출 레시피**가 전부이고, 필드 매핑 표는 `sources-and-fields.md` § Wikimedia 반환 필드 매핑에
+있다. UA에는 도구와 연락처 식별을 넣는다. Wikimedia 정책이며 빠지면 403이다. `gsrnamespace=6`은
+File 네임스페이스다.
 
-호출 방식은 **§ 호출 레시피**를 그대로 쓴다(여기서 반복하지 않는다). UA에는 도구·연락 식별을
-넣는다 — Wikimedia 정책이며 누락 시 403. `gsrnamespace=6`은 File 네임스페이스.
-
-### 반환 필드 매핑 (`query.pages[*].imageinfo[0]`)
-
-| 반환 필드 | 매핑 대상 | 비고 |
-|---|---|---|
-| `imageinfo[0].thumburl` (우선) / `imageinfo[0].url` (폴백) | `banner` | `iiurlwidth=1200`이 만든 썸 URL 우선, 없으면 원본 URL |
-| `imageinfo[0].mime` | mime 필터 | `image/*`(jpg·png·webp) 확인 |
-| `imageinfo[0].width` / `height` / `size` | 해상도 게이트 | **`width < 1000` 배제**(§ 감별 3). 다운로드 전 공짜로 걸러진다 |
-| `extmetadata.LicenseShortName.value` | `banner_license` | 라이선스 필터의 근거 |
-| `extmetadata.Artist.value` | `banner_creator` | **HTML 태그 제거 후** 아래 쓰기 안전 규칙 적용. 개인 닉네임·`Photograph by …`면 **사진본 신호** — § 정본 우선 |
-| `extmetadata.DateTimeOriginal.value` (없으면 `DateTime`) | `banner_year` | `date QS:` 잔여물 절단(아래). 최근 타임스탬프면 **사진본 신호** — § 정본 우선 |
-| `imageinfo[0].descriptionurl` | `banner_source` | Commons 파일 설명 페이지 URL |
-| `imageinfo[0].url`의 파일명(원제) | `banner_title` | URL 마지막 세그먼트 → 확장자·`File:` 정리 |
-
-### `extmetadata.Artist` HTML 평문화
-
-`Artist.value`는 흔히 `<bdi><a href="…">이름</a></bdi>` 형태의 HTML이다. `banner_creator`에
-넣기 전 **모든 HTML 태그를 제거해 평문화**한다(`<bdi>`·`<a>` 등 흔적 없이). 이름만 남긴다.
+파서가 낸 표만 보고 6개 `banner*`를 다 쓸 수 있다. 표 밖 필드가 필요할 때만 참조 파일로 간다.
 
 ### 정본 우선 — `Artist`가 원작자가 아닐 때
 
@@ -425,34 +382,10 @@ CC 라이선스**다. 필드를 곧이곧대로 기록하면 1766년 회화가
 4. **재검색하지 않는다** — 정본은 대개 같은 검색 결과 안에 이미 있다. 콜 2의 표를 다시 훑으면
    된다(§ 호출 레시피 예산).
 
-### `DateTimeOriginal`의 `date QS:` 잔여물
-
-값에 Wikidata 문장이 들러붙어
-`circa 1766date QS:P571,+1766-00-00T00:00:00Z/9,P1480,Q5727902`처럼 오는 경우가 있다.
-**`date QS:` 이후를 잘라** `circa 1766`만 남긴다. **그 이상은 하지 않는다** — 날짜 값은
-`1660. Date published…` 등 형태가 제각각이라 범용 파서를 만들면 금세 취약해진다. 잘라낸 뒤에도
-남는 잡음은 그대로 둔다.
-
-이건 **미관 문제이지 아래 § 쓰기 안전(YAML 손상·키 주입 방지)과 다른 사안**이다. 잔여물을
-잘랐든 아니든 인용·이스케이프는 그것대로 반드시 적용한다.
-
-### 쓰기 안전 — 모든 소스 파생 값 (신뢰 불가)
-
-위 6개 `banner*` 스칼라(URL 포함)는 **외부 신뢰 불가 값**이다. 노트에 기록하기 전:
-
-1. **YAML 문자열로 인용/이스케이프** — 큰따옴표로 감싸고 내부 `"`·`\`를 이스케이프한다.
-2. **개행·제어문자 제거**.
-3. HTML 제거는 평문을 만들 뿐, YAML 구조 메타문자(`:`·선두 `-`·`#`·`|`·`"`)를 남긴다. 이스케이프
-   없이 기록하면 악의적 소스 메타데이터가 프론트매터를 손상시키거나 외부 키를 주입할 수 있다.
-
-이 방어는 tag-doc에는 불필요했다(자기생성 신뢰값). banner-doc은 소스 파생 값이라 필수다.
-
----
-
 ## § CMA 1차 소스 (완전 배선)
 
 Cleveland Museum of Art Open Access. 인증 키가 필요 없고, 검색 응답 하나에 CC0 여부와 직접 jpg
-URL과 크기가 함께 온다.
+URL과 크기가 함께 온다. 필드 매핑 표는 `sources-and-fields.md` § CMA 반환 필드 매핑에 있다.
 
 ```
 https://openaccess-api.clevelandart.org/api/artworks/?q=<낱말1+낱말2>&cc0=1&has_image=1&limit=20
@@ -463,27 +396,13 @@ https://openaccess-api.clevelandart.org/api/artworks/?q=<낱말1+낱말2>&cc0=1&
 - 핫링크 실측 확인: `openaccess-cdn.clevelandart.org`는 특별한 헤더 없이 3400x2286 JPEG를 돌려준다.
   AIC와 달리 봇 차단이 없다.
 
-### 반환 필드 매핑 (`data[*]`)
-
-| 반환 필드 | 매핑 대상 | 비고 |
-|---|---|---|
-| `images.print.url` | `banner` | 직접 `.jpg`. **`images.web`은 대개 900px 미만이라 쓰지 않고**, `images.full`은 `.tif`라 배제 |
-| `images.print.width` / `height` | 해상도 게이트 | 검색 JSON에 이미 있어 공짜 |
-| `share_license_status` | `banner_license` | `CC0` |
-| `title` | `banner_title` | |
-| `creators[*].description` | `banner_creator` | `Giulio Campagnola (Italian, 1482–1515)` 형태의 평문. HTML 평문화 불필요 |
-| `creation_date` | `banner_year` | `c. 1508–9` 형태 |
-| `url` | `banner_source` | `https://clevelandart.org/art/<accession>` |
-| `type` | 시각 판정 힌트 | `Print`·`Painting`·`Photograph`. 사진이 섞여 나오므로 컨셉과 대조할 때 참고 |
-
-6개 `banner*` 스칼라는 § 쓰기 안전(모든 소스 파생 값) 규칙을 동일하게 적용한다.
-
 ---
 
 ## § Wellcome 1차 소스 (완전 배선)
 
 Wellcome Collection 카탈로그. 의학·과학사 도해와 판화가 두터워 Wikimedia·CMA와 **소장품 겹침이
-가장 적다.** 인증 키가 필요 없다.
+가장 적다.** 인증 키가 필요 없다. 필드 매핑 표는 `sources-and-fields.md` § Wellcome 반환 필드
+매핑에 있다.
 
 ```
 https://api.wellcomecollection.org/catalogue/v2/works?query=<어구+어구>&items.locations.license=pdm&include=items,contributors,production&pageSize=20
@@ -508,92 +427,23 @@ https://iiif.wellcomecollection.org/image/<ID>/full/1024,/0/default.jpg
 조용한 형태로 실패한다. 사다리 상한은 항목의 긴 변을 1024로 맞춘 값이라, 세로로 긴 자료는 상한이
 1024보다 작다(실측: 2125x3526 항목의 상한은 617).
 
-**그래서 Wellcome의 해상도 게이트는 별도 호출이 아니라 다운로드 자체다.** § 감별 4에서 컨택트
-시트를 만들려고 어차피 받으므로, **받아서 0바이트면 그 후보를 버린다.** `info.json`을 후보마다
-따로 조회하면 LoC를 1차에서 내린 것과 같은 이유로 라운드트립이 샌다. 조회하지 않는다.
-
-### 반환 필드 매핑 (`results[*]`)
-
-| 반환 필드 | 매핑 대상 | 비고 |
-|---|---|---|
-| 조립한 IIIF URL | `banner` | 위 참조 |
-| `items[*].locations[*].license.id` | `banner_license` | `pdm`(Public Domain Mark) 또는 `cc0`. 이 둘만 통과 |
-| `title` | `banner_title` | |
-| `contributors[*].agent.label` | `banner_creator` | 평문. 없으면 비운다 |
-| `production[*].dates[0].label` | `banner_year` | `1822` 형태. 없으면 비운다 |
-| `https://wellcomecollection.org/works/<id>` | `banner_source` | `results[*].id`로 조립 |
-
-6개 `banner*` 스칼라는 § 쓰기 안전(모든 소스 파생 값) 규칙을 동일하게 적용한다.
+**그래서 Wellcome의 해상도 게이트는 별도 호출이 아니라 다운로드 자체다.** 이것을 **0바이트
+게이트**라 부르고 문서 전체에서 이 이름으로 가리킨다. § 감별 4에서 컨택트 시트를 만들려고 어차피
+받으므로, **받아서 0바이트면 그 후보를 버린다.** `info.json`을 후보마다 조회하는 방식은 LoC를
+1차에서 내린 것과 같은 이유로 라운드트립을 샌다.
 
 ---
 
-## § 보조 소스 — LoC (배선은 완전하되 1차 아님)
+## § 쓰기 안전 — 모든 소스 파생 값 (신뢰 불가)
 
-미 의회도서관 Prints & Photographs 온라인 카탈로그. 보조 소스 중 유일하게 **완전 배선**돼 있다.
+위 6개 `banner*` 스칼라(URL 포함)는 **외부 신뢰 불가 값**이다. 노트에 기록하기 전:
 
-**호출 조건은 3소스 병렬로도 통과 후보가 2개 미만일 때뿐이다.** 매 실행 무조건 도는 소스가 아니다.
+1. **YAML 문자열로 인용/이스케이프** — 큰따옴표로 감싸고 내부 `"`·`\`를 이스케이프한다.
+2. **개행·제어문자 제거**.
+3. HTML 제거는 평문을 만들 뿐, YAML 구조 메타문자(`:`·선두 `-`·`#`·`|`·`"`)를 남긴다. 이스케이프
+   없이 기록하면 악의적 소스 메타데이터가 프론트매터를 손상시키거나 외부 키를 주입할 수 있다.
 
-**왜 1차가 아닌가.** LoC 검색 JSON에는 **`width`/`height`도 라이선스 필드도 없다.** 1차 소스 셋이
-검색 JSON 하나로 끝내는 사전 필터(§ 감별 1·2·3)를 LoC는 후보당 별도 호출(라이선스)과 실제
-다운로드(해상도) 없이 하지 못한다. 즉 **탈락할 후보에 라운드트립을 먼저 지불하는 구조**다. 이는
-소스 품질 문제가 아니라 API 구조의 비대칭이고, § 보조 소스의 "직접 래스터 URL을 안정 추출 가능할
-때만 보강한다"는 원칙과 같은 결이다.
-
-### 1단계 — 검색
-
-```
-https://www.loc.gov/pictures/search/?q=<검색어>&fo=json
-```
-
-```bash
-curl -s -H 'User-Agent: banner-doc/1.0 (Claude Code; contact via user)' \
-  'https://www.loc.gov/pictures/search/?q=steam%20engine&fo=json'
-```
-
-`results[*]`에서 뽑는다:
-
-| 반환 필드 | 매핑 대상 | 비고 |
-|---|---|---|
-| `image.full` | `banner` | 직접 `.jpg` 래스터 URL(`tile.loc.gov/…`) |
-| `title` | `banner_title` | |
-| `creator` | `banner_creator` | 없으면 비운다 |
-| `created_published_date` | `banner_year` | |
-| `links.item` | `banner_source` | 아이템 페이지 URL |
-| `pk` | (2단계 입력) | 라이선스 확인용 아이템 키 |
-
-### 2단계 — 라이선스 태그 확인 (필수)
-
-검색 JSON에는 **라이선스 필드가 없다.** 후보마다 아이템 JSON을 조회해 최상위 `unrestricted`
-불리언을 확인한다:
-
-```bash
-curl -s -H 'User-Agent: banner-doc/1.0 (Claude Code; contact via user)' \
-  'https://www.loc.gov/pictures/item/<pk>/?fo=json'
-```
-
-- 최상위 **`unrestricted == true` 인 항목만 통과**시켜 `banner_license`에
-  `No known restrictions (LoC)`로 기록한다. `false`이거나 필드가 없으면 **제외**한다(§ 감별 1 —
-  저작권을 독자 판단하지 않고 소스 태그만 신뢰).
-- `image.full`은 `.jpg`이므로 mime 필터는 자동 충족(§ 감별 2).
-- 6개 `banner*` 스칼라는 § 쓰기 안전(모든 소스 파생 값) 규칙을 동일하게 적용한다.
-
----
-
-## § 보조 소스 (한 문단 원칙)
-
-NYPL Digital Collections(API 토큰 필요)·Met Museum·Rijksmuseum·Internet Archive 등 다른 PD
-소스는 **직접 래스터 URL을 안정적으로 추출할 수 있을 때만** best-effort로 보강한다. (LoC는 위
-§ 보조 소스 — LoC에 완전 배선돼 있으니 폴백이 필요하면 그쪽을 먼저 쓴다.) 이들 상당수는
-IIIF 뷰어·아이템 페이지만 노출하고 직접 이미지 URL을 안정적으로 주지 않으므로, 안 뽑히면 그
-후보를 **스킵**한다. 개별 소스의 API 엔드포인트·IIIF 매니페스트 파싱을 여기에 열거하지 않는다 —
-유지비만 늘고 실패율이 높다. 안정 URL 추출은 에이전트 재량의 best-effort이며, 못 뽑으면 미련
-없이 버린다. 1차 소스(Wikimedia·LoC)만으로 최소 후보 수를 채우는 것이 정상 경로다.
-
-**AIC(시카고 미술관) 제외** — AIC IIIF 이미지 호스트(`www.artic.edu/iiif/…`)는 Cloudflare 봇
-차단 뒤에 있어 `AIC-User-Agent` 헤더나 `Referer: artic.edu` 없이는 403이다. Obsidian Pixel
-Banner의 fetch는 이 조건을 못 붙이고 JS 챌린지도 못 풀어 **배너가 렌더되지 않음이 실측 확인**됐다
-(서버측 이미지 프록시도 datacenter IP라 더 막힌다). 따라서 AIC는 1차·보조 어디에서도 배너 소스로
-쓰지 않는다. AIC의 대표 PD 작품 상당수는 Wikimedia Commons에 미러링돼 있어 그쪽으로 커버된다.
+이 방어는 tag-doc에는 불필요했다(자기생성 신뢰값). banner-doc은 소스 파생 값이라 필수다.
 
 ---
 
@@ -606,7 +456,7 @@ JSON만으로 **추가 호출 없이** 판정되므로, 비싼 시각 확인(다
 ### 1. 라이선스 필터
 
 - 소스가 **PD / CC0 / 자유 라이선스(CC BY · CC BY-SA 등)로 태깅한 것만** 통과.
-- 라이선스 필드가 없거나 모호하면 **제외**.
+- 라이선스 필드가 **명시적으로 자유**인 것만 통과시킨다. 없거나 모호하면 제외한다.
 - **스킬은 저작권을 독자 판단하지 않고 소스의 태깅을 신뢰한다.** 법적 판단은 스킬의 책임 범위
   밖이고, 소스가 명시한 라이선스 태그만 근거로 삼는다. 소스별 태그 필드는 Wikimedia
   `LicenseShortName`, CMA `share_license_status`, Wellcome `locations[*].license.id`다.
@@ -627,9 +477,9 @@ JSON만으로 **추가 호출 없이** 판정되므로, 비싼 시각 확인(다
 - **Wikimedia** `imageinfo[0].width`, **CMA** `images.print.width`. 둘 다 검색 JSON에 이미 들어 있어
   **공짜**다. 다운로드하고 `Read`한 뒤에야 "작네" 하고 버리는 것이 시각 감별 단계에서 가장 흔한
   낭비였고, 그 왕복을 여기서 없앤다.
-- **Wellcome은 예외다.** 검색 JSON에 크기가 없고 `info.json`은 후보당 추가 호출이라, 게이트를
-  § 감별 4의 다운로드로 미룬다. `full/1024,`가 **0바이트로 오면 사다리 상한이 1024 미만**이라는
-  뜻이므로 그 자리에서 버린다(§ Wellcome 1차 소스).
+- **Wellcome은 0바이트 게이트로 판정한다.** 검색 JSON에 크기가 없고 `info.json`은 후보당 추가
+  호출이라, 게이트를 § 감별 4의 다운로드로 미룬다. `full/1024,`가 0바이트면 사다리 상한이 1024
+  미만이라는 뜻이므로 그 자리에서 버린다(§ Wellcome 1차 소스).
 
 ### 4. 시각 판정 (컨택트 시트 1장, `Read` 1회)
 
@@ -647,18 +497,18 @@ while read -r u; do i=$((i+1))
   curl -sL -H 'User-Agent: banner-doc/1.0' -o "c$(printf %02d $i).jpg" "$v" &
 done < picks.txt
 wait
-for f in c*.jpg; do [ -s "$f" ] || { echo "drop $f (0바이트)"; rm -f "$f"; }; done   # § Wellcome 해상도 게이트
+for f in c*.jpg; do [ -s "$f" ] || { echo "drop $f (0바이트)"; rm -f "$f"; }; done   # 0바이트 게이트
 montage -label '%f' c*.jpg -tile 3x -geometry 420x420+10+10 \
   -background '#1b1b1b' -fill '#eee' -pointsize 22 sheet.jpg
 ```
 
-**다운로드는 병렬로 띄우고, 시트용 이미지만 축소한다.** 실측에서 후보 6장이 **8.97초·13MB에서
-1.31초·2.3MB**로 줄었다. 화질 손실은 없다. `montage`가 어차피 각 칸을 420px로 줄이므로 그보다 큰
-원본은 시트에서 버려지는 화소다. **배너로 기록하는 URL은 축소 전 원본 URL** 그대로다.
+**다운로드는 병렬로 띄우고, 시트용 이미지만 축소한다**(효과는 § 병렬화 표). 화질 손실은 없다.
+`montage`가 어차피 각 칸을 420px로 줄이므로 그보다 큰 원본은 시트에서 버려지는 화소다. **배너로
+기록하는 URL은 축소 전 원본 URL** 그대로다.
 
-**Wellcome URL은 축소하지 않는다.** `full/1024,`의 0바이트 응답이 이 소스의 해상도 게이트를
-겸하는데, `400,`으로 낮추면 게이트가 죽는다. 실측에서 상한이 617인 세로 항목은 `1024,`로 0바이트,
-`400,`으로 108KB를 돌려줬다. 400으로 받으면 배너에는 못 쓰는 항목이 시트를 통과한다.
+**Wellcome URL은 원본 그대로 받는다.** 축소하면 **0바이트 게이트**가 죽는다. 실측에서 사다리
+상한이 617인 세로 항목은 `1024,`로 0바이트, `400,`으로 108KB를 돌려줬다. 400으로 받으면 배너에는
+못 쓰는 항목이 시트를 통과한다.
 
 그다음 `sheet.jpg`를 **`Read` 한 번**으로 본다. 라벨의 `cNN.jpg`가 picks.txt의 몇 번째 줄인지로
 후보를 되짚는다. 실측에서 1320x938 시트 한 장으로 계보 판화·지질 단면도·풍경 사진·고서 텍스트
