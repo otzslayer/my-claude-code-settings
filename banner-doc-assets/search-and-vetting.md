@@ -11,8 +11,19 @@
 
 ## § 컨셉 도출 (직결형 + 연상형)
 
-노트의 주제 신호(제목·파일명·첫 H1)를 읽어 **비주얼 컨셉을 2~3갈래**로 생성한다. 후보 묶음에
-직결형과 연상형이 **섞이도록** 한다.
+노트의 주제 신호(제목·파일명·첫 H1)와 **본문**을 함께 읽어 **비주얼 컨셉을 2~3갈래**로 생성한다.
+후보 묶음에 직결형과 연상형이 **섞이도록** 한다.
+
+**제목만으로 컨셉을 짜지 않는다.** 제목은 대개 낱말 두셋이라 검색어로 옮기면 뜻이 넓은 일반어가
+되고, 그 검색이 관련도가 낮은 후보를 부른다. 본문은 Step 1에서 이미 읽어 컨텍스트에 있으므로
+**본문을 쓰는 데 드는 추가 비용이 없다.** 본문에서 다음을 건져 검색어에 반영한다.
+
+- **고유 명사** — 인물·지명·기관·저작 이름. 검색어에서 가장 강한 신호다.
+- **시대와 지역** — 본문이 다루는 연대나 문화권. § 검색어 만들기의 시대 축을 여기서 채운다.
+- **되풀이되는 은유와 결** — 연상형 컨셉의 재료다. 제목에는 거의 드러나지 않는다.
+
+제목이 "분산 시스템 설계"뿐이어도, 본문이 합의 알고리즘과 장애 전파를 다룬다면 연상형은
+`medieval network diagram` 같은 막연한 어구가 아니라 본문의 결을 짚은 어구로 잡을 수 있다.
 
 - **직결형(최소 1개)** — 주제어를 직접 매칭하는 이미지. 글이 "증기기관"이면 19세기 증기기관
   고판화, "천문학"이면 고천문도. 주제를 문자 그대로 시각화한 역사 자료.
@@ -116,11 +127,11 @@ wm(){ curl -s -H "$UA" \
 cma(){ curl -s -H "$UA" \
   "https://openaccess-api.clevelandart.org/api/artworks/?q=$2&cc0=1&has_image=1&limit=20" -o "cma_$1.json"; }
 wel(){ curl -s -H "$UA" \
-  "https://api.wellcomecollection.org/catalogue/v2/works?query=$2&items.locations.license=pdm&include=items,contributors,production&pageSize=20" -o "wel_$1.json"; }
+  "https://api.wellcomecollection.org/catalogue/v2/works?query=$2&items.locations.license=pdm&workType=k,e&include=items,contributors,production&pageSize=20" -o "wel_$1.json"; }
 
-wm  tree    "filetype%3Abitmap%20genealogical%20tree%20engraving"                  # 직결형
-wm  meander "filetype%3Abitmap%20ancient%20courses%20mississippi%20meander%20belt"  # 연상형
-wm  strata  "filetype%3Abitmap%20geological%20cross%20section%20engraving"          # 연상형
+wm  tree    "filetype%3Abitmap%20filew%3A%3E999%20genealogical%20tree%20engraving"          # 직결형
+wm  meander "filetype%3Abitmap%20filew%3A%3E999%20ancient%20courses%20mississippi%20meander"  # 연상형
+wm  strata  "filetype%3Abitmap%20filew%3A%3E999%20geological%20cross%20section%20engraving"   # 연상형
 cma tree    "genealogy"          # CMA는 낱말 1~2개, 공백은 +
 cma strata  "geological"
 wel tree    "genealogical+tree"  # Wellcome은 어구 가능, 공백은 +
@@ -132,9 +143,19 @@ grep -rhoE '^banner:[[:space:]]*.*' "$VAULT" --include='*.md' > used_banners.txt
 
 (예시는 "기록·계보·과거의 층" 결의 컨셉 3갈래다. 실제 컨셉은 노트 주제에서 도출한다.)
 
-**Wikimedia의 모든 `gsrsearch`는 `filetype%3Abitmap%20`으로 시작한다.** File 네임스페이스 전문
-검색은 Internet Archive의 PDF 책 스캔이 지배하기 때문에, 이를 빼면 § 감별 2의 mime 필터를 통과하는
-후보가 0건에 수렴하고 결과에 섞인 PDF 한 건이 검색 전체를 죽인다(§ 실측 함정).
+**Wikimedia의 모든 `gsrsearch`는 `filetype%3Abitmap%20filew%3A%3E999%20`로 시작한다.**
+
+- `filetype:bitmap` — File 네임스페이스 전문 검색은 Internet Archive의 PDF 책 스캔이 지배하기
+  때문에, 이를 빼면 § 감별 2의 mime 필터를 통과하는 후보가 0건에 수렴하고 결과에 섞인 PDF 한
+  건이 검색 전체를 죽인다(§ 실측 함정).
+- `filew:>999` — **해상도 게이트를 쿼리로 올린다.** 이게 없으면 `gsrlimit=40`으로 받아온 자리의
+  상당수를 § 감별 3에서 어차피 탈락할 저해상 파일이 차지한다. 실측에서 이 연산자가 저해상 성서
+  인물 썸네일을 밀어내고 큰 판본을 상위로 올렸다(71건 → 64건, 상위 4건이 전부 교체). 파서의 폭
+  검사는 그대로 둔다. CMA·Wellcome·LoC에는 이 연산자가 없고, 쿼리에서 빠졌을 때의 방어가 된다.
+
+**Wellcome은 `workType=k,e`(Pictures·Maps)로 좁힌다.** 이게 없으면 결과의 대부분이 책 서지
+레코드다. 실측에서 `geological` 검색의 workType 분포는 Books 186 · Pictures 12 · Maps 1 · 기록물
+1이었고, 필터를 걸자 200건이 13건으로 줄면서 **전부 IIIF 이미지가 있는 후보**가 됐다.
 
 **소스마다 검색어 문법이 다르다.** Wikimedia는 공백을 `%20`으로만 인코딩하고, CMA와 Wellcome은
 `+`를 쓴다. CMA의 `q`는 전 필드 AND 매칭이라 어구가 길면 0건이 되므로 **낱말 1~2개**로 줄인다
@@ -143,8 +164,10 @@ grep -rhoE '^banner:[[:space:]]*.*' "$VAULT" --include='*.md' > used_banners.txt
 
 ### 콜 2 — 일괄 파싱 (라이선스·mime·해상도 필터 + 중복 배제 후 컴팩트 표만 출력)
 
-세 소스의 JSON 형태를 한 파서가 모두 처리하고, § 중복 배제를 같은 자리에서 적용한다. 컨셉·소스당
-**최대 5줄 묶음**만 출력하며, 출력 직전에 섞어 상위 랭킹 고착을 푼다.
+세 소스의 JSON 형태를 한 파서가 모두 처리하고, § 중복 배제를 같은 자리에서 적용한다. 순서는
+**필터 → 중복 배제 → 관련도 정렬 → 상위 밴드 절단 → 밴드 안에서 셔플 → 5줄 출력**이다. 이 순서를
+지켜야 한다. 밴드를 중복 배제보다 먼저 자르면 볼트에서 이미 쓴 항목이 밴드 자리를 먹어, 쓸 만한
+후보가 남아 있는데도 출력이 비는 일이 생긴다.
 
 ```bash
 cd <scratchpad>
@@ -169,15 +192,24 @@ try:
         if v: seen.add(key(v))
 except FileNotFoundError: pass
 NEW=SKIP=0
-def emit(rows,tag):
+BAND=12                                       # 관련도 상위 몇 개 안에서만 섞을지
+def stem(t):                                  # 같은 시리즈의 낱장을 한 묶음으로
+    t=t.lower()
+    t=re.sub(r'[,(]?\s*(plate|sheet|pl\.|folio|fol\.|no\.|vol\.|p\.|page|part|tafel|planche)\s*[.\d ivxlc]+','',t)
+    t=re.sub(r'[\W_]+',' ',t).strip()
+    return ' '.join(t.split()[:6])
+def emit(rows,tag):                           # rows: (rank, key, title, line) — rank 작을수록 관련도 높음
     global NEW,SKIP
-    out=[]
-    for k,line in rows:
-        if k in seen: SKIP+=1; continue
+    out=[]; ser={}
+    for r,k,t,line in sorted(rows,key=lambda x:x[0]):
+        if k in seen: SKIP+=1; continue       # 중복 배제를 밴드 절단보다 먼저
+        st=stem(t)
+        if ser.get(st,0) >= 2: SKIP+=1; continue   # 한 시리즈에서 최대 2장
+        ser[st]=ser.get(st,0)+1
         seen.add(k); out.append(line); NEW+=1
-    random.shuffle(out)
+    band=out[:BAND]; random.shuffle(band)     # 관련도 밴드 안에서만 섞는다
     print('='*10,tag,f'({len(out)})')
-    for line in out[:5]: print(line)
+    for line in band[:5]: print(line)
 
 for fn in sorted(glob.glob('wm_*.json')):
     rows=[]
@@ -186,7 +218,7 @@ for fn in sorted(glob.glob('wm_*.json')):
         if ii.get('mime') not in ('image/jpeg','image/png','image/webp'): continue  # § 감별 2
         if (ii.get('width') or 0) < 1000: continue                                  # § 감별 3
         u=ii.get('thumburl') or ii.get('url')
-        rows.append((key(u), f"* WM {p['title'][5:][:60]}\n  "
+        rows.append((p.get('index',999), key(u), p['title'][5:], f"* WM {p['title'][5:][:60]}\n  "
             f"{strip(em.get('LicenseShortName',{}).get('value'))} | {ii.get('width')}x{ii.get('height')} | "
             f"{strip(em.get('Artist',{}).get('value'))[:40]} | "
             f"{strip(em.get('DateTimeOriginal',{}).get('value'))[:24]}\n  {u}"))
@@ -194,20 +226,20 @@ for fn in sorted(glob.glob('wm_*.json')):
 
 for fn in sorted(glob.glob('cma_*.json')):
     rows=[]
-    for a in json.load(open(fn)).get('data',[]) or []:
+    for rank,a in enumerate(json.load(open(fn)).get('data',[]) or []):
         pr=(a.get('images') or {}).get('print') or {}     # web은 대개 900px 미만, full은 .tif
         u=pr.get('url','')
         if not u.endswith('.jpg'): continue
         if int(pr.get('width') or 0) < 1000: continue
         cr=', '.join(c.get('description','') for c in (a.get('creators') or []))
-        rows.append((key(u), f"* CMA[{a.get('type')}] {(a.get('title') or '')[:55]}\n  "
+        rows.append((rank, key(u), a.get('title') or '', f"* CMA[{a.get('type')}] {(a.get('title') or '')[:55]}\n  "
             f"{a.get('share_license_status')} | {pr.get('width')}x{pr.get('height')} | {cr[:40]} | "
             f"{(a.get('creation_date') or '')[:24]}\n  {u}\n  src {a.get('url')}"))
     emit(rows,fn)
 
 for fn in sorted(glob.glob('wel_*.json')):
     rows=[]
-    for w in json.load(open(fn)).get('results',[]) or []:
+    for rank,w in enumerate(json.load(open(fn)).get('results',[]) or []):
         iid=lic=None
         for it in w.get('items') or []:
             for L in it.get('locations') or []:
@@ -217,7 +249,7 @@ for fn in sorted(glob.glob('wel_*.json')):
         u=f'https://iiif.wellcomecollection.org/image/{iid}/full/1024,/0/default.jpg'
         cr=', '.join(c['agent']['label'] for c in (w.get('contributors') or []))
         yr=next((((pp.get('dates') or [{}])[0].get('label')) or '' for pp in (w.get('production') or [])),'')
-        rows.append((key(u), f"* WEL {w['title'][:60]}\n  {lic} | 1024w(사다리 상한, 받아서 0바이트면 탈락) | "
+        rows.append((rank, key(u), w['title'], f"* WEL {w['title'][:60]}\n  {lic} | 1024w(사다리 상한, 받아서 0바이트면 탈락) | "
             f"{cr[:40]} | {yr[:24]}\n  {u}\n  src https://wellcomecollection.org/works/{w['id']}"))
     emit(rows,fn)
 print(f'\n-- 신규 {NEW}건 / 중복 배제 {SKIP}건')
@@ -266,6 +298,8 @@ EOF
 | 검색어에 `+`를 공백으로 | 결과 0건 (조용히 실패) | `gsrsearch` 인코딩은 **`%20`만** |
 | bash 연관배열 `${!Q[@]}` | zsh `bad substitution` | 셸은 **zsh**. 연관배열 대신 위 `f()` 반복 호출 |
 | raw JSON 그대로 출력 | 한 묶음에 20k자 | 파싱 출력은 **후보당 2~4줄**로 투영 |
+| `generator=search`의 `pages`를 순회 순서대로 씀 | `pages`는 **pageid로 키를 잡은 딕셔너리**라 관련도 순위가 사라진다. 실측에서 순회 첫 항목은 관련도 1위가 아니라 무관한 책 스캔이었고, 진짜 1위는 네 번째에 나왔다 | 각 페이지의 **`index` 필드로 정렬**한 뒤 쓴다(§ 랭킹 고착을 푸는 법) |
+| Wellcome을 `workType` 없이 검색 | 결과의 **93%가 책 서지 레코드**다(실측 `geological`: Books 186 · Pictures 12 · Maps 1). 배너로 쓸 후보가 뒤에 묻힌다 | `workType=k,e`(Pictures·Maps)를 건다 |
 | Wellcome IIIF에 사다리 밖 크기 요청 | `1200,`·`full/full`이 **HTTP 200 + `image/jpeg` + 0바이트**로 온다. 에러가 아니라 빈 몸통이라 조용히 깨진다 | 폭은 **`1024,`로 고정**한다. 0바이트면 그 항목의 사다리 상한이 1024 미만(세로로 긴 자료)이라는 뜻이니 후보에서 버린다 |
 | CMA `images.web`을 배너로 | 대개 **900px 미만**이라 § 감별 3에서 전멸 | **`images.print`**(jpg)를 쓴다. `images.full`은 `.tif`라 배제 |
 | CMA `q`에 긴 어구 | 전 필드 AND 매칭이라 0건. 실측: `geological engraving` 0건, `geological` 9건 | CMA 검색어는 **낱말 1~2개**, 공백은 `+` |
@@ -290,12 +324,35 @@ EOF
 Wellcome 스캔**(`…_Wellcome_V0025106.jpg`)도 파일명에서 ID를 뽑아 Wellcome 후보와 같은 키로
 묶는다. 실측에서 이 교차 배제가 Wellcome 후보 3건 중 2건을 걸러냈다.
 
-### 랭킹 고착을 푸는 법
+### 랭킹 고착을 푸는 법 (관련도를 지키면서)
+
+**관련도를 먼저 복원하고, 그다음에 흔든다.** 순서가 반대면 다양성이 관련도를 잡아먹는다.
+
+1. **관련도 정렬** — `generator=search`의 `query.pages`는 **pageid로 키를 잡은 딕셔너리**라 순회
+   순서가 관련도 순이 아니다. 각 페이지의 **`index` 필드가 진짜 검색 순위**이므로 이 값으로
+   정렬한다(§ 실측 함정). CMA와 Wellcome은 응답 배열 순서가 곧 순위다.
+2. **밴드 절단** — 정렬된 통과 후보의 **상위 12개까지만** 후보로 삼는다. 풀 전체를 섞으면
+   `gsrlimit=40`의 꼬리에 있는 무관한 결과가 상위와 같은 확률로 제시된다.
+3. **시리즈 상한** — 제목에서 `Plate 22 Sheet 01` 같은 낱장 표기를 벗긴 **stem이 같은 후보는 최대
+   2장**만 남긴다. § 중복 배제의 키는 파일 단위라 같은 지도·화첩의 낱장들을 서로 다른 것으로 보고,
+   실측에서 한 컨셉의 출력 5줄이 같은 시리즈의 낱장 다섯 장으로 채워졌다. 관련도는 높지만 사용자가
+   고를 것이 하나뿐인 상태라 반복과 같은 문제다.
+4. **밴드 안에서 셔플** — 남은 것 중 상위 12개를 섞어 5개를 출력한다. 관련도 순위는 검색과 밴드가
+   지키고, 흔드는 범위는 밴드 안으로 묶인다.
 
 `gsrsort=random`은 **쓰지 않는다.** 실측에서 문법 오류 없이 동작하기는 하지만 관련도를 통째로
-버려서, "geological engraving" 검색에 20420px짜리 무관한 책 스캔이 1위로 올라왔다. 대신
-**`gsrlimit`을 40으로 올려 통과 후보 풀을 넓히고, 필터를 통과한 것들을 섞어** 출력한다. 관련도
-순위는 검색이 지키고, 그 안에서의 선택만 흔든다.
+버려서, "geological engraving" 검색에 20420px짜리 무관한 책 스캔이 1위로 올라왔다.
+
+### 효과가 없어서 버린 연산자 (재시도 금지)
+
+기준 질의 `filetype:bitmap "genealogical tree" engraving`(71건)에 하나씩 얹어 실측한 결과다.
+
+| 시도 | 결과 | 판정 |
+|---|---|---|
+| `-incategory:"Files from Internet Archive Book Images Flickr stream"` | 64건 → 63건 | 카테고리명은 맞지만 효과가 1건. 쿼리만 길어진다 |
+| `incategory:"Engravings"` | **0건** | `incategory`는 **직접 소속만** 본다. 상위 카테고리는 하위만 거느려 직접 파일이 없다 |
+| `deepcategory:"Genealogical trees"` | **0건** | 이 엔드포인트에서 동작하지 않는다 |
+| CMA `&type=Print` | **0건** (`geological` 9건 중) | 결과 수가 적은 소스에 하드 필터를 걸면 통째로 비운다. `type`은 § CMA 반환 필드 매핑처럼 **시각 판정 힌트로만** 쓴다 |
 
 ---
 
