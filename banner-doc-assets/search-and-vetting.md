@@ -106,9 +106,21 @@
 |---|---|
 | 컨셉 | 3개 (직결형 1개 이상, 연상형 1~2개) |
 | 컨셉당 검색어 | 소스별 **1개** (Wikimedia 어구 1개, CMA 낱말 1~2개, Wellcome 어구 1개) |
-| 검색 Bash 콜 | **1콜** (3소스 × 전 컨셉 fan-out) |
-| 파싱 Bash 콜 | **1콜** (전 파일 일괄 + 중복 배제) |
+| 검색 Bash 콜 | **1콜** (3소스 × 전 컨셉 fan-out, 전부 `&` + `wait`) |
+| 파싱 Bash 콜 | **1콜** (전 파일 일괄 + 중복 배제 + 6개 `banner*` 필드 출력) |
+| 시트 Bash 콜 | **1콜** (다운로드 `&` + `wait` → `montage`) |
+| 선택 후 Bash 콜 | **0콜** — 표가 필드를 다 냈으므로 재파싱하지 않는다 |
 | 시각 감별 `Read` | **1회** (컨택트 시트 1장). 시트 재생성이 필요하면 추가 (§ 감별 4) |
+
+### § 병렬화 (지연의 지배 요인)
+
+이 스킬의 벽시계 시간은 토큰이 아니라 **네트워크 대기**가 지배한다. 검색 요청 7개와 시트 이미지
+6장은 서로 의존하지 않으므로 전부 `&`로 띄우고 `wait` 한 번으로 받는다. 실측 효과는 아래와 같다.
+
+| 구간 | 순차 | 병렬 | 비고 |
+|---|---|---|---|
+| 검색 fan-out (7 요청) | 9.19초 | **2.00초** | 콜 1 |
+| 시트 다운로드 (6장) | 8.97초 / 13MB | **1.31초 / 2.3MB** | 콜 3. 축소 효과가 함께 들어 있다 |
 
 **빈 결과가 나온 검색어는 버린다.** 변형을 만들어 재시도하지 않는다 — 통과 후보가 2개 미만이면
 사용자에게 검색어 조정을 요청하고 중단한다(§ 최소 확보 실패).
@@ -116,7 +128,9 @@
 ### 콜 1 — 3소스 × 전 컨셉 fan-out (파일로 저장)
 
 한 번의 `Bash` 안에서 세 소스를 모두 부르고, 같은 콜에서 **볼트가 이미 쓴 배너 URL 목록**까지
-거둔다(§ 중복 배제).
+거둔다(§ 중복 배제). **모든 curl을 `&`로 띄우고 끝에서 `wait` 한 번**으로 받는다. 검색 요청은
+서로 의존하지 않으므로 순차로 돌릴 이유가 없다. 실측에서 7개 요청이 **9.19초에서 2.00초**로
+줄었다(§ 병렬화).
 
 ```bash
 cd <scratchpad>
@@ -129,16 +143,18 @@ cma(){ curl -s -H "$UA" \
 wel(){ curl -s -H "$UA" \
   "https://api.wellcomecollection.org/catalogue/v2/works?query=$2&items.locations.license=pdm&workType=k,e&include=items,contributors,production&pageSize=20" -o "wel_$1.json"; }
 
-wm  tree    "filetype%3Abitmap%20filew%3A%3E999%20genealogical%20tree%20engraving"          # 직결형
-wm  meander "filetype%3Abitmap%20filew%3A%3E999%20ancient%20courses%20mississippi%20meander"  # 연상형
-wm  strata  "filetype%3Abitmap%20filew%3A%3E999%20geological%20cross%20section%20engraving"   # 연상형
-cma tree    "genealogy"          # CMA는 낱말 1~2개, 공백은 +
-cma strata  "geological"
-wel tree    "genealogical+tree"  # Wellcome은 어구 가능, 공백은 +
-wel strata  "geological+strata"
+# 전부 백그라운드로 띄우고 한 번에 기다린다 (§ 병렬화)
+wm  tree    "filetype%3Abitmap%20filew%3A%3E999%20genealogical%20tree%20engraving"          &  # 직결형
+wm  meander "filetype%3Abitmap%20filew%3A%3E999%20ancient%20courses%20mississippi%20meander"  &  # 연상형
+wm  strata  "filetype%3Abitmap%20filew%3A%3E999%20geological%20cross%20section%20engraving"   &  # 연상형
+cma tree    "genealogy"          &   # CMA는 낱말 1~2개, 공백은 +
+cma strata  "geological"         &
+wel tree    "genealogical+tree"  &   # Wellcome은 어구 가능, 공백은 +
+wel strata  "geological+strata"  &
 
 # 이미 쓰인 배너 URL (VAULT는 입력 파일에서 .obsidian 을 찾아 위로 거슬러 올라간 경로)
 grep -rhoE '^banner:[[:space:]]*.*' "$VAULT" --include='*.md' > used_banners.txt 2>/dev/null || : > used_banners.txt
+wait
 ```
 
 (예시는 "기록·계보·과거의 층" 결의 컨셉 3갈래다. 실제 컨셉은 노트 주제에서 도출한다.)
@@ -221,7 +237,7 @@ for fn in sorted(glob.glob('wm_*.json')):
         rows.append((p.get('index',999), key(u), p['title'][5:], f"* WM {p['title'][5:][:60]}\n  "
             f"{strip(em.get('LicenseShortName',{}).get('value'))} | {ii.get('width')}x{ii.get('height')} | "
             f"{strip(em.get('Artist',{}).get('value'))[:40]} | "
-            f"{strip(em.get('DateTimeOriginal',{}).get('value'))[:24]}\n  {u}"))
+            f"{strip(em.get('DateTimeOriginal',{}).get('value'))[:24]}\n  {u}\n  src {ii.get('descriptionurl')}"))
     emit(rows,fn)
 
 for fn in sorted(glob.glob('cma_*.json')):
@@ -256,8 +272,11 @@ print(f'\n-- 신규 {NEW}건 / 중복 배제 {SKIP}건')
 EOF
 ```
 
-최종 후보가 정해지면 같은 파일들을 한 번 더 파싱해 `descriptionurl`·`ObjectName` 등 기록용
-필드를 뽑는다(§ 반환 필드 매핑). 재검색하지 않는다. JSON은 이미 스크래치패드에 있다.
+**표에는 6개 `banner*` 필드가 전부 들어 있다.** 제목·라이선스·작가·연도·배너 URL에 더해 세 소스
+모두 `src`(각각 Commons 파일 설명 페이지, CMA 작품 페이지, Wellcome 작품 페이지)를 함께 낸다.
+그러니 사용자가 고른 뒤 **JSON을 다시 파싱하지 않는다.** 표가 이미 컨텍스트에 있으므로 Step 6은
+Bash 라운드트립 없이 바로 쓰기로 간다. 재파싱은 왕복을 하나 더 쓸 뿐 아니라, 같은 값을 두 번
+유도하면서 어긋날 여지를 만든다.
 
 ### RTK 상호작용 — `-o <file>`이 필수인 **진짜** 이유
 
@@ -622,11 +641,24 @@ JSON만으로 **추가 호출 없이** 판정되므로, 비싼 시각 확인(다
 cd <scratchpad>
 # picks.txt — 콜 2 표에서 고른 후보 URL을 컨셉·소스가 섞이도록 한 줄에 하나씩
 i=0
-while read -r u; do i=$((i+1)); curl -sL -H 'User-Agent: banner-doc/1.0' -o "c$(printf %02d $i).jpg" "$u"; done < picks.txt
+while read -r u; do i=$((i+1))
+  # 시트용으로만 축소한다. Wellcome URL은 건드리지 않는다 (아래 주의)
+  v=$(printf '%s' "$u" | sed -E 's#/1280px-#/500px-#; s#_print\.jpg#_web.jpg#')
+  curl -sL -H 'User-Agent: banner-doc/1.0' -o "c$(printf %02d $i).jpg" "$v" &
+done < picks.txt
+wait
 for f in c*.jpg; do [ -s "$f" ] || { echo "drop $f (0바이트)"; rm -f "$f"; }; done   # § Wellcome 해상도 게이트
 montage -label '%f' c*.jpg -tile 3x -geometry 420x420+10+10 \
   -background '#1b1b1b' -fill '#eee' -pointsize 22 sheet.jpg
 ```
+
+**다운로드는 병렬로 띄우고, 시트용 이미지만 축소한다.** 실측에서 후보 6장이 **8.97초·13MB에서
+1.31초·2.3MB**로 줄었다. 화질 손실은 없다. `montage`가 어차피 각 칸을 420px로 줄이므로 그보다 큰
+원본은 시트에서 버려지는 화소다. **배너로 기록하는 URL은 축소 전 원본 URL** 그대로다.
+
+**Wellcome URL은 축소하지 않는다.** `full/1024,`의 0바이트 응답이 이 소스의 해상도 게이트를
+겸하는데, `400,`으로 낮추면 게이트가 죽는다. 실측에서 상한이 617인 세로 항목은 `1024,`로 0바이트,
+`400,`으로 108KB를 돌려줬다. 400으로 받으면 배너에는 못 쓰는 항목이 시트를 통과한다.
 
 그다음 `sheet.jpg`를 **`Read` 한 번**으로 본다. 라벨의 `cNN.jpg`가 picks.txt의 몇 번째 줄인지로
 후보를 되짚는다. 실측에서 1320x938 시트 한 장으로 계보 판화·지질 단면도·풍경 사진·고서 텍스트
