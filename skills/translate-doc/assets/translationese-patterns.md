@@ -20,7 +20,7 @@ deferred: [B-4, C-7, C-8, F-1, F-2, F-3, H-2, H-4, I-2, I-4, I-5, I-6]
 출처는 `im-not-ai`(humanize-korean v2.0) 분류 체계의 번역투 특화 패턴이며,
 translate-doc은 **영어 원문을 본다**는 source-access 우위를 살려 패턴을 원문과 대조하며 고친다.
 
-`system_prompt.md`·`glossary.json`과 동형의 외부 asset이다. `commands/translate-doc.md`는
+`system_prompt.md`·`glossary.json`과 동형의 외부 asset이다. `SKILL.md`는
 이 파일을 **참조만** 하고 규칙 본문을 복제하지 않는다. 흡수 규칙 텍스트는 전부 이 한 파일에 둔다
 (ledger와 규칙을 같은 파일에 유지해 resync 정합성을 지킨다).
 
@@ -40,7 +40,7 @@ translate-doc은 **영어 원문을 본다**는 source-access 우위를 살려 �
 
 ## 패턴 인덱스 (ID → Tier × 적용위치 × 강도)
 
-`commands/translate-doc.md`의 Step 4/Step 5 참조와 **이 표가 ID별로 1:1 일치**해야 한다
+`SKILL.md`의 Step 4/Step 5 참조와 **이 표가 ID별로 1:1 일치**해야 한다
 (드리프트 방지).
 
 | ID | 패턴 | Tier | 적용 위치 | 의역강도 게이팅 |
