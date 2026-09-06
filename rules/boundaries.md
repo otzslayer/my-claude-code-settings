@@ -81,6 +81,7 @@ specific to this setup. Hard prohibitions live in the Never tier below.
 - Never make assumptions without verification
 - Never repeat same approach after 3 failed attempts
 - Never proceed while ignoring errors
+- Never emit a response without first applying the active output style (`~/.claude/output-styles/*.md`). It governs from the first sentence; rewriting an already-sent response to fix style is not the remedy.
 
 ### Surgical Changes
 
