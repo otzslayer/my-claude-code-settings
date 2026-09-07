@@ -20,17 +20,16 @@ bash ~/.claude/scripts/install.sh
 `scripts/install.sh`는 gum TUI 기반 인터랙티브 설치기다. macOS와 WSL2를 지원한다. gum이 없으면 plain read 폴백으로 동작한다.
 
 **설치기가 처리하는 항목**:
-- **jq**: 컴포넌트 선택과 무관하게 항상 확인하고 설치한다. `rtk-rewrite.sh`와 `settings.json` 인라인 `PreToolUse` 훅 4종(`.py` 편집 시 python-coding-style 주입, `docs/plans/*.md`, `docs/superpowers/specs/*.md`, `docs/solutions/*.md` 한국어 강제, `Read`와 `Grep`, `Bash`에 CodeGraph 안내 주입)이 전부 jq 하드 의존이라 없으면 이들이 **조용히** 죽는다
+- **jq**: 컴포넌트 선택과 무관하게 항상 확인하고 설치한다. `settings.json` 인라인 `PreToolUse` 훅 4종(`.py` 편집 시 python-coding-style 주입, `docs/plans/*.md`, `docs/superpowers/specs/*.md`, `docs/solutions/*.md` 한국어 강제, `Read`와 `Grep`, `Bash`에 CodeGraph 안내 주입)이 전부 jq 하드 의존이라 없으면 이들이 **조용히** 죽는다
 - **ugrep와 bfs**: 컴포넌트 선택과 무관하게 항상 확인하고 설치한다. `rules/boundaries.md`의 검색 가이드가 아카이브 검색(`-z`), 퍼지 매칭, 빠른 breadth-first find를 전제한다. jq와 달리 **소프트 의존**이라 없으면 `grep`과 `find`로 폴백된다. 실패해도 경고만 남기고 점검 미해결 항목에는 넣지 않는다
 - **node/npm 전제 확인**: statusLine(claude-dashboard)이 `node`로 직접 실행되므로 slides-grab을 고르지 않아도 확인한다 (없으면 경고)
-- rtk (token optimizer) + `rtk init -g` (RTK.md 생성, 순서 보장) + `rtk config`의 `[hooks] exclude_commands`에 `grep`과 `find` 추가. 네이티브 빌드는 셸 스냅샷에서 `grep`과 `find`를 임베디드 ugrep, bfs로 shadow하는데 rtk가 `rtk grep`으로 재작성하면 별도 프로세스의 BSD grep이 돌아 gitignore 인식(`--ignore-files`)을 잃는다 (`rtk rg`는 ripgrep을 그대로 실행하므로 제외하지 않는다)
 - codegraph (symbol-level code intelligence): `~/.claude.json`에 MCP 자동 등록 (idempotent)
 - graphify (knowledge graph CLI)
 - slides-grab (npm 패키지)
 - plannotator (계획 파일 브라우저 리뷰 UI 바이너리, plannotator 플러그인 prerequisite)
 - 메모리 seed 동기화 (`memory-templates/`)
 - `settings.json` 로컬 블록 clean/smudge 필터 등록 (머신 로컬 훅 커밋 차단)
-- **훅과 의존성 점검**: 설치 말미에 `settings.json`이 실제로 호출하는 훅과 statusLine 커맨드를 **설정에서 추출해** PATH, 존재, 실행권한을 확인하고(커맨드 목록을 하드코딩하지 않으므로 저장소에 없는 머신 로컬 훅도 그대로 걸린다), 추적 스킬 4종과 `RTK.md`가 제자리에 있는지 본다. 미해결 항목은 마지막 요약에 모아 출력한다
+- **훅과 의존성 점검**: 설치 말미에 `settings.json`이 실제로 호출하는 훅과 statusLine 커맨드를 **설정에서 추출해** PATH, 존재, 실행권한을 확인하고(커맨드 목록을 하드코딩하지 않으므로 저장소에 없는 머신 로컬 훅도 그대로 걸린다), 추적 스킬 4종이 제자리에 있는지 본다. 미해결 항목은 마지막 요약에 모아 출력한다
 
 > **추적 스킬은 설치 단계가 없다**: 저장소 루트가 곧 `~/.claude`라 `skills/` 4종은 clone만으로 Claude Code가 읽는 위치에 놓이고 실행 비트도 git이 보존한다. 위 점검 섹션은 설치를 하지 않는다. **누락을 감지**할 뿐이다.
 
@@ -46,27 +45,15 @@ bash ~/.claude/scripts/install.sh
 
 ### 수동 설치
 
-> **중요**: 아래 순서를 반드시 지킨다. `rtk init -g`를 먼저 실행하지 않으면 CLAUDE.md의 `@RTK.md` import가 깨진다.
-
-#### 1단계: RTK 설치 (최우선)
+#### 1단계: 공통 의존 설치
 
 ```bash
-# RTK (token optimizer) 설치. brew tap이 없다면 GitHub Releases에서 직접 설치한다
-brew install reachingforthejack/rtk/rtk   # 또는 릴리즈 바이너리 직접 설치
-
-# jq: 훅 전체의 하드 의존 (rtk-rewrite와 settings.json 인라인 훅 4종이
-#     모두 조용히 비활성화된다). rtk를 안 써도 필요하다.
+# jq: 훅 전체의 하드 의존 (settings.json 인라인 훅 4종이 모두 조용히 비활성화된다)
 brew install jq   # Linux/WSL2: sudo apt-get install -y jq
 
 # ugrep와 bfs: boundaries.md 검색 가이드의 전제다(아카이브 -z, 퍼지, 빠른 find).
 #              소프트 의존이라 없으면 grep과 find로 폴백된다.
 brew install ugrep bfs   # Linux/WSL2: sudo apt-get install -y ugrep bfs
-
-# RTK.md 글로벌 초기화. 이 단계가 없으면 CLAUDE.md @RTK.md import가 깨진다
-rtk init -g
-
-# 확인
-rtk --version
 ```
 
 #### 2단계: 나머지 툴 설치
@@ -131,7 +118,7 @@ Claude Code가 `settings.json`의 `enabledPlugins`와 `extraKnownMarketplaces`�
 | `skills/python-architecture/` | Python 레이어드 아키텍처 스킬 (`SKILL.md` 단일 파일). 위와 같은 이유로 추적한다 |
 | `skills/python-coding-style/` | Python 스타일 규칙 (`SKILL.md` 단일 파일). **ruff 설정의 원본**이다. `fastapi-project-structure`의 `pyproject-template.toml`이 이걸 인스턴스화하므로 둘은 같이 움직여야 한다 |
 | `memory-templates/` | 세션 간 메모리 seed (현재 본문 seed 없음, 인덱스 스캐폴드만) |
-| `hooks/*.sh` | rtk-rewrite |
+| `hooks/*.sh` | mattpocock-flow, python-style-once |
 | `scripts/sync-memory-templates.sh` | 메모리 템플릿 동기화 |
 | `.gitignore`, `.gitattributes`, `README.md` | 저장소 메타 |
 | `PRESENTATION.pdf` | 이전 하이브리드 워크플로우 발표자료 (아카이브) |

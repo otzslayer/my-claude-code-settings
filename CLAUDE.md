@@ -31,8 +31,3 @@ this is per-project, not global):
 - Add items discovered during planning or implementation
 - Mark completed items with `- [x]`
 - Review `TODO.md` before declaring the task fully complete
-
-## Tools & References
-
-### RTK (Token Optimizer)
-@RTK.md

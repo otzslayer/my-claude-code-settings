@@ -4,7 +4,7 @@
 # 지원: macOS (brew) / WSL2 (apt/release binary)
 # TUI:  gum (없으면 plain read 폴백)
 # 순서: 플랫폼 감지 -> gum bootstrap -> 컴포넌트 선택 -> 전제 확인 ->
-#        툴 설치 -> RTK.md 생성 -> 메모리 seed -> settings.json 로컬 블록 필터 ->
+#        툴 설치 -> 메모리 seed -> settings.json 로컬 블록 필터 ->
 #        훅·의존성 점검 -> 요약
 
 set -euo pipefail
@@ -186,14 +186,12 @@ print("OK: " + name + " MCP registered in ~/.claude.json")
 # ---------------------------------------------------
 echo "=== 설치할 컴포넌트 선택 (기본: 전체) ==="
 
-INSTALL_RTK=false
 INSTALL_CODEGRAPH=false
 INSTALL_GRAPHIFY=false
 INSTALL_SLIDES=false
 INSTALL_PLANNOTATOR=false
 
 # 컴포넌트 라벨 (역할 설명 포함) -- gum choose 표시 / plain read 안내 / 선택 요약에서 공용
-_OPT_RTK="rtk (출력 토큰 압축 프록시)"
 _OPT_CODEGRAPH="codegraph (심볼 단위 코드 인텔리전스 MCP)"
 _OPT_GRAPHIFY="graphify (코드 지식 그래프 네비게이션)"
 _OPT_SLIDES="slides-grab (HTML -> 슬라이드 덱 생성 CLI)"
@@ -202,8 +200,7 @@ _OPT_PLANNOTATOR="plannotator (Plan Mode 브라우저 리뷰 UI 바이너리)"
 if [[ "$GUM_OK" == "true" ]]; then
     # gum choose --no-limit: 선택 항목을 한 줄씩 stdout 출력
     _sel_file="$(mktemp)"
-    gum choose --no-limit "$_OPT_RTK" "$_OPT_CODEGRAPH" "$_OPT_GRAPHIFY" "$_OPT_SLIDES" "$_OPT_PLANNOTATOR" > "$_sel_file" || true
-    grep -qxF "$_OPT_RTK"         "$_sel_file" && INSTALL_RTK=true
+    gum choose --no-limit "$_OPT_CODEGRAPH" "$_OPT_GRAPHIFY" "$_OPT_SLIDES" "$_OPT_PLANNOTATOR" > "$_sel_file" || true
     grep -qxF "$_OPT_CODEGRAPH"   "$_sel_file" && INSTALL_CODEGRAPH=true
     grep -qxF "$_OPT_GRAPHIFY"    "$_sel_file" && INSTALL_GRAPHIFY=true
     grep -qxF "$_OPT_SLIDES"      "$_sel_file" && INSTALL_SLIDES=true
@@ -211,29 +208,26 @@ if [[ "$GUM_OK" == "true" ]]; then
     rm -f "$_sel_file"
 else
     echo "번호를 공백으로 구분해 입력 (기본값: 전체 선택):"
-    echo "  1) $_OPT_RTK"
-    echo "  2) $_OPT_CODEGRAPH"
-    echo "  3) $_OPT_GRAPHIFY"
-    echo "  4) $_OPT_SLIDES"
-    echo "  5) $_OPT_PLANNOTATOR"
-    read -rp "> [기본: 1 2 3 4 5] " _raw_sel || true
+    echo "  1) $_OPT_CODEGRAPH"
+    echo "  2) $_OPT_GRAPHIFY"
+    echo "  3) $_OPT_SLIDES"
+    echo "  4) $_OPT_PLANNOTATOR"
+    read -rp "> [기본: 1 2 3 4] " _raw_sel || true
     if [[ -z "${_raw_sel:-}" ]]; then
-        _raw_sel="1 2 3 4 5"
+        _raw_sel="1 2 3 4"
     fi
     for _n in $_raw_sel; do
         case "$_n" in
-            1) INSTALL_RTK=true ;;
-            2) INSTALL_CODEGRAPH=true ;;
-            3) INSTALL_GRAPHIFY=true ;;
-            4) INSTALL_SLIDES=true ;;
-            5) INSTALL_PLANNOTATOR=true ;;
+            1) INSTALL_CODEGRAPH=true ;;
+            2) INSTALL_GRAPHIFY=true ;;
+            3) INSTALL_SLIDES=true ;;
+            4) INSTALL_PLANNOTATOR=true ;;
         esac
     done
 fi
 
 echo
 echo "선택된 컴포넌트:"
-[[ "$INSTALL_RTK"         == "true" ]] && echo "  * $_OPT_RTK"
 [[ "$INSTALL_CODEGRAPH"   == "true" ]] && echo "  * $_OPT_CODEGRAPH"
 [[ "$INSTALL_GRAPHIFY"    == "true" ]] && echo "  * $_OPT_GRAPHIFY"
 [[ "$INSTALL_SLIDES"      == "true" ]] && echo "  * $_OPT_SLIDES"
@@ -273,15 +267,8 @@ if [[ "$INSTALL_GRAPHIFY" == "true" ]]; then
     fi
 fi
 
-if [[ "$INSTALL_RTK" == "true" ]] && [[ "$PLATFORM" == "macOS" ]]; then
-    if ! command -v brew &>/dev/null; then
-        warn "Homebrew 없음. https://brew.sh 에서 설치 후 재실행하세요."
-    fi
-fi
-
-# jq: 이 저장소 전체의 하드 의존이다 (rtk 컴포넌트 선택 여부와 무관).
+# jq: 이 저장소 전체의 하드 의존이다 (컴포넌트 선택 여부와 무관).
 # 없으면 아래가 전부 조용히 죽는다:
-#   - hooks/rtk-rewrite.sh          (Bash 명령 rtk 재작성)
 #   - settings.json 인라인 PreToolUse 훅 4종
 #     (.py 편집 시 python-coding-style 주입
 #      / docs/plans·docs/superpowers/specs·docs/solutions의 .md 한국어 강제
@@ -321,7 +308,7 @@ else
     if [[ "$_jq_installed" == "true" ]]; then
         ok "jq 설치 완료 ($(jq --version))"
     else
-        warn "jq 설치 실패 -- rtk 재작성·워크플로우 단계 주입·python-coding-style·계획 한국어 강제 훅이 모두 비활성화됩니다."
+        warn "jq 설치 실패 -- 워크플로우 단계 주입·python-coding-style·계획 한국어 강제 훅이 모두 비활성화됩니다."
         if [[ "$PLATFORM" == "macOS" ]]; then
             echo "  수동: brew install jq"
         else
@@ -375,113 +362,6 @@ echo
 # ---------------------------------------------------
 echo "=== 툴 설치 ==="
 FAILED_TOOLS=()
-
-# ---- rtk ----
-if [[ "$INSTALL_RTK" == "true" ]]; then
-    if command -v rtk &>/dev/null; then
-        skip "rtk 이미 설치됨"
-    else
-        echo "rtk 설치 중..."
-        _rtk_installed=false
-        if [[ "$PLATFORM" == "macOS" ]]; then
-            if command -v brew &>/dev/null; then
-                spin "rtk 설치 중 (brew tap)..." brew tap reachingforthejack/rtk 2>/dev/null || true
-                if spin "rtk 설치 중 (brew install)..." brew install rtk 2>/dev/null; then
-                    _rtk_installed=true
-                fi
-            fi
-        else
-            _local_bin="$HOME/.local/bin"
-            mkdir -p "$_local_bin"
-            case "$(uname -m)" in
-                x86_64)  _rtk_bin="rtk-x86_64-unknown-linux-musl" ;;
-                aarch64) _rtk_bin="rtk-aarch64-unknown-linux-musl" ;;
-                *)       _rtk_bin="rtk-x86_64-unknown-linux-musl" ;;
-            esac
-            _rtk_url="https://github.com/reachingforthejack/rtk/releases/latest/download/${_rtk_bin}"
-            if curl -fsSL "$_rtk_url" -o "$_local_bin/rtk" 2>/dev/null && chmod +x "$_local_bin/rtk"; then
-                export PATH="$_local_bin:$PATH"
-                _rtk_installed=true
-            fi
-        fi
-
-        if [[ "$_rtk_installed" == "true" ]]; then
-            ok "rtk 설치 완료"
-            # 이름 충돌 검증
-            if rtk gain &>/dev/null; then
-                ok "rtk gain 통과 (이름 충돌 없음)"
-            else
-                warn "rtk gain 실패 -- 다른 rtk 패키지가 있을 수 있습니다. 확인: which rtk"
-            fi
-        else
-            warn "rtk 설치 실패."
-            FAILED_TOOLS+=("rtk")
-            if [[ "$PLATFORM" == "macOS" ]]; then
-                echo "  수동: brew tap reachingforthejack/rtk && brew install rtk"
-            else
-                echo "  수동: https://github.com/reachingforthejack/rtk/releases 에서 바이너리 다운로드"
-            fi
-        fi
-    fi
-
-    # RTK.md 생성 -- rtk 직후 (CLAUDE.md @RTK.md 의존, 순서 필수)
-    if command -v rtk &>/dev/null; then
-        echo "RTK.md 글로벌 초기화 중 (rtk init -g)..."
-        if rtk init -g; then
-            ok "RTK.md 생성 완료"
-        else
-            warn "rtk init -g 실패. 수동: rtk init -g"
-            FAILED_TOOLS+=("rtk init -g")
-        fi
-    fi
-
-    # rtk config: grep·find를 재작성 대상에서 제외한다.
-    # 2.1.117 네이티브 빌드는 셸 스냅샷에서 grep·find를 임베디드 ugrep·bfs로 shadow하는데,
-    # rtk가 이를 `rtk grep`으로 바꾸면 별도 프로세스에서 BSD grep이 돌아
-    # --ignore-files(gitignore 인식)를 잃는다. 포맷이 아니라 결과가 달라지는 문제다.
-    # (`rtk rg`는 ripgrep을 그대로 실행해 gitignore를 유지하므로 제외하지 않는다.)
-    if command -v rtk &>/dev/null; then
-        _rtk_cfg="$(rtk config 2>/dev/null | LC_ALL=C /usr/bin/grep -m1 '^Config:' | cut -d' ' -f2-)"
-        [[ -n "${_rtk_cfg:-}" && ! -f "$_rtk_cfg" ]] && rtk config --create &>/dev/null || true
-
-        if [[ -z "${_rtk_cfg:-}" || ! -f "$_rtk_cfg" ]]; then
-            warn "rtk config 파일을 찾을 수 없어 grep·find 제외를 건너뜁니다. 수동: rtk config 로 경로 확인 후 [hooks] exclude_commands 편집"
-        elif ! command -v python3 &>/dev/null; then
-            warn "python3 없음 -- rtk exclude_commands 자동 설정 불가."
-            echo "  수동: $_rtk_cfg 의 [hooks] 아래를 exclude_commands = [\"grep\", \"find\"] 로 편집"
-        else
-            _rtk_res="$(python3 - "$_rtk_cfg" <<'PY' 2>/dev/null || true
-import re, sys
-
-path = sys.argv[1]
-src = open(path, encoding="utf-8").read()
-hit = re.search(r"^[ \t]*exclude_commands[ \t]*=[ \t]*\[(.*?)\]", src, re.M | re.S)
-if hit is None:
-    print("MISSING")
-    sys.exit(0)
-
-have = set(re.findall(r"""["']([^"']+)["']""", hit.group(1)))
-want = have | {"grep", "find"}
-if want == have:
-    print("SKIP")
-    sys.exit(0)
-
-items = ", ".join('"%s"' % name for name in sorted(want))
-open(path, "w", encoding="utf-8").write(
-    src[: hit.start()] + "exclude_commands = [%s]" % items + src[hit.end() :]
-)
-print("OK")
-PY
-)"
-            case "${_rtk_res:-}" in
-                OK)      ok "rtk config: grep·find를 재작성 제외에 추가 ($_rtk_cfg)" ;;
-                SKIP)    skip "rtk config: grep·find 이미 제외됨" ;;
-                MISSING) warn "rtk config에 [hooks] exclude_commands 항목이 없습니다. 수동 추가 필요: $_rtk_cfg" ;;
-                *)       warn "rtk config 편집 실패. 수동: $_rtk_cfg 의 exclude_commands = [\"grep\", \"find\"]" ;;
-            esac
-        fi
-    fi
-fi
 
 # ---- codegraph ----
 if [[ "$INSTALL_CODEGRAPH" == "true" ]]; then
@@ -686,7 +566,7 @@ _doctor_fail() {
 if [[ ! -f "$SETTINGS_FILE" ]]; then
     _doctor_fail "settings.json을 찾을 수 없습니다: $SETTINGS_FILE"
 elif ! command -v jq &>/dev/null; then
-    _doctor_fail "jq 없음 -- 훅 커맨드 점검 불가. jq 자체가 훅의 하드 의존이므로, 이 상태에서는 rtk 재작성·워크플로우 단계 주입·python-coding-style·계획 한국어 강제 훅이 전부 동작하지 않습니다."
+    _doctor_fail "jq 없음 -- 훅 커맨드 점검 불가. jq 자체가 훅의 하드 의존이므로, 이 상태에서는 워크플로우 단계 주입·python-coding-style·계획 한국어 강제 훅이 전부 동작하지 않습니다."
 else
     _hook_cmds="$(jq -r '
         [ (.hooks // {}) | .. | objects | select(.type? == "command") | .command? // empty ]
@@ -752,13 +632,6 @@ for _skill in capturing-learnings fastapi-project-structure python-architecture 
         _doctor_fail "손-작성 스킬 누락: skills/$_skill/SKILL.md  (git clone 상태 확인 필요)"
     fi
 done
-
-# 8-3. RTK.md -- CLAUDE.md가 @RTK.md로 import한다 (없으면 import가 깨짐)
-if [[ -f "$HOME/.claude/RTK.md" ]]; then
-    ok "RTK.md 존재"
-else
-    _doctor_fail "RTK.md 없음 -- CLAUDE.md의 @RTK.md import가 깨집니다. 해결: rtk init -g"
-fi
 
 echo
 
