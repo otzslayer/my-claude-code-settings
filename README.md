@@ -21,7 +21,7 @@ bash ~/.claude/scripts/install.sh
 
 **설치기가 처리하는 항목**:
 - **jq**: 컴포넌트 선택과 무관하게 항상 확인하고 설치한다. `settings.json` 인라인 `PreToolUse` 훅 4종(`.py` 편집 시 python-coding-style 주입, `docs/plans/*.md`, `docs/superpowers/specs/*.md`, `docs/solutions/*.md` 한국어 강제, `Read`와 `Grep`, `Bash`에 CodeGraph 안내 주입)이 전부 jq 하드 의존이라 없으면 이들이 **조용히** 죽는다
-- **ugrep와 bfs**: 컴포넌트 선택과 무관하게 항상 확인하고 설치한다. `rules/boundaries.md`의 검색 가이드가 아카이브 검색(`-z`), 퍼지 매칭, 빠른 breadth-first find를 전제한다. jq와 달리 **소프트 의존**이라 없으면 `grep`과 `find`로 폴백된다. 실패해도 경고만 남기고 점검 미해결 항목에는 넣지 않는다
+- **ugrep와 bfs**: 컴포넌트 선택과 무관하게 항상 확인하고 설치한다. 쉘 스냅샷이 `grep`과 `find`를 이 둘로 shadow하고, `rules/boundaries.md`의 검색 가이드가 그 shadow를 전제한다. jq와 달리 **소프트 의존**이라 없으면 기본 `grep`과 `find`로 폴백된다. 실패해도 경고만 남기고 점검 미해결 항목에는 넣지 않는다
 - **node/npm 전제 확인**: statusLine(claude-dashboard)이 `node`로 직접 실행되므로 slides-grab을 고르지 않아도 확인한다 (없으면 경고)
 - codegraph (symbol-level code intelligence): `~/.claude.json`에 MCP 자동 등록 (idempotent)
 - graphify (knowledge graph CLI)
@@ -51,8 +51,8 @@ bash ~/.claude/scripts/install.sh
 # jq: 훅 전체의 하드 의존 (settings.json 인라인 훅 4종이 모두 조용히 비활성화된다)
 brew install jq   # Linux/WSL2: sudo apt-get install -y jq
 
-# ugrep와 bfs: boundaries.md 검색 가이드의 전제다(아카이브 -z, 퍼지, 빠른 find).
-#              소프트 의존이라 없으면 grep과 find로 폴백된다.
+# ugrep와 bfs: 쉘 스냅샷이 grep과 find를 이 둘로 shadow한다. boundaries.md 검색 가이드의 전제다.
+#              소프트 의존이라 없으면 기본 grep과 find로 폴백된다.
 brew install ugrep bfs   # Linux/WSL2: sudo apt-get install -y ugrep bfs
 ```
 
@@ -216,8 +216,7 @@ MCP 서버 등록은 `~/.claude.json`에 있고 git으로 추적하지 않는다
 
 전역에 남은 것은 도구를 쓸 상황인지 판정하는 장치뿐이다.
 
-- `settings.json`의 SessionStart와 PreToolUse 훅 3종이 `.codegraph/` 존재를 검사해 CodeGraph 안내를 조건부로 주입한다
-- `rules/boundaries.md`는 MCP `initialize` 지침에 없는 두 가지(`codegraph status`, CLI 단독 서브도구)만 언급한다
+- `settings.json`의 SessionStart와 PreToolUse 훅 3종이 `.codegraph/` 존재를 검사해 CodeGraph 안내를 조건부로 주입한다. MCP `initialize` 지침과 겹치므로 `rules/boundaries.md`는 CodeGraph를 따로 다루지 않는다
 
 ### CodeGraph
 
