@@ -170,6 +170,6 @@ cp ~/.claude/output-styles/korean.md ~/.claude/skills/polish-korean/references/h
 
 ## 언제 다른 도구를 쓰나
 
-이 스킬은 사람이 쓴 글을 다듬으라고 만들었습니다. 손댈 곳이 너무 많아 문서 전체를 다시 쓰는 수준이면 그 사실을 알리고 멈춥니다. 중증 AI 초안은 [im-not-ai](https://github.com/epoko77-ai/im-not-ai)의 `/humanize-korean --strict`가 맡습니다.
+이 스킬은 사람이 쓴 글을 다듬으라고 만들었습니다. 손댈 곳이 너무 많아 문서 전체를 다시 쓰는 수준이면 그 사실을 알리고 멈춥니다. 초안을 처음부터 다시 쓰는 일은 이 스킬의 범위 밖입니다.
 
 맞춤법과 오탈자만 고치실 거면 스킬 없이 그냥 부탁하시는 편이 빠릅니다.
