@@ -74,6 +74,7 @@
 /commands/*
 !/commands/tag-doc.md
 !/commands/banner-doc.md
+!/commands/add-banner-from-unsplash.md
 
 # doc 스킬 에셋: 손-콘텐츠만 opt-in
 # tag-doc·banner-doc은 순수 마크다운
