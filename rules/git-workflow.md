@@ -9,7 +9,7 @@
 - <key changes (in Korean)>
 ```
 
-- `<description>`: Written in Korean, imperative present tense (e.g., "로그인 기능 추가", "버그 수정")
+- `<description>`: Written in Korean as a noun phrase, not a sentence (e.g., "로그인 기능 추가", "버그 수정"). Never end it with "~한다".
 - `<optional body>`: Written as a bullet (`-`) list, in Korean. Focus on the WHY and the key changes.
 
 Types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`, `ci`
