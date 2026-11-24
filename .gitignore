@@ -52,6 +52,7 @@
 !/skills/python-architecture/
 !/skills/polish-korean/
 !/skills/write-korean-doc/
+!/skills/write-korean-docstring/
 !/skills/python-coding-style/
 !/skills/translate-doc/
 !/skills/editorial-flow-diagram/
@@ -68,6 +69,9 @@
 # editorial-flow-diagram의 캐시와 바이트코드는 생성물 → 재무시
 /skills/editorial-flow-diagram/.ruff_cache/
 /skills/editorial-flow-diagram/**/__pycache__/
+# write-korean-docstring의 캐시와 바이트코드는 생성물 → 재무시
+/skills/write-korean-docstring/.ruff_cache/
+/skills/write-korean-docstring/**/__pycache__/
 
 # doc 스킬 명령어: 디렉토리 opt-in → 전체 무시 → 2개 커맨드만 재opt-in
 # (translate-doc은 커맨드에서 스킬로 옮겨 위 skills/ 절에서 opt-in한다)
