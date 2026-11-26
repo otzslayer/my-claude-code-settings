@@ -2,7 +2,6 @@
 
 ![Claude Code](https://img.shields.io/badge/Claude_Code-settings-D97757?logo=claude&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20WSL2-lightgrey)
-![Last commit](https://img.shields.io/github/last-commit/otzslayer/my-claude-code-settings)
 
 `~/.claude` 디렉터리를 그대로 git으로 추적하는 Claude Code 개인 설정 저장소입니다. 저장소를 `~/.claude`에 clone하면 규칙, 스킬, 훅, 에이전트가 Claude Code가 읽는 위치에 바로 놓입니다. 개발은 [Matt Pocock의 스킬](https://github.com/mattpocock/skills) 플로우로 진행하고 응답과 문서는 한국어 출력 스타일로 씁니다.
 
