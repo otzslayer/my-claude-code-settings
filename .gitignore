@@ -42,6 +42,7 @@
 /docs/superpowers/*
 !/docs/superpowers/specs/
 !/docs/solutions/
+!/docs/setup.md
 
 # 손-작성 스킬: 디렉토리 opt-in → 전체 무시 → 손-콘텐츠만 재opt-in
 # (나머지 skills/*는 설치·생성물이라 계속 무시)
